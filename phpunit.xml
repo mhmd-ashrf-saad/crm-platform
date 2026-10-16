@@ -27,6 +27,31 @@
         <env name="APP_MAINTENANCE_DRIVER" value="file" />
         <env name="BCRYPT_ROUNDS" value="4" />
         <env name="CACHE_STORE" value="array" />
+
+        <!--
+            The test database. Without these keys the suite inherits DB_DATABASE=krayin from .env
+            and every RefreshDatabase test runs migrate:fresh against the live development
+            database. The values are non-secret, which is why they can be committed; DB_PASSWORD
+            and DB_USERNAME are deliberately left out and still come from .env, where the
+            credential lives. `make test-db` creates this database and grants the .env user
+            access to it; see scripts/README.md.
+
+            Each key appears twice on purpose. `<env>` sets the process environment and $_ENV, and
+            `<server>` sets $_SERVER. Laravel's dotenv repository reads $_SERVER first, so without
+            the `<server>` half an inherited variable would still win: with only `<env force="true">`,
+            `DB_DATABASE=krayin php artisan test` resolved to krayin and would have run migrate:fresh
+            against the live development database. `force="true"` additionally stops PHPUnit from
+            deferring to a variable that is already present.
+        -->
+        <server name="DB_CONNECTION" value="mysql" force="true" />
+        <server name="DB_HOST" value="127.0.0.1" force="true" />
+        <server name="DB_PORT" value="3306" force="true" />
+        <server name="DB_DATABASE" value="krayin_test" force="true" />
+        <env name="DB_CONNECTION" value="mysql" force="true" />
+        <env name="DB_HOST" value="127.0.0.1" force="true" />
+        <env name="DB_PORT" value="3306" force="true" />
+        <env name="DB_DATABASE" value="krayin_test" force="true" />
+
         <env name="MAIL_MAILER" value="array" />
         <env name="PULSE_ENABLED" value="false" />
         <env name="QUEUE_CONNECTION" value="sync" />

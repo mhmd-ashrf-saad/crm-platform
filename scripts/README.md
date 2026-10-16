@@ -6,6 +6,190 @@ instance. Assumes Ubuntu-like Linux with PHP, Composer, Docker and Node availabl
 The scripts referenced below live next to this file in `scripts/`, and they derive the project root
 from their own location, so the checkout works from any path on any machine.
 
+## Daily commands: `make`
+
+`make` (or `make help`) is the documented way to operate this checkout. It prints every target with
+a one-line description, and the header it prints resolves the live values it is working with — the
+port, `APP_ENV`, the live and test database names and the MySQL container:
+
+```bash
+make            # the same as: make help
+make setup      # bash scripts/provision-dev.sh, for provisioning described below
+make serve      # start the dev server (idempotent)
+make stop       # stop this checkout's dev server
+make status     # server, port owner, health codes, both databases, container
+make test       # Pest suite against the test database
+make test-db    # create/grant/migrate/seed the test database
+make lint       # ./vendor/bin/pint
+make admin      # php scripts/create-admin.php with credentials from the environment
+make logs       # tail -f the dev server log
+make db-reset   # DESTRUCTIVE: wipe the dev database, rebuild it and recreate the admin (CONFIRM + KRAYIN_ADMIN_* required)
+make db-shell   # MySQL shell on the live database as the .env user
+```
+
+| Target | What it does |
+| ------ | ------------ |
+| `help` | Lists the targets (the default target). |
+| `setup` | Runs `scripts/provision-dev.sh`, described below. A fresh install still needs `KRAYIN_ADMIN_EMAIL` and `KRAYIN_ADMIN_PASSWORD`. |
+| `serve` | Starts `php artisan serve` detached on the app port, logging to `storage/logs/serve.log`. |
+| `stop` | Stops the dev server this checkout is running. |
+| `restart` | `stop` followed by `serve`. |
+| `status` | One screen of state: listener pid, `GET /` and `/admin/login` codes, live database counts, test database table count, container state. |
+| `test-db` | Creates the database `phpunit.xml` pins, grants the `.env` user access, then migrates and seeds it. Idempotent. |
+| `test` | Migrates and seeds the test database, then runs `php artisan test --compact`. Refuses when the test database is missing or when it would reach the live one. |
+| `lint` / `lint-check` | Pint formatting / Pint in check-only mode. |
+| `admin` | Runs `scripts/create-admin.php`. Requires `KRAYIN_ADMIN_EMAIL` and `KRAYIN_ADMIN_PASSWORD`; with either missing it prints both names and exits 1. |
+| `logs` | `tail -f storage/logs/serve.log`; `LOG=storage/logs/laravel.log` for application errors. |
+| `db-reset` | Drops every table in the development database, re-migrates it, re-seeds it and recreates the administrator from `KRAYIN_ADMIN_EMAIL`/`KRAYIN_ADMIN_PASSWORD`, so it always ends fully installed. Its confirmation must be that database's name (`CONFIRM=krayin`) and both credentials must be set. See the guards below. |
+| `db-shell` | A MySQL shell on the live database as the `.env` user. |
+
+Nothing in the Makefile is a credential: every password is read from `.env` at run time and handed to
+`docker`/`mysql` through the environment (`MYSQL_PWD`), never as a `-p<password>` argument.
+
+### `make serve` is idempotent, and `make stop` does not guess
+
+`make serve` first asks `ss` which process owns the listening socket (`ss -ltnpH`, matched on the
+port whatever bind address it is on — `127.0.0.1`, `0.0.0.0`, `::` or a specific interface). If
+something is already listening there is no second
+server: if the owner's `/proc/<pid>/cwd` is inside this checkout, `serve` reports the pid and exits 0;
+if it is not, `serve` refuses and exits 1 without starting anything or killing anything.
+
+`make stop` identifies its own processes the same way — port ownership plus `/proc/<pid>/cwd` — and
+adds the `php artisan serve` supervisor, which does not own the socket, by matching its command line
+with both ends anchored and any `--host` value. Matching on the port rather than on
+`127.0.0.1:<port>` matters: a server started with `--host=0.0.0.0` was invisible to `make stop`, which
+printed `nothing to stop` and exited 0 while the server kept running. It never uses
+`pkill -f 'php artisan serve'`: that pattern is unanchored,
+re-reads the full command line of every process, and kills whatever shell or script merely mentions
+that text, including the one running the command. A listener whose working directory is not this
+checkout is reported and left alone, and `make stop` on a port that is already free prints
+`nothing to stop` and exits 0.
+
+### `make db-reset` refuses more often than it runs
+
+It is the only destructive target. The connection is resolved once, at run time, and then handed to
+`artisan` unchanged: `DB_DATABASE`, `DB_HOST`, `DB_PORT` and `DB_CONNECTION` come from the caller's
+environment when set — Laravel reads those same variables, so artisan would use them anyway — and
+from `.env` otherwise. One resolved set feeds the guards and the wipe, so the guard and the action
+cannot disagree about which database is at stake. `APP_ENV` is deliberately read from `.env` alone:
+a caller cannot declare a production instance a development one. That does **not** mean a caller's
+`APP_ENV` protects anything — setting `APP_ENV=production` in the environment is ignored by the
+guard, and an instance whose `.env` says `local` is still wiped. The caller's `APP_ENV=production`
+did not save the instance that was wiped while this rule was being tested, which is exactly why a
+guard must never be tested against the live database: test it against a scratch database. It refuses
+unless all of the following hold:
+
+- `CONFIRM` is exactly the resolved database name — `make db-reset CONFIRM=krayin` for the default
+  instance. Anything else is refused, including the old generic `CONFIRM=reset`, and the refusal names
+  the database it would have destroyed together with the exact token to type instead. A confirmation
+  that names its target cannot be typed out of habit while testing a guard.
+- The resolved name is non-empty.
+- `KRAYIN_ADMIN_EMAIL` and `KRAYIN_ADMIN_PASSWORD` are both set; the refusal names the variable that
+  is missing. The credentials are required before anything is destroyed, because a permitted reset
+  recreates the administrator (below), and an operator with no credentials to give has no database
+  they should be firing this target at.
+- `APP_ENV` in `.env` is `local`.
+- The resolved database is not the test database and not a MySQL system database.
+- The resolved host is a loopback address (`127.0.0.1`, `localhost` or `::1`), so a remote host is
+  never a target.
+- The resolved connection is `mysql` or `mariadb`.
+- The MySQL container is running.
+- `bootstrap/cache/config.php` does not exist. When it does, artisan reads the database name from the
+  cache while the guards read the environment and `.env`, so the two can disagree: with a cache baked
+  to database A, `DB_DATABASE=B CONFIRM=B make db-reset` printed `DESTROYING database 'B'` and then
+  wiped A. Clear the cache with `php artisan config:clear`.
+
+Only then does it print the database, host, port and container it is about to destroy, and run
+`db:wipe`, `migrate`, `db:seed` and finally `scripts/create-admin.php` with the supplied credentials.
+Because the same resolved name feeds the guard and the wipe, a
+scratch database can be exercised safely, with the guard and the wipe aimed at the same name:
+
+```bash
+KRAYIN_ADMIN_EMAIL='admin@client.test' KRAYIN_ADMIN_PASSWORD='<chosen-password>' \
+DB_DATABASE=krayin_scratch CONFIRM=krayin_scratch make db-reset
+```
+
+That wipes and rebuilds exactly that database, which is how this rule is verified without ever
+pointing the target at the development database. A permitted reset always ends **fully installed**:
+one administrator row for `KRAYIN_ADMIN_EMAIL` (the installer's placeholder admin is replaced),
+`storage/installed`, and `core_config installation.completed=1`. That is deliberately more than the
+test database's migrated-and-seeded baseline, which never carries an administrator. To erase and
+rebuild through the provisioning path instead — including a
+new `APP_KEY` — use `bash scripts/provision-dev.sh --reinstall`, which has its own warnings.
+
+## The test database
+
+The suite never touches the development database. `phpunit.xml` pins the test connection to
+`krayin_test` on the same container:
+
+```xml
+<server name="DB_CONNECTION" value="mysql" force="true" />
+<server name="DB_HOST" value="127.0.0.1" force="true" />
+<server name="DB_PORT" value="3306" force="true" />
+<server name="DB_DATABASE" value="krayin_test" force="true" />
+<env    name="DB_CONNECTION" value="mysql" force="true" />
+<env    name="DB_HOST" value="127.0.0.1" force="true" />
+<env    name="DB_PORT" value="3306" force="true" />
+<env    name="DB_DATABASE" value="krayin_test" force="true" />
+```
+
+None of that is a secret, which is why it is committed: a database name, a host and a port. There is
+deliberately no `DB_PASSWORD` and no `DB_USERNAME` in `phpunit.xml` — the credential stays in
+`.env`, where it already lives, and the suite inherits it. Before this was added the suite inherited
+`DB_DATABASE=krayin` from `.env` as well, so the first test written with `RefreshDatabase` would have
+run `migrate:fresh` against the live development database.
+
+Each key is set twice on purpose. `<env>` sets the process environment and `$_ENV`; `<server>` sets
+`$_SERVER`. Laravel's dotenv repository reads `$_SERVER` first, so with `<env>` alone
+`DB_DATABASE=krayin php artisan test` still resolved to `krayin` — the `<server>` entries are what
+make the pin hold against an inherited variable, and `force="true"` stops PHPUnit from deferring to a
+variable that is already set. The pin is therefore not overridable from the shell; changing it means
+editing `phpunit.xml`.
+
+### Creating it
+
+```bash
+make test-db          # create, grant, migrate, seed
+make test             # migrate + seed, then run the suite
+```
+
+`make test-db` creates `krayin_test` with the root password from `.env` (`DB_ROOT_PASSWORD`), grants
+the `.env` user (`DB_USERNAME`, `krayin` here) full access to it, then migrates and seeds it. The
+application's database user is created by the container with a grant on `krayin` only, which is why
+this step exists and why it needs root. Both targets are idempotent and can be re-run at any time.
+The suite uses `DatabaseTransactions` against a migrated, seeded database — the schema and seed data a
+freshly provisioned instance has, without its administrator row — so `make test` migrates and seeds
+before it runs. That is a different baseline from `make db-reset`, which now also recreates the
+administrator. The seeders are
+idempotent; a database created by an older `make test-db` that lacks the seeded default lead pipeline
+is repaired by the next `make test`. `make test-db` refuses, before it creates or migrates anything,
+when `bootstrap/cache/config.php` exists, because a cached config beats both `.env` and `phpunit.xml`.
+
+### When the test database is missing
+
+`make test` refuses before it starts, naming the database and the fix:
+
+```text
+test: test database 'krayin_test' does not exist on crm-platform-mysql - run: make test-db
+```
+
+Bypassing the Makefile and running `php artisan test` directly is safe but not loud: Laravel's
+`migrate --force` creates a missing MySQL database itself
+(`vendor/laravel/framework/src/Illuminate/Database/Console/Migrations/MigrateCommand.php`), and the
+application user can create `krayin_test` because its grant is `ALL PRIVILEGES ON krayin_test.*` — so
+the suite silently creates and migrates the **test** database. It cannot fall back to `krayin`: the
+pin above is what decides the target, and `make test` additionally refuses when `phpunit.xml` pins the
+live database name or pins nothing at all, or when `bootstrap/cache/config.php` exists (a cached
+config beats both `.env` and `phpunit.xml`, so run `php artisan config:clear`).
+
+### A second install
+
+The four pinned values describe the default instance: `127.0.0.1:3306`, database `krayin_test`. A
+second checkout provisioned with its own `KRAYIN_DB_HOST_PORT` (see [Adding a second
+install](#adding-a-second-install)) must have those values changed in its own `phpunit.xml`, and its
+`make test-db` will then create the database on its own server. Leaving them alone means the tests of
+the second checkout run against the first install's test database.
+
 ## What `scripts/provision-dev.sh` does
 
 One command sets up a fresh clone or a fresh machine:
@@ -104,6 +288,11 @@ KRAYIN_ADMIN_NAME='Mohamed Ashraf' php scripts/create-admin.php
 
 ## Running the app
 
+Use `make serve`, `make stop`, `make restart` and `make status` for daily work; they wrap the commands
+below, including the process identification and the ownership checks. The raw commands are kept here
+because they are what those targets do, and because they are what to reach for when `make` itself is
+not available.
+
 ```bash
 # start (detached)
 setsid nohup php artisan serve --host=127.0.0.1 --port=8000 > storage/logs/serve.log 2>&1 < /dev/null &
@@ -125,7 +314,8 @@ Check it: `curl -s -o /dev/null -w '%{http_code}\n' http://127.0.0.1:8000/admin/
 `200`. Logs are in `storage/logs/`; `storage/logs/serve.log` is the dev server's request log, and
 `storage/logs/laravel.log` appears only when the application reports an error.
 
-MySQL is the Docker container on `127.0.0.1:3306`:
+MySQL is the Docker container on `127.0.0.1:3306` only (`-p 127.0.0.1:3306:3306`), so it is not
+reachable from the LAN:
 
 ```bash
 docker ps --filter name=crm-platform-mysql

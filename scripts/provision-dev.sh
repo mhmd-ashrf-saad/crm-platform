@@ -35,7 +35,7 @@
 #   KRAYIN_APP_PORT           port for `artisan serve`                    [8000]
 #   KRAYIN_DB_CONTAINER       MySQL container name                        [crm-platform-mysql]
 #   KRAYIN_DB_VOLUME          NAMED docker volume for /var/lib/mysql      [crm-platform-mysql-data]
-#   KRAYIN_DB_HOST_PORT       host port published for MySQL               [3306]
+#   KRAYIN_DB_HOST_PORT       host port published for MySQL, bound to 127.0.0.1 only [3306]
 #   KRAYIN_DB_NAME            database name                               [krayin]
 #   KRAYIN_DB_USER            application database user                   [same as KRAYIN_DB_NAME]
 #   KRAYIN_SESSION_COOKIE     session cookie name (create path only)      [krayin_crm_session_<slug of KRAYIN_DB_NAME>]
@@ -388,7 +388,7 @@ if [ "$CONTAINER_EXISTS" -eq 1 ]; then
         echo "    docker rm -f $DB_CONTAINER && docker run -d --name $DB_CONTAINER --restart unless-stopped \\" >&2
         echo "      -v $DB_VOLUME:/var/lib/mysql -e MYSQL_ROOT_PASSWORD=... \\" >&2
         echo "      -e MYSQL_DATABASE=$DB_NAME -e MYSQL_USER=$DB_USER -e MYSQL_PASSWORD=... \\" >&2
-        echo "      -p $DB_HOST_PORT:3306 mysql:8.4" >&2
+        echo "      -p 127.0.0.1:$DB_HOST_PORT:3306 mysql:8.4" >&2
         exit 1
     fi
 
@@ -417,7 +417,7 @@ else
         -e MYSQL_DATABASE="$DB_NAME" \
         -e MYSQL_USER="$DB_USER" \
         -e MYSQL_PASSWORD="$DB_PASSWORD" \
-        -p "$DB_HOST_PORT:3306" mysql:8.4 >/dev/null
+        -p "127.0.0.1:$DB_HOST_PORT:3306" mysql:8.4 >/dev/null
 fi
 
 echo -n "  waiting for MySQL to accept the application login"
