@@ -3,7 +3,7 @@ import { expect, test } from "../../fixtures/AdminFixtures";
 import { SourcesPage } from "../../pages/settings/SourcesPage";
 import { generateFirstName } from "../../utils/faker";
 
-test.describe("source managment",async()=>{
+test.describe("source managment", () => {
     const sourceName=generateFirstName();
     const updateSourceName=sourceName+"udated";
     test('verify create source',async({adminPage})=>{

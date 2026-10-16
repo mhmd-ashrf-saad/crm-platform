@@ -3,7 +3,7 @@ import { AdminPage } from "../../pages/AdminPage";
 import { WarehouseData, warehouseData, WarehousePage } from "../../pages/settings/WarehousesPage";
 import { generateDescription, generateEmail, generateLastName, generatePhoneNumber } from "../../utils/faker";
 
-test.describe('warehouse management', async () => {
+test.describe('warehouse management', () => {
     const updateWareshousedata:WarehouseData={
             name: generateLastName(),
             description: generateDescription().slice(0,20),

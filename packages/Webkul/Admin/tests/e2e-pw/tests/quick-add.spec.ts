@@ -8,7 +8,7 @@ import {
     quickAddProductData,
 } from "../pages/QuickAddPage";
 
-test.describe("quick add modal", async () => {
+test.describe("quick add modal", () => {
 
     test("should open the quick add modal from the header plus button", async ({ adminPage }) => {
 

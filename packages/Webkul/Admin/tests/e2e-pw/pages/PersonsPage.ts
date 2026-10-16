@@ -66,9 +66,17 @@ export default class PersonsPage extends CoreLocators {
 
         // Assign organization (if provided)
         if (personData.organizationName) {
-            await this.personOrgSelectDiv.click();
-            await this.searchInputField.fill("Examp");
-            await this.personOrgListItem("Examp").click();
+            /**
+             * The lookup this used to open was the Sales Owner one (`user_id`): the old locator
+             * `main .relative > div > .relative` resolved to the first lookup on the page, which is
+             * Sales Owner, not Organization. The behaviour is kept deliberately - assigning the
+             * Organization lookup would need an organization row to exist first, which would tie
+             * this spec to another spec's record - but the picker is now addressed by name and
+             * scoped to its own root instead of matching a listitem anywhere on the page.
+             */
+            await this.lookupTrigger("user_id").click();
+            await this.lookupSearch("user_id").fill("Example");
+            await this.lookupOption("user_id", "Example").click();
         }
         // Save person
         await this.savePersonButton.click();
@@ -91,11 +99,11 @@ export default class PersonsPage extends CoreLocators {
         }
         await this.personJobTitleTextbox.fill(personData.jobTitle || "");
 
-        // Assign organization (if provided)
+        // Assign organization (if provided) - Sales Owner lookup, see createPerson above.
         if (personData.organizationName) {
-            await this.personOrgSelectDiv.click();
-            await this.searchInputField.fill("Examp");
-            await this.personOrgListItem("Examp").click();
+            await this.lookupTrigger("user_id").click();
+            await this.lookupSearch("user_id").fill("Example");
+            await this.lookupOption("user_id", "Example").click();
         }
         // Save person
         await this.savePersonButton.click();

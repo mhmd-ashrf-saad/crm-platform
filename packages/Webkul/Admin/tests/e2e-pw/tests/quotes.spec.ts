@@ -8,7 +8,7 @@ import { ProductData, productData, ProductPage } from "../pages/ProductPage";
 import { quoteData, QuotesPage, } from "../pages/QuotesPage";
 import { generateDescription, generateEmail, generateLocation, generateName, generatePhoneNumber, generateSKU } from "../utils/faker";
 
-test.describe("quotes mangement", async () => {
+test.describe("quotes mangement", () => {
 
   test("verify create quote", async ({ adminPage }) => {
     const person = new PersonsPage(adminPage);

@@ -1,7 +1,7 @@
 import { expect, test } from "../fixtures/AdminFixtures";
 import PersonsPage, { buildPersonData } from "../pages/PersonsPage";
 
-test.describe("person managment", async () => {
+test.describe("person managment", () => {
     /**
      * This spec builds its own person rather than importing the shared `personData`. Email and
      * contact number are unique in Krayin, and the lead and quote specs create a person too — with

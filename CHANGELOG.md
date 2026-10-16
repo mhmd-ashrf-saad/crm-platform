@@ -2,6 +2,14 @@
 
 This changelog consists of the bug & security fixes and new features being included in the releases listed below.
 
+## **v2.2.8 (Upcoming)**
+
+* [fixed] Fixed the Admin Playwright suite failing intermittently on the organization and person create cases: the tests typed into the form before the page had finished loading, so the mount discarded the value and the form was never submitted.
+
+* [enhancement] Scoped the contact lookup pickers to their own popup in the Playwright suite, and made each organization case create the record it acts on, so one failure no longer reports as three.
+
+* [enhancement] Moved the `beads` skill into the canonical `.github/skills` directory, linked it from `.agents/skills`, and made the skills-consistency workflow run for changes under `.agents/`.
+
 ## **v2.2.7 (16th of Oct 2026)**
 
 * [fixed] Fixed a web form submission creating a duplicate contact when the address differed only in case.

@@ -13,8 +13,6 @@ export default class CoreLocators {
     readonly personEmailTextbox: Locator;
     readonly personPhoneTextbox: Locator;
     readonly personJobTitleTextbox: Locator;
-    readonly personOrgSelectDiv: Locator;
-    readonly personOrgListItem: (text: string) => Locator;
 
     // Links and buttons
     readonly createOrgLink: Locator;
@@ -31,10 +29,6 @@ export default class CoreLocators {
     // Select dropdowns
     readonly orgCountryCombobox: Locator;
     readonly orgStateSelect: Locator;
-
-    // Other UI elements
-    readonly orgExtraDetailsDiv: Locator;
-    readonly orgExampleListItem: (text: string) => Locator;
 
     // Buttons
     readonly saveQuoteButton: Locator;
@@ -433,9 +427,6 @@ export default class CoreLocators {
         this.orgCityTextbox = page.getByRole('textbox', { name: 'City' });
         this.orgPostcodeTextbox = page.getByRole('textbox', { name: 'Postcode' });
 
-        this.orgExtraDetailsDiv = page.locator('div').filter({ hasText: /^Click to add$/ });
-        this.orgExampleListItem = (text: string) => page.getByRole('listitem').filter({ hasText: text });
-
         // Person Locators Initialization
         this.createPersonLink = page.getByRole('link', { name: 'Create Person' });
         this.savePersonButton = page.getByRole('button', { name: 'Save Person' });
@@ -443,9 +434,6 @@ export default class CoreLocators {
         this.personEmailTextbox = page.getByRole('textbox', { name: 'Emails *' });
         this.personPhoneTextbox = page.getByRole('textbox', { name: 'Contact Numbers' });
         this.personJobTitleTextbox = page.getByRole('textbox', { name: 'Job Title' });
-        this.personOrgSelectDiv = page.locator('main .relative > div > .relative, form .relative > div > .relative').first();
-
-        this.personOrgListItem = (text: string) => page.getByRole('listitem').filter({ hasText: text });
 
         // Lead
         this.createLeadButton = page.getByRole('link', { name: 'Create Lead' });
@@ -582,6 +570,34 @@ export default class CoreLocators {
     async selectListItmeByName(value: string) {
         return this.page.getByRole('listitem').filter({ hasText: `${value}` });
     }
+
+    /**
+     * A lookup attribute (`<v-lookup-component>`) is identified by the hidden input that carries its
+     * field name; the component's root element is that input's parent. Scoping every locator to that
+     * root keeps the result list out of the rest of the page: the admin account is named
+     * "Example Admin", so a whole-page `getByRole('listitem').filter({ hasText: 'Example' })` matched
+     * a row of whatever picker happened to be open anywhere on the page rather than the picker the
+     * test had just opened, and matched nothing at all once that popup closed.
+     */
+    lookupRoot(name: string): Locator {
+        return this.page.locator(`input[name="${name}"]`).locator("xpath=..");
+    }
+
+    /** The clickable header of a lookup control - the element that opens and closes its popup. */
+    lookupTrigger(name: string): Locator {
+        return this.lookupRoot(name).locator("div").first();
+    }
+
+    /** The popup's own search box, which only exists while the popup is open. */
+    lookupSearch(name: string): Locator {
+        return this.lookupRoot(name).getByRole("textbox");
+    }
+
+    /** One result row of an open lookup popup. */
+    lookupOption(name: string, text: string): Locator {
+        return this.lookupRoot(name).getByRole("listitem").filter({ hasText: text });
+    }
+
     async massDelete() {
         await this.multiSelectCheckbox.click();
         if(await this.deleteButton.isVisible())  {

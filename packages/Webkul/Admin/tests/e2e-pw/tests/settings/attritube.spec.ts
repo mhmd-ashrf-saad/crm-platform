@@ -3,7 +3,7 @@ import { generateFullName, generateSKU } from "../../utils/faker";
 import { attributeData, AttributesPage } from "../../pages/settings/AttributesPage";
 import { test } from "../../fixtures/AdminFixtures";
 import { AdminPage } from "../../pages/AdminPage";
-test.describe("attribute managment ", async () => {
+test.describe("attribute managment ", () => {
 
     test("should create an attribute", async ({ adminPage }) => {
         const attributePage = new AttributesPage(adminPage);

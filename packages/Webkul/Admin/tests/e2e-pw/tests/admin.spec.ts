@@ -2,7 +2,7 @@ import { test, expect } from "../fixtures/AdminFixtures";
 import { AdminPage } from "../pages/AdminPage";
 
 
-test.describe("admin mangement", async () => {
+test.describe("admin mangement", () => {
 
     test("verify admin login", async ({ adminPage }) => {
 

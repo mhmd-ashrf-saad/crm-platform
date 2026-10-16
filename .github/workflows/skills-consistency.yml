@@ -7,6 +7,7 @@ on:
   pull_request:
     paths:
       - '.github/skills/**'
+      - '.agents/**'
       - '.ai/**'
       - '.claude/**'
       - '.codex/**'
@@ -21,6 +22,7 @@ on:
       - main
     paths:
       - '.github/skills/**'
+      - '.agents/**'
       - '.ai/**'
       - '.claude/**'
       - '.codex/**'

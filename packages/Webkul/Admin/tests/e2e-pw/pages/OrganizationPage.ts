@@ -9,14 +9,32 @@ export type OrganizationData = {
     city: string;
     postcode: string;
 };
- export  const organizationData: OrganizationData = {
-  name:  generateName(),
-  address: generateLocation() ,
-  country: "IN",               // India country code
-  state: "DL",                 // Delhi state code
-  city: "New Delhi",
-  postcode: "110015",
-};
+
+/**
+ * Build an organization the caller owns.
+ *
+ * The shared `organizationData` below is a constant, but a spec that let create, update and delete
+ * all act on it turned one failure into three: update waited out its whole test timeout for a row
+ * that was never written, and delete then searched for a name that did not exist. Each case builds
+ * its own instance instead, so one defect fails one test.
+ */
+export function buildOrganizationData(overrides: Partial<OrganizationData> = {}): OrganizationData {
+    return {
+        name: generateName(),
+        address: generateLocation(),
+        country: "IN",
+        state: "DL",
+        city: "New Delhi",
+        postcode: "110015",
+        ...overrides,
+    };
+}
+
+/**
+ * Default instance kept for existing importers (the person form and the data-transfer spec read the
+ * name). Do not let more than one case act on it.
+ */
+export const organizationData: OrganizationData = buildOrganizationData();
 export default class OrganizationPage extends CoreLocators{
 
     
@@ -47,24 +65,25 @@ export default class OrganizationPage extends CoreLocators{
     await this.orgCityTextbox.fill(orgData.city);
     await this.orgPostcodeTextbox.fill(orgData.postcode);
 
-    await this.orgExtraDetailsDiv.nth(2).click();
-
-    await this.searchInputField.fill('exampl');
-    await this.orgExampleListItem('Example').click();
-
-
+    /**
+     * Sales Owner is the organization form's one lookup attribute. Every locator below is scoped to
+     * that lookup's own root, identified by the hidden input it renders (`user_id`); the previous
+     * whole-page `getByRole('listitem').filter({ hasText: 'Example' })` matched the listitem of
+     * whatever picker happened to be open, not necessarily this one.
+     */
+    await this.lookupTrigger("user_id").click();
+    await this.lookupSearch("user_id").fill("Example");
+    await this.lookupOption("user_id", "Example").click();
 
     // Save organization
     await this.saveOrganizationButton.click();
-    await expect(this.organizationCreateSuccessMessage.first()).toBeVisible();
-    // await this.searchInputExact.fill(orgData.name);
-    // await this.page.keyboard.press('Enter');
-    console.log("There’s an issue: the organization search isn’t working and needs to be fixed.");
 
-
+    /**
+     * The created row in the list is the signal that matters - the toast is transient and may be
+     * gone before it is asserted, while the row stays. The toast is still checked, after the row.
+     */
     await expect(this.page.getByText(orgData.name).first()).toBeVisible();
-
-   
+    await expect(this.organizationCreateSuccessMessage.first()).toBeVisible();
     }
 
 

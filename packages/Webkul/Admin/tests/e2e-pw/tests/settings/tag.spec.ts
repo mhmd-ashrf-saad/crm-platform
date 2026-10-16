@@ -1,7 +1,7 @@
 import { expect, test } from "../../fixtures/AdminFixtures";
 import { TagsPage } from "../../pages/settings/TagsPage";
 
-test.describe("tag management",async()=>{
+test.describe("tag management", () => {
     test("verify create tag",async({adminPage})=>{
         const tagsPage=new TagsPage(adminPage);
         await tagsPage.navigateToTags();

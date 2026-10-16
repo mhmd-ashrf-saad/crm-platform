@@ -1,7 +1,7 @@
 import { test } from "../../fixtures/AdminFixtures";
 import { groupData, GroupPage } from "../../pages/settings/GroupsPage";
 
-test.describe("group managment",async()=>{
+test.describe("group managment", () => {
     test("verify create group",async({adminPage})=>{
         const groupPage=new GroupPage(adminPage);
         await groupPage.navigateToGroups();

@@ -1,7 +1,7 @@
 import { expect, test } from "../fixtures/AdminFixtures";
 import { mailData, MailPage } from "../pages/MailPage";
 
-test.describe("mail management", async () => {
+test.describe("mail management", () => {
 
     test("should compose and send an email", async ({ adminPage }) => {
 

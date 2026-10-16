@@ -4,7 +4,7 @@ import PersonsPage from "../pages/PersonsPage";
 import { generateDescription, generateEmail, generateName, generatePhoneNumber, generateSKU } from "../utils/faker";
 
 
-test.describe("lead management", async () => {
+test.describe("lead management", () => {
 
     const updatedLeadData={
             title: generateName(),
