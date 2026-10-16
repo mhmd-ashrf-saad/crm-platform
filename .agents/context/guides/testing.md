@@ -9,8 +9,15 @@ one.
 
 ```bash
 make test      # migrate + seed krayin_test, then php artisan test --compact
-make test-db   # create, grant, migrate and seed krayin_test (idempotent)
+make test-db   # -> bash scripts/prepare-test-db.sh (idempotent)
+bash scripts/prepare-test-db.sh --check   # read-only: resolved db/host/port/user + action
 ```
+
+`make test-db` and CI call the **same** script, `scripts/prepare-test-db.sh`. It reads
+`krayin_test` from `phpunit.xml` (the pin, not the command line), resolves the connection from the
+caller's environment then `.env`, creates the database and grants the `.env` user, then migrates and
+seeds it. Because both gates run one path, adding a database name to `phpunit.xml` without
+provisioning it is the exact failure mode that turned the CI Pest job red once — do not repeat it.
 
 `make test` refuses to start when the test database is missing, when
 `phpunit.xml` pins the live database name or pins nothing, when the container is
@@ -48,12 +55,17 @@ the first install's test database.
 
 ## Creating the test database
 
-`make test-db` needs `DB_ROOT_PASSWORD` from `.env`: the container creates the
-application user with a grant on `krayin` only, so creating `krayin_test` and
-granting that user access requires root. The suite uses `DatabaseTransactions`
-against a migrated, seeded baseline — the schema and seed data a fresh install
-has, without its administrator row, which is deliberately a smaller baseline
-than `make db-reset` now produces — which is why `make test` migrates and seeds
+`scripts/prepare-test-db.sh` is the single provisioning path. It needs a privileged MySQL user:
+as `root` with `DB_ROOT_PASSWORD` from `.env` on this machine, or as the application user itself
+where that user is root (the CI service container sets `DB_USERNAME=root`/`DB_PASSWORD=root` and a
+matching `DB_ROOT_PASSWORD`). Creation runs over PDO, which behaves the same on a CI runner and
+locally; only if every PDO attempt fails does it fall back to `docker exec` into the MySQL
+container. No host `mysql` client is required, and when no route works the script exits non-zero
+naming what is missing.
+
+The suite uses `DatabaseTransactions` against a migrated, seeded baseline — the schema and seed data
+a fresh install has, without its administrator row, which is deliberately a smaller baseline than
+`make db-reset` now produces — which is why both `make test-db` and `make test` migrate and seed
 before running.
 
 Bypassing the Makefile with a bare `php artisan test` is safe but not loud:

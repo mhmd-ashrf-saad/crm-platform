@@ -35,7 +35,7 @@ make db-shell   # MySQL shell on the live database as the .env user
 | `stop` | Stops the dev server this checkout is running. |
 | `restart` | `stop` followed by `serve`. |
 | `status` | One screen of state: listener pid, `GET /` and `/admin/login` codes, live database counts, test database table count, container state. |
-| `test-db` | Creates the database `phpunit.xml` pins, grants the `.env` user access, then migrates and seeds it. Idempotent. |
+| `test-db` | Provisions the database `phpunit.xml` pins (via `scripts/prepare-test-db.sh`): create, grant the `.env` user access, migrate and seed. Idempotent. |
 | `test` | Migrates and seeds the test database, then runs `php artisan test --compact`. Refuses when the test database is missing or when it would reach the live one. |
 | `lint` / `lint-check` | Pint formatting / Pint in check-only mode. |
 | `admin` | Runs `scripts/create-admin.php`. Requires `KRAYIN_ADMIN_EMAIL` and `KRAYIN_ADMIN_PASSWORD`; with either missing it prints both names and exits 1. |
@@ -146,24 +146,44 @@ make the pin hold against an inherited variable, and `force="true"` stops PHPUni
 variable that is already set. The pin is therefore not overridable from the shell; changing it means
 editing `phpunit.xml`.
 
-### Creating it
+### Creating it: one script, local and CI
 
 ```bash
-make test-db          # create, grant, migrate, seed
+make test-db          # -> bash scripts/prepare-test-db.sh
 make test             # migrate + seed, then run the suite
 ```
 
-`make test-db` creates `krayin_test` with the root password from `.env` (`DB_ROOT_PASSWORD`), grants
-the `.env` user (`DB_USERNAME`, `krayin` here) full access to it, then migrates and seeds it. The
-application's database user is created by the container with a grant on `krayin` only, which is why
-this step exists and why it needs root. Both targets are idempotent and can be re-run at any time.
-The suite uses `DatabaseTransactions` against a migrated, seeded database — the schema and seed data a
-freshly provisioned instance has, without its administrator row — so `make test` migrates and seeds
-before it runs. That is a different baseline from `make db-reset`, which now also recreates the
-administrator. The seeders are
-idempotent; a database created by an older `make test-db` that lacks the seeded default lead pipeline
-is repaired by the next `make test`. `make test-db` refuses, before it creates or migrates anything,
-when `bootstrap/cache/config.php` exists, because a cached config beats both `.env` and `phpunit.xml`.
+Both `make test-db` and the CI workflow call **`scripts/prepare-test-db.sh`**, so the local gate and
+the CI gate use the same provisioning path and cannot drift apart. The script reads the database
+name from `phpunit.xml` — the pin above is the single source of truth — and resolves the connection
+the way the application does: the caller's environment first, then `.env`. It creates the database
+if it is absent, grants the application user (`DB_USERNAME`, `krayin` here) full access to it, then
+migrates and seeds it. The application's database user is created by the container with a grant on
+`krayin` only, which is why the create-and-grant step exists and why it needs a privileged user.
+
+Creation is attempted over PDO first, because PDO behaves identically on a CI runner and on this
+machine: as `root` with `DB_ROOT_PASSWORD` when that is set (the local container), otherwise as the
+application user itself (on the CI service container that user is `root`). Only if every PDO attempt
+fails does the script fall back to `docker exec` into the MySQL container. No host `mysql` client is
+required on either side, and when no route works the script exits non-zero naming exactly what is
+missing instead of leaving the suite to fail confusingly later.
+
+`bash scripts/prepare-test-db.sh --check` is the read-only dry run: it prints the resolved database,
+host, port, user and the action it would take, and writes nothing.
+
+The script is idempotent, and both targets can be re-run at any time. `make test` migrates and seeds
+before it runs because the suite uses `DatabaseTransactions` against a migrated, seeded database —
+the schema and seed data a freshly provisioned instance has, without its administrator row. That is
+a different baseline from `make db-reset`, which also recreates the administrator. The script
+refuses, before it creates or migrates anything, when `bootstrap/cache/config.php` exists (a cached
+config beats both `.env` and `phpunit.xml`) and when the pin names the live database.
+
+CI used to rewrite `.env` to `DB_DATABASE=krayin` and install against that database, but never
+created or migrated the pinned `krayin_test`, so the suite ran against a database that had never
+been prepared. That is exactly the defect this path removes: a database name added to `phpunit.xml`
+must be provisioned by the same step in both places. The CI workflow now calls this script between
+the installer and the pest run, and pins the MySQL service to host port 3306 so the suite's
+`DB_PORT` pin is reachable there too.
 
 ### When the test database is missing
 
@@ -188,7 +208,9 @@ The four pinned values describe the default instance: `127.0.0.1:3306`, database
 second checkout provisioned with its own `KRAYIN_DB_HOST_PORT` (see [Adding a second
 install](#adding-a-second-install)) must have those values changed in its own `phpunit.xml`, and its
 `make test-db` will then create the database on its own server. Leaving them alone means the tests of
-the second checkout run against the first install's test database.
+the second checkout run against the first install's test database. `scripts/prepare-test-db.sh`
+warns when the pinned `DB_HOST`/`DB_PORT` disagree with what the environment and `.env` resolve, so
+the two can be brought back together before the suite runs.
 
 ## What `scripts/provision-dev.sh` does
 

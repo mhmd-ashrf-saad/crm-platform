@@ -20,7 +20,7 @@ jobs:
           MYSQL_ROOT_PASSWORD: root
           MYSQL_DATABASE: krayin
         ports:
-          - 3306
+          - 3306:3306
         options: --health-cmd="mysqladmin ping" --health-interval=10s --health-timeout=5s --health-retries=5
 
     steps:
@@ -47,9 +47,19 @@ jobs:
           sed -i "s|^\(DB_DATABASE=\s*\).*$|\1krayin|" .env
           sed -i "s|^\(DB_USERNAME=\s*\).*$|\1root|" .env
           sed -i "s|^\(DB_PASSWORD=\s*\).*$|\1root|" .env
+          # prepare-test-db.sh uses DB_ROOT_PASSWORD for its
+          # privileged PDO connection. The service container's
+          # MYSQL_ROOT_PASSWORD is root, and .env.example has no
+          # such key, so drop any inherited line and append one.
+          sed -i "/^DB_ROOT_PASSWORD=/d" .env
+          echo 'DB_ROOT_PASSWORD=root' >> .env
 
       - name: Running Krayin Installer
-        run: php artisan krayin-crm:install --skip-env-check --skip-admin-creation
+        run: >-
+          php artisan krayin-crm:install --skip-env-check --skip-admin-creation
+
+      - name: Preparing Test Database
+        run: bash scripts/prepare-test-db.sh
 
       - name: Running Pest Test
         run: vendor/bin/pest --parallel --colors=always

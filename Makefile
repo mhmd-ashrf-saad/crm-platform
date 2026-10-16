@@ -217,31 +217,9 @@ status: ## Show the server, the databases and the app's health
 	    echo "container: $$container missing or stopped (start it with: make setup)"
 	fi
 
-test-db: ## Create the test database pinned in phpunit.xml and grant the .env user access
+test-db: ## Provision the phpunit.xml-pinned test database (scripts/prepare-test-db.sh; idempotent)
 	@cd '$(ROOT)'
-	set -eu
-	test_db='$(TEST_DB)'
-	container='$(DB_CONTAINER)'
-	db_user="$$(sed -nE 's/^DB_USERNAME=(.*)/\1/p' .env | tail -1)"
-	root_pass="$$(sed -nE 's/^DB_ROOT_PASSWORD=(.*)/\1/p' .env | tail -1)"
-	live="$$(sed -nE 's/^DB_DATABASE=(.*)/\1/p' .env | tail -1)"
-	[ -n "$$test_db" ] || { echo "test-db: phpunit.xml pins no DB_DATABASE - fix that first" >&2; exit 1; }
-	[ -n "$$db_user" ] || { echo "test-db: DB_USERNAME is not set in .env" >&2; exit 1; }
-	[ "$$test_db" != "$$live" ] || { echo "test-db: refusing - phpunit.xml pins '$$test_db', the live database; the test database must be a separate one" >&2; exit 1; }
-	[ -n "$$root_pass" ] || { echo "test-db: DB_ROOT_PASSWORD is empty in .env - it is what creates the database and grants '$$db_user' access" >&2; exit 1; }
-	# A cached config file beats .env and phpunit.xml: it would silently pin a different database.
-	[ ! -f bootstrap/cache/config.php ] || { echo "test-db: refusing - bootstrap/cache/config.php exists and would ignore .env and phpunit.xml; run: php artisan config:clear" >&2; exit 1; }
-	docker inspect -f '{{.State.Running}}' "$$container" >/dev/null 2>&1 || { echo "test-db: container '$$container' is not running - run: make setup" >&2; exit 1; }
-	docker exec -e MYSQL_PWD="$$root_pass" "$$container" mysql -uroot -e "CREATE DATABASE IF NOT EXISTS \`$$test_db\` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci; GRANT ALL PRIVILEGES ON \`$$test_db\`.* TO '$$db_user'@'%'; FLUSH PRIVILEGES;"
-	tables_q="SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = '$$test_db'"
-	tables="$$(docker exec -e MYSQL_PWD="$$root_pass" "$$container" mysql -uroot -N -B -e "$$tables_q")"
-	# The suite runs with DatabaseTransactions against a migrated, seeded database -- the same baseline a
-	# freshly provisioned instance has (the admin dashboard reads the default lead pipeline, which only
-	# the seeders create). DB_DATABASE is exported for these two commands only: Laravel's dotenv reader
-	# is immutable, so the exported value wins over .env and nothing else in the checkout changes.
-	DB_DATABASE="$$test_db" php artisan migrate --force
-	DB_DATABASE="$$test_db" php artisan db:seed --force
-	echo "test-db: '$$test_db' ready on $$container ($$tables tables before migrate; migrated and seeded), '$$db_user'@'%' granted access"
+	bash scripts/prepare-test-db.sh
 
 test: ## Run the Pest suite against the test database (refuses if it would reach the live one)
 	@cd '$(ROOT)'
