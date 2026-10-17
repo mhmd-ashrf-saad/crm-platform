@@ -15,6 +15,10 @@ export type MailData = {
  * acts on the first match, so a repeated subject makes a test trash or delete some earlier run's
  * mail and then fail to find its own — which is what made the trash tests flaky rather than
  * broken. The run suffix makes each run's subject its own.
+ *
+ * The same subject is deliberately reused by every case in a file, which is safe because each case
+ * searches inside one folder and selects every same-subject row. A draft that silently failed to
+ * save is a different fault: it leaves the folder empty rather than showing someone else's mail.
  */
 export const mailData: MailData = {
     replyTo: generateEmail(),
@@ -87,8 +91,47 @@ export class MailPage extends CoreLocators {
         await this.replyToInput.fill(mailData.replyTo);
         await this.subjectInput.fill(mailData.subject);
 
-        await this.editorFrame.locator('body').fill(mailData.body);
+        await this.fillMailBody(mailData.body);
+
         await this.sendButton.click();
+    }
+
+    /**
+     * Write the composer's message body, then wait until the form itself carries it.
+     *
+     * Two separate windows make the composer lose a body, and both are closed here.
+     *
+     * 1. TinyMCE creates its iframe before it has finished initializing. A `fill()` that lands in
+     *    that window is adopted by the body but never by the editor — the body keeps the raw string,
+     *    `getContent()` normalizes it, and no `change`/`keyup` fires — so the field stays empty. The
+     *    editor's own `initialized` flag is the state before a user can type into it at all.
+     * 2. `fill()` on a contenteditable emits an `input` event, but Krayin's `v-tinymce` copies the
+     *    editor content back into the VeeValidate `reply` field on `change`, `paste` and `keyup`
+     *    only. So even in a fully initialized editor the field still holds its previous value, and
+     *    the sync the editor's blur triggers races the submit handler the same click runs. When the
+     *    submit won, VeeValidate rejected the still-empty `reply` as required, the axios POST in
+     *    `save()` was never issued, and the draft silently did not exist.
+     *
+     * The key event makes the field agree with the editor the way real typing does; the textarea is
+     * the field's DOM mirror and what `new FormData(mailForm)` submits, so waiting on it is waiting
+     * on exactly the value the request would carry.
+     */
+    async fillMailBody(body: string) {
+        await this.page.waitForFunction(() => {
+            const tinymce = (window as any).tinymce;
+
+            const editor = tinymce?.get?.('reply') ?? tinymce?.activeEditor;
+
+            return Boolean(editor?.initialized);
+        });
+
+        const editorBody = this.editorFrame.locator('body');
+
+        await editorBody.fill(body);
+
+        await editorBody.press('End');
+
+        await expect(this.page.locator('textarea[name="reply"]')).not.toHaveValue('');
     }
     
     async saveDraftEmail(mailData: MailData, type: emailType) {
@@ -117,8 +160,25 @@ export class MailPage extends CoreLocators {
         await this.replyToInput.fill(mailData.replyTo);
         await this.subjectInput.fill(mailData.subject);
 
-        await this.editorFrame.locator('body').fill(mailData.body);
+        await this.fillMailBody(mailData.body);
+
+        /**
+         * Armed before the click and awaited before navigating away: the draft exists only once the
+         * composer has actually POSTed, and navigating first turned a submit that never happened
+         * into a confusing "no records" failure on the Draft page instead of a failure here.
+         */
+        const draftSaved = this.page.waitForResponse(
+            (response) =>
+                response.request().method() === 'POST'
+                && response.url().endsWith('/admin/mail/create')
+                && response.ok(),
+            { timeout: 15000 }
+        );
+
         await this.saveDraftButton.click();
+
+        await draftSaved;
+
         await this.navigateToMailDraftPage();
         await this.searchEmail(mailData.subject);
         await expect(this.page.getByRole('paragraph').filter({ hasText: mailData.subject }).first()).toBeVisible();
