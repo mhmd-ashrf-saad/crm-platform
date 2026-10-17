@@ -337,6 +337,7 @@ return [
         ],
         'layouts' => [
             'powered-by' => [
+                'description' => 'Açık kaynaklı bir proje olan Sijilna tarafından desteklenmektedir.',
             ],
             'header' => [
                 'mega-search' => [
@@ -2303,12 +2304,17 @@ return [
     'help' => [
         'index' => [
             'title' => 'Yardım ve Kaynaklar',
+            'description' => 'Sijilna Admin panelinden en iyi şekilde yararlanmanız için gereken her şey — barındırma, destek ve profesyonel hizmetlerin yanı sıra eklentiler ve geliştirici dokümantasyonu.',
             'contact-us' => 'Bize ulaşın',
             'view-all' => 'Tümünü gör',
             'still-need-help-title' => 'Hâlâ yardıma mı ihtiyacınız var?',
+            'still-need-help-description' => 'Barındırma, özel geliştirme veya başka her konuda Sijilna ekibiyle görüşün.',
+
             'services' => [
                 'title' => 'Hizmetler ve Kaynaklar',
                 'cloud-hosting' => [
+                    'title' => 'Bulut Barındırma',
+                    'description' => 'Uygun maliyetli, yönetilen bulut barındırma — Sijilna uygulamasını dakikalar içinde bulutta deneyip yayına alın; tamamen optimize edilmiş ve ölçeklenebilir.',
                 ],
                 'support' => [
                     'title' => 'Destek ve Bakım',
@@ -2316,6 +2322,7 @@ return [
                 ],
                 'extensions' => [
                     'title' => 'Eklentiler',
+                    'description' => 'Sijilna uygulamasını yeni bağlayıcılar, kanallar ve özelliklerle genişletmek için resmi ve topluluk eklentilerine göz atın.',
                 ],
             ],
 
@@ -2331,12 +2338,14 @@ return [
                 ],
                 'api-docs' => [
                     'title' => 'API Dokümanları',
+                    'description' => 'Sijilna uygulamasını sisteminize entegre etmek için uç noktalar, kimlik doğrulama ve örnekler içeren eksiksiz REST API referansı.',
                 ],
             ],
 
             'community' => [
                 'forums' => [
                     'title' => 'Topluluk Forumları',
+                    'description' => 'İpuçlarını paylaşmak ve sorunları çözmek için binlerce Sijilna kullanıcısı ve geliştiricisiyle bağlantı kurun.',
                     'link' => 'Topluluğa katılın',
                 ],
                 'tutorials' => [

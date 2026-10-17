@@ -337,6 +337,7 @@ return [
         ],
         'layouts' => [
             'powered-by' => [
+                'description' => 'Sijilna によるオープンソースプロジェクト',
             ],
             'header' => [
                 'mega-search' => [
@@ -2305,12 +2306,17 @@ return [
     'help' => [
         'index' => [
             'title' => 'ヘルプとリソース',
+            'description' => 'Sijilna管理パネルを最大限に活用するために——ホスティング、サポート、プロフェッショナルサービス、拡張機能、開発者ドキュメントをご案内します。',
             'contact-us' => 'お問い合わせ',
             'view-all' => 'すべて見る',
             'still-need-help-title' => 'まだお困りですか？',
+            'still-need-help-description' => 'ホスティング、カスタム開発、その他何でもSijilnaチームにご相談ください。',
+
             'services' => [
                 'title' => 'サービスとリソース',
                 'cloud-hosting' => [
+                    'title' => 'クラウドホスティング',
+                    'description' => 'コスト効率の高いマネージドクラウドホスティング。最適化されたスケーラブルな環境で、数分でSijilnaをクラウドに立ち上げられます。',
                 ],
                 'support' => [
                     'title' => 'サポートと保守',
@@ -2318,6 +2324,7 @@ return [
                 ],
                 'extensions' => [
                     'title' => '拡張機能',
+                    'description' => '公式・コミュニティのアドオンを探して、新しいコネクタ・チャネル・機能でSijilnaを拡張できます。',
                 ],
             ],
 
@@ -2333,12 +2340,14 @@ return [
                 ],
                 'api-docs' => [
                     'title' => 'APIドキュメント',
+                    'description' => 'エンドポイント・認証・サンプルを網羅したREST APIリファレンスで、Sijilnaをお使いのシステムと連携できます。',
                 ],
             ],
 
             'community' => [
                 'forums' => [
                     'title' => 'コミュニティフォーラム',
+                    'description' => '世界中のSijilnaユーザー・開発者とつながり、ヒントの共有や問題解決ができます。',
                     'link' => 'コミュニティに参加',
                 ],
                 'tutorials' => [

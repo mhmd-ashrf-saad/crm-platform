@@ -286,7 +286,7 @@ return [
 
             'back' => 'Back',
             'krayin' => 'Sijilna',
-            'krayin-info' => 'a Community Project by',
+            'krayin-info' => 'a self-hosted CRM',
             'krayin-logo' => 'Sijilna logo',
             'continue' => 'Continue',
             'installation-description' => 'Installing Sijilna takes a few steps. Here is what this wizard does.',

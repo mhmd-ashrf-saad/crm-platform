@@ -337,6 +337,7 @@ return [
         ],
         'layouts' => [
             'powered-by' => [
+                'description' => 'Desenvolvido por Sijilna, um projeto de código aberto.',
             ],
             'header' => [
                 'mega-search' => [
@@ -2303,12 +2304,17 @@ return [
     'help' => [
         'index' => [
             'title' => 'Ajuda e recursos',
+            'description' => 'Tudo o que você precisa para aproveitar ao máximo o Sijilna Admin — hospedagem, suporte e serviços profissionais, além de extensões e documentação para desenvolvedores.',
             'contact-us' => 'Fale conosco',
             'view-all' => 'Ver tudo',
             'still-need-help-title' => 'Ainda precisa de ajuda?',
+            'still-need-help-description' => 'Fale com a equipe Sijilna sobre hospedagem, desenvolvimento personalizado ou qualquer outra coisa.',
+
             'services' => [
                 'title' => 'Serviços e recursos',
                 'cloud-hosting' => [
+                    'title' => 'Hospedagem na nuvem',
+                    'description' => 'Hospedagem na nuvem gerenciada e econômica — experimente e coloque o Sijilna na nuvem em minutos, totalmente otimizado e escalável.',
                 ],
                 'support' => [
                     'title' => 'Suporte e manutenção',
@@ -2316,6 +2322,7 @@ return [
                 ],
                 'extensions' => [
                     'title' => 'Extensões',
+                    'description' => 'Navegue por complementos oficiais e da comunidade para ampliar o Sijilna com novos conectores, canais e recursos.',
                 ],
             ],
 
@@ -2331,12 +2338,14 @@ return [
                 ],
                 'api-docs' => [
                     'title' => 'Documentação da API',
+                    'description' => 'Referência completa da API REST com endpoints, autenticação e exemplos para integrar o Sijilna ao seu stack.',
                 ],
             ],
 
             'community' => [
                 'forums' => [
                     'title' => 'Fóruns da comunidade',
+                    'description' => 'Conecte-se com milhares de outros usuários e desenvolvedores do Sijilna para compartilhar dicas e resolver problemas.',
                     'link' => 'Participe da comunidade',
                 ],
                 'tutorials' => [

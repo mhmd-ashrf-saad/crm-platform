@@ -130,6 +130,7 @@ return [
         'index' => [
             'create-administrator' => [
                 'admin' => '管理者',
+                'krayin' => 'Sijilna',
                 'confirm-password' => 'パスワード（確認）',
                 'email' => 'メールアドレス',
                 'email-address' => 'admin@example.com',
@@ -144,6 +145,7 @@ return [
                 'application-name' => 'アプリケーション名',
                 'argentine-peso' => 'アルゼンチン・ペソ (ARS)',
                 'australian-dollar' => 'オーストラリア・ドル (AUD)',
+                'krayin' => 'Sijilna',
                 'bangladeshi-taka' => 'バングラデシュ・タカ (BDT)',
                 'brazilian-real' => 'ブラジル・レアル (BRL)',
                 'british-pound-sterling' => '英ポンド (GBP)',
@@ -227,19 +229,24 @@ return [
             ],
 
             'installation-processing' => [
+                'krayin' => 'Sijilnaのインストール',
                 'krayin-info' => 'データベーステーブルを作成しています。しばらくお待ちください',
                 'title' => 'インストール',
             ],
 
             'installation-completed' => [
                 'admin-panel' => '管理パネル',
+                'krayin-forums' => 'Sijilnaフォーラム',
                 'customer-panel' => '顧客パネル',
+                'explore-krayin-extensions' => 'Sijilna拡張機能を探す',
                 'title' => 'インストール完了',
+                'title-info' => 'Sijilnaのインストールが正常に完了しました。',
             ],
 
             'ready-for-installation' => [
                 'create-databsae-table' => 'データベーステーブルの作成',
                 'install' => 'インストール',
+                'install-info' => 'Sijilnaのインストール',
                 'install-info-button' => '下のボタンをクリックして',
                 'populate-database-table' => 'データベーステーブルへの初期データ投入',
                 'start-installation' => 'インストールを開始',
@@ -250,6 +257,8 @@ return [
                 'locale' => '言語',
                 'main' => '開始',
                 'select-locale' => '言語を選択',
+                'title' => 'Sijilnaのインストール',
+                'welcome-title' => 'Sijilnaへようこそ',
             ],
 
             'server-requirements' => [
@@ -276,10 +285,16 @@ return [
             ],
 
             'back' => '戻る',
+            'krayin' => 'Sijilna',
+            'krayin-info' => 'コミュニティプロジェクト by',
+            'krayin-logo' => 'Sijilnaロゴ',
             'continue' => '続行',
+            'installation-description' => 'Sijilnaのインストールは通常いくつかのステップで行います。以下はSijilnaのインストール手順の概要です',
             'installation-info' => 'ようこそ！お会いできてうれしいです。',
             'installation-title' => 'インストールへようこそ',
             'installation-wizard' => 'インストールウィザードの言語',
+            'title' => 'Sijilnaインストーラー',
+            'webkul' => '',
         ],
     ],
 ];

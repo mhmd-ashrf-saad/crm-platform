@@ -130,6 +130,7 @@ return [
         'index' => [
             'create-administrator' => [
                 'admin' => 'Administrador',
+                'krayin' => 'Sijilna',
                 'confirm-password' => 'Confirmar Senha',
                 'email' => 'E-mail',
                 'email-address' => 'admin@example.com',
@@ -144,6 +145,7 @@ return [
                 'application-name' => 'Nome do Aplicativo',
                 'argentine-peso' => 'Peso Argentino (ARS)',
                 'australian-dollar' => 'Dólar Australiano (AUD)',
+                'krayin' => 'Sijilna',
                 'bangladeshi-taka' => 'Taka de Bangladesh (BDT)',
                 'brazilian-real' => 'Real Brasileiro (BRL)',
                 'british-pound-sterling' => 'Libra Esterlina (GBP)',
@@ -227,19 +229,24 @@ return [
             ],
 
             'installation-processing' => [
+                'krayin' => 'Instalação do Sijilna',
                 'krayin-info' => 'Criando as tabelas do banco de dados, isso pode levar alguns momentos',
                 'title' => 'Instalação',
             ],
 
             'installation-completed' => [
                 'admin-panel' => 'Painel de Administração',
+                'krayin-forums' => 'Fórum Sijilna',
                 'customer-panel' => 'Painel do Cliente',
+                'explore-krayin-extensions' => 'Explorar Extensões Sijilna',
                 'title' => 'Instalação Concluída',
+                'title-info' => 'Sijilna foi instalado com sucesso no seu sistema.',
             ],
 
             'ready-for-installation' => [
                 'create-databsae-table' => 'Adicionar tabela do banco de dados',
                 'install' => 'Instalação',
+                'install-info' => 'Sijilna Para Instalação',
                 'install-info-button' => 'Clique no botão abaixo para',
                 'populate-database-table' => 'Preencher as tabelas do banco de dados',
                 'start-installation' => 'Iniciar Instalação',
@@ -250,6 +257,8 @@ return [
                 'locale' => 'Idioma',
                 'main' => 'Início',
                 'select-locale' => 'Selecionar Idioma',
+                'title' => 'Instalação do Sijilna',
+                'welcome-title' => 'Bem-vindo ao Sijilna',
             ],
 
             'server-requirements' => [
@@ -276,10 +285,16 @@ return [
             ],
 
             'back' => 'Voltar',
+            'krayin' => 'Sijilna',
+            'krayin-info' => 'um projeto comunitário de',
+            'krayin-logo' => 'Logotipo Sijilna',
             'continue' => 'Continuar',
+            'installation-description' => 'A instalação do Sijilna geralmente envolve várias etapas. Aqui está uma visão geral do processo de instalação do Sijilna',
             'installation-info' => 'Estamos felizes em ver você aqui!',
             'installation-title' => 'Bem-vindo à Instalação',
             'installation-wizard' => 'Assistente de Instalação - Idioma',
+            'title' => 'Instalador do Sijilna',
+            'webkul' => '',
         ],
     ],
 ];

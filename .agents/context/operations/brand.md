@@ -1,4 +1,4 @@
-<!-- Context: operations/brand.md | Priority: high | Version: 1.2 | Updated: 2026-10-17 -->
+<!-- Context: operations/brand.md | Priority: high | Version: 1.3 | Updated: 2026-10-17 -->
 
 # Sijilna Brand
 
@@ -97,16 +97,16 @@ degrades rather than breaking boot, and `php artisan sijilna:brand` seeds
 `core_config` rows, so the values are visible and editable under **Settings**.
 
 The palette key is the application point: a second client's colours are a config
-change, not a code edit (the crm-941/crm-xj8 promise). The dashboard PDF needs
-both halves — `DashboardController::getLogoDataUri()` returns null unless the
-path is set **and** the file exists on the `public` disk — and it is a raster,
-never an SVG, because the Settings field validates `bmp/jpeg/jpg/png/webp`.
-**Verification gap:** the rendered PDF has no suite guard (it needs a seeded
-admin, so it was checked out-of-band); `tests/Feature/RebrandRegressionTest.php`
-guards the mechanism, not the PDF itself. Two deliberate non-changes:
+change, not a code edit (crm-941, ruled satisfied in substance 2026-10-17). The
+dashboard PDF needs both halves — `DashboardController::getLogoDataUri()` returns
+null unless the path is set **and** the file exists on the `public` disk — and it
+is a raster, never an SVG (the Settings field validates `bmp/jpeg/jpg/png/webp`).
+**Verification gap:** the rendered PDF has no suite guard (it needs a seeded admin,
+so it was checked out-of-band); `tests/Feature/RebrandRegressionTest.php` guards
+the mechanism, not the PDF itself. Two deliberate non-changes:
 `general.design.admin_logo.favicon` stays unset (read by one view, which already
 falls back to the package's crisp SVG), and `Admin/src/Config/core_config.php`
-stays unedited, unchanged from the earlier record.
+stays unedited.
 
 ## Reproducing the assets and the proof
 

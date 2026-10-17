@@ -44,21 +44,19 @@ All twelve are **approved**:
    destination.
 3. **Vendor name: Sijilna.** The root composer package is `sijilna/crm` and the
    installer caption reads “a project by Sijilna” (§9.4, §9.9).
-4. **Locales.** The 23 vendor keys are deleted from each of `es, fa, ja, ko,
-   pt_BR, tr, vi, zh_CN`; those locales inherit English through
-   `fallback_locale`. No machine translation (§1).
+4. **Locales.** Each of the 23 vendor-branded keys **returns at its original
+   position in all eight locales** (`es, fa, ja, ko, pt_BR, tr, vi, zh_CN`) with
+   its own pre-rebrand translation, vendor token replaced by Sijilna (§1, §7).
 5. **The live instance is rebranded for real.** `.env` values are changed
    **and** a `general.settings.footer.label` `core_config` row is seeded, so the
    credit is visible and editable under **Settings**.
-6. **Core residuals accepted — all four.** The installer's cloud-hosting advert
+6. **Core residuals accepted — all five.** The installer's cloud-hosting advert
    and ASCII banner, the `storage/installed` literals, the presence of the
-   now-unreachable core `ImageCacheController` class, and the `krayin-crm:*`
-   command signatures are **accepted**: not rewritten, not deleted, and not to
-   be re-filed as bugs (§2.7, §4, §5, §9.10, §9.13). The *route* is no longer a
+   now-unreachable core `ImageCacheController` class, the `krayin-crm:*` command
+   signatures, and the core info toast's `#0E90D9` severity tint (accepted
+   2026-10-17, §9.17) are **accepted**: not rewritten, not deleted, and not to be
+   re-filed as bugs (§2.7, §4, §5, §9.10, §9.13). The *route* is no longer a
    residual — it is replaced (decision 7); only the unreachable class remains.
-   **A fifth candidate surfaced later and is NOT covered by this decision** — the
-   core info toast's `#0E90D9` severity colour, flagged in §9.17. The accepted
-   list stays at four until the operator says otherwise.
 7. **The outbound vendor calls are stopped — not by a Blade override.** Two
    provider registrations do it: `disableVendorInstallTelemetry()` forgets the
    `krayin.installed` listener, so the installer never POSTs to
@@ -82,32 +80,36 @@ All twelve are **approved**:
 
 ## 1. Locale policy — decided
 
-**Only `ar` and `en` are maintained. The eight other locales inherit English.**
+**`en` and `ar` are the maintained locales. The other eight keep their own
+pre-rebrand strings, re-branded.**
 
 | Locale | Action | Why |
 | --- | --- | --- |
 | `en` | Rewritten (English table) | Source of truth |
 | `ar` | Rewritten (Arabic table) | Primary market |
-| `es, fa, ja, ko, pt_BR, tr, vi, zh_CN` | **23 keys each deleted** from `app.php` under this deck's scope only | Inherit English via `fallback_locale` |
+| `es, fa, ja, ko, pt_BR, tr, vi, zh_CN` | **23 keys restored per locale**, each carrying its own pre-rebrand translation with the vendor token replaced by Sijilna | Passes both spec tests; no reviewer for these languages exists, so no machine translation is risked |
 
-Reasoning:
+Reasoning — the mechanism was settled by measurement, not preference:
 
-1. `config/app.php:131` sets `'fallback_locale' => 'en'`, so a key missing from a
-   locale file resolves to the English file. Deleting the scoped keys makes
-   every one of the eight locales render the Sijilna English string — a grep for
-   the vendor name comes back clean in **all ten** locales, which is hard rule 1.
-2. Machine-translating into eight languages nobody here can review is the
-   failure mode `AGENTS.md` warns about: a silently wrong Japanese or Persian
-   admin UI is worse than an English one.
-3. Nothing in scope requires those locales; the product is sold to Egyptian
-   businesses and ships `ar` (RTL) + `en`.
-4. Deleting is minimal: every other string in those files keeps its existing
-   translation. Nothing is retranslated, nothing gains a half-translated mix.
-5. **The eight files are logged deletions, not edits** — do not add a single new
-   translated string there. `fa` is RTL like `ar` and is the only plausible
-   future candidate; it is not maintained now.
+1. Deleting the keys in `132393d5` failed upstream's key-parity test; rewriting
+   each value to the English Sijilna string passed parity but pushed all eight
+   locales past the second test's recorded `BACKLOG`.
+2. Restoring the pre-rebrand translation with the vendor token replaced passes
+   **both** tests with `lang.spec.ts` unedited and returns each locale to its
+   recorded `BACKLOG` (measured 2026-10-17: `Admin/ar` 1, `Admin/pt_BR` 46,
+   `Admin/tr` 23, `Admin/vi` 41, every other combo 0).
+3. Nothing is retranslated and no value is copied from `en`; the honest cost is
+   **176 locale-key pairs** — the 22 keys whose English wording changed (8
+   Admin, 14 Installer) × 8 locales — keeping older re-branded phrasing.
+4. Two hand-fixes, because a doubled brand is barred: each locale's
+   `components.layouts.powered-by.description` drops the second `:webkul`
+   mention, and `installer.index.webkul` is **empty in all ten locales** (as
+   `en`/`ar` already were), kept for key parity: the caption is config-driven and
+   the override replaces its whole paragraph, deleting both vendor anchors rather
+   than re-pointing them, so neither renders (§2.6, §9.4); `ko` and `tr` also drop the vendor clause in `installer.index.krayin-info`.
 
-Delete list per locale file (`packages/Webkul/Admin/src/Resources/lang/<loc>/app.php`):
+The 23 keys, restored at their original positions — Admin,
+`packages/Webkul/Admin/src/Resources/lang/<loc>/app.php`:
 
 ```text
 components.layouts.powered-by.description
@@ -120,7 +122,7 @@ help.index.resources.api-docs.description
 help.index.community.forums.description
 ```
 
-Delete list per locale file (`packages/Webkul/Installer/src/Resources/lang/<loc>/app.php`):
+Installer, `packages/Webkul/Installer/src/Resources/lang/<loc>/app.php`:
 
 ```text
 installer.index.create-administrator.krayin
@@ -331,8 +333,8 @@ no vendor mark. Flagged in §9.8 because its heading is rewritten.
 | Line | Location | Current | New |
 | --- | --- | --- | --- |
 | 132 | `src` of the wizard logo | `vite()->asset('images/krayin-logo.svg', 'installer')` | asset swap → Sijilna mark; source asset is `installer/src/Resources/assets/images/krayin-logo.svg` (see §5) |
-| 259 | vendor link `href` | `https://krayincrm.com/` | `https://sijilna.com/` |
-| 267–273 | second vendor anchor (`webkul` key → `https://webkul.com/`) | renders `… a Community Project by Webkul` | **delete the anchor block**; the two remaining inline elements then read `Sijilna a self-hosted CRM` (add a separator in the view if the lane wants one) — see §9.4 |
+| 259 | first vendor anchor `href` (`krayin` key → `https://krayincrm.com/`) | `https://krayincrm.com/` | **deleted, not re-pointed** — both vendor anchors go with the whole caption paragraph the brand override replaces (core 253–272) with config-driven copy (`installer/installer/index.blade.php:263`); line 259 never renders — see §9.4 |
+| 267–273 | second vendor anchor (`webkul` key → `https://webkul.com/`) | renders `… a Community Project by Webkul` | **superseded** — the brand override replaces the whole caption paragraph (override line 263), which renders `config('sijilna.installer.caption_en')` = `a project by Sijilna`; no inline lang element survives — see §9.4 |
 | 735 | default value of the Application Name field | `::value="envData.app_name ?? 'Krayin'"` | `::value="envData.app_name ?? 'Sijilna'"` |
 | 1027 | completion-step forum card `href` | `https://forums.krayincrm.com/` | **delete the anchor block** — a forum card, deleted by decision 2; no invented URL |
 | 1034 | completion-step extensions card `href` | `https://krayincrm.com/extensions/` | **delete the anchor block** — an extensions card, deleted by decision 2; no invented URL |
@@ -361,7 +363,7 @@ flagged in §9.11.
 > **accepted core residuals**: the panel is not rewritten, not deleted, and not
 > re-filed. The `ComposerEvents.php` rows and the on-boarding ASCII template
 > above are withdrawn as proposals and kept only as rationale;
-> `rebrand-boundary.md` lists them as residual 1 of exactly four. §9.10 is closed
+> `rebrand-boundary.md` lists them as residual 1 of exactly five. §9.10 is closed
 > by decision 6. The plain console lines in `Installer.php` (142, 214, 391) are
 > not banner art and are not covered by decision 6.
 
@@ -670,39 +672,30 @@ the vendor string as a residual):
 - **Console (3 / 0 / 7 withdrawn).** Only the three plain `Installer.php`
   console lines (142, 214, 391) are rewrites.
 
-Plus the locale work, now **measured against the tree** rather than counted from
-§1. The command:
+Plus the locale work, now **measured against the tree**. `git diff --numstat`
+over the same 20 lang files, two baselines:
 
 ```text
-$ git diff --numstat -- packages/Webkul/Admin/src/Resources/lang \
-                          packages/Webkul/Installer/src/Resources/lang
+132393d5   the purge, as first approved       42 insertions / 232 deletions
+bf545355   pre-rebrand tree, as shipped      216 insertions / 216 deletions
 ```
 
-Measured 2026-10-17: **42 insertions / 232 deletions across 20 files**. The 232
-decomposes exactly:
+The purge's **42 / 232** is **184 key deletions in 16 files** (23 keys × 8
+locales, written as 190 deleted lines — the 184 keys plus **6 blank separators**
+in `es`, `fa`, `ja`, `pt_BR`, `tr`, `vi`) plus the **42 `en`/`ar` substitutions**.
 
-- **184 key deletions across 8 locales in 16 files** — 23 keys × 8 locales
-  (Admin 8 keys + Installer 15 keys per locale). The diff writes them as
-  **190 deleted lines**: the 184 key lines plus **6 blank separator lines** left
-  behind in `es`, `fa`, `ja`, `pt_BR`, `tr` and `vi` (the `ko` and `zh_CN` diffs
-  remove no blank line). Those 16 files carry **0 insertions**.
-- **42 substituted lines from the `en`/`ar` value rewrites** — **21 keys × 2
-  locales** (Admin `en` 7 and `ar` 7; Installer `en` 14 and `ar` 14), each one
-  insertion plus one deletion. That is the part the deck-time line omitted.
+**Final mechanism, settled 2026-10-17: the keys return carrying their own
+pre-rebrand translations, vendor token replaced by Sijilna.** Re-measured:
+`git diff --numstat bf545355` = **7/7** per Admin locale file, **14/14** per
+Installer file (**15/15** in `ko`, `tr`) — **170 changed lines in 16 files** —
+plus **46** in `en`/`ar` (the caption `krayin-info` adds one), so 170 + 46 = 216;
+against `HEAD` the same 20 files are **192 insertions / 2 deletions**.
 
-So the deck-time “**184 logged deletions … and no additions**” was right about
-the keys and wrong about the additions: the purge also substituted 21 vendor
-values in each of `en` and `ar`. Independent verification on the same day
-measured the same **42 / 232 across those 20 files**; the run recorded here
-agrees with it line for line. Re-measured after the follow-up that retitled the
-surviving Help card (§2.2/§3.2, `cloud-hosting.title`): **44 insertions / 234
-deletions across the same 20 files** — **22 substituted value lines per locale**
-(Admin 8, Installer 14), the Admin 8 being its five rewrites plus the three
-decision-2 card keys. Those are substituted *lines*; the group table counts
-*rows* (§2/§3), so its totals stay **54 rewrites / 27 deletions / 7 withdrawn**.
-An earlier revision read the 44 lines as "12 rewrites, total 56"; that figure
-double-counted the Admin card keys and does not reproduce from the group list,
-which is the authoritative count.
+Both upstream spec tests pass with `lang.spec.ts` **unedited**: parity holds
+because every key is back, and `no locale falls further behind English` holds at
+exactly its recorded `BACKLOG` (35 combos; `Admin/ar` 1, `Admin/pt_BR` 46,
+`Admin/tr` 23, `Admin/vi` 41, all others 0; no value carries a vendor token).
+The group table above still counts *rows* of §2/§3, so it stays **54 / 27 / 7**.
 
 Key-existence verification — every key named in §2 and §3 was confirmed in place
 before it was written down:
@@ -775,30 +768,10 @@ $ git status --porcelain --untracked-files=all brand/
 ```
 
 Every ` M ` and `??` outside `brand/` is another lane's uncommitted work
-(attribution, the boundary record, brand assets); none was touched. File times
-separate the files inside `brand/`:
-
-```text
-$ ls -l --time-style=+%H:%M brand/ | awk 'NR>1 {print $6, $7}' | grep -v copy-deck
-22:56 palette.md
-23:01 png
-22:56 sijilna-app-icon.svg
-22:58 sijilna-mark-favicon.svg
-22:55 sijilna-mark.svg
-22:58 sijilna-test-sheet.html
-22:58 sijilna-test-sheet.png
-22:56 sijilna-wordmark-ar.svg
-22:56 sijilna-wordmark.svg
-```
-
-Every other entry in `brand/` is stamped 22:55–23:01 by the earlier asset lane.
-`copy-deck.md` — the one entry filtered out above, because every further wording
-edit moves its own timestamp — is the only file newer than that, i.e. the only
-file this session wrote. (`brand/palette.md` was read only; the SVGs and
-`brand/png/` were left alone.) Nothing outside `brand/copy-deck.md` was
-written — no navigation file, no `.agents/context` file, no source file — and no
-git state-changing command (`add`, `commit`, `stash`, `checkout`, `restore`,
-`clean`) was run.
+(attribution, the boundary record, brand assets); none was touched. The 20
+locale files, this deck and `rebrand-boundary.md` are the only files this
+session wrote; no navigation file, no source file and no git state-changing
+command (`add`, `commit`, `stash`, `checkout`, `restore`, `clean`) was run.
 
 ## 8. Runtime wiring notes for the lane that applies this deck
 
@@ -849,10 +822,13 @@ git state-changing command (`add`, `commit`, `stash`, `checkout`, `restore`,
 3. **The community block — RESOLVED (decision 2).** The forum and video cards
    are deleted, not linked: `community[0]`, `community[1]` and the
    `help.index.community.*` lang keys leave the tree with them (§2.2, §2.3).
-4. **The installer caption's vendor slot — RESOLVED (decision 3).** The caption
-   reads “a project by Sijilna”. The vendor anchor at `index.blade.php:267–273`
-   and the `webkul` key (installer lang line 297) are deleted with it; no legal
-   company name is needed for that screen.
+4. **The installer caption's vendor slot — RESOLVED (decisions 3 and 4).** The caption is
+   config-driven, not a lang key: `BrandingServiceProvider.php:322–323` sets
+   `sijilna.installer.caption_en` = `a project by Sijilna` / `caption_ar` = `نظام إدارة عملاء
+   تستضيفه بنفسك`, printed by the brand override `installer/installer/index.blade.php:263`.
+   That override replaces the **whole** caption paragraph (core 253–272), so the core
+   `krayin-info` span (265) never renders: its `a self-hosted CRM` (§2.5/§3.5 row 289) is
+   dead copy kept for key parity, as is the empty `webkul` key (297).
 5. **`create-administrator.krayin` is doing double duty — OPEN.** `index.blade.php:913`
    uses it as the **example name** placeholder in the administrator-name field,
    while `environment-configuration.krayin` (`:738`) is the application-name
@@ -925,14 +901,15 @@ git state-changing command (`add`, `commit`, `stash`, `checkout`, `restore`,
     label the deleted completion-step cards, so the keys are deleted with the
     anchors (`index.blade.php:1027`, `:1034`); no vendor forum URL and no
     invented `sijilna.com` path is involved.
-17. **The info toast's blue — OPEN, flagged not promoted.**
+17. **The info toast's blue — RESOLVED (decision 6): accepted as a fifth
+    residual.** Accepted 2026-10-17 by the operator.
     `packages/Webkul/Admin/src/Resources/views/components/flash-group/item.blade.php`
     hardcodes `#0E90D9` three times (lines 131, 133, 135) as the **info** toast
     severity. It is a severity colour, not a brand mark, and the brand slot is
     correct — verified 2026-10-17: `/admin/login` renders `--brand-color: #0B3C5D`
     and exactly three `#0E90D9` literals, all from that blade. Config cannot reach
     it, because the colours are a literal array in a core blade with no config
-    key, so the fix is a core edit or a copy of the component. It is **not** one of
-    decision 6's four accepted residuals, and `rebrand-boundary.md` keeps that list
-    at four. **Decision needed:** accept it as a fifth residual, or authorise
-    copying the flash-group component into `packages/Sijilna/Brand`.
+    key, so the fix would be a core edit or a copy of the component. It is now one
+    of decision 6's five accepted residuals, and `rebrand-boundary.md` keeps that
+    list at five. Copying the flash-group component into `packages/Sijilna/Brand`
+    is withdrawn.

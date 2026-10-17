@@ -130,6 +130,7 @@ return [
         'index' => [
             'create-administrator' => [
                 'admin' => 'مدیر',
+                'krayin' => 'Sijilna',
                 'confirm-password' => 'تایید رمز عبور',
                 'email' => 'ایمیل',
                 'email-address' => 'admin@example.com',
@@ -144,6 +145,7 @@ return [
                 'application-name' => 'نام برنامه',
                 'argentine-peso' => 'پزو آرژانتین (ARS)',
                 'australian-dollar' => 'دلار استرالیا (AUD)',
+                'krayin' => 'Sijilna',
                 'bangladeshi-taka' => 'تاکا بنگلادش (BDT)',
                 'brazilian-real' => 'رئال برزیل (BRL)',
                 'british-pound-sterling' => 'پوند استرلینگ بریتانیا (GBP)',
@@ -227,19 +229,24 @@ return [
             ],
 
             'installation-processing' => [
+                'krayin' => 'نصب Sijilna',
                 'krayin-info' => 'در حال ایجاد جداول پایگاه داده، این ممکن است چند لحظه طول بکشد',
                 'title' => 'نصب',
             ],
 
             'installation-completed' => [
                 'admin-panel' => 'پنل مدیریت',
+                'krayin-forums' => 'انجمن Sijilna',
                 'customer-panel' => 'پنل مشتری',
+                'explore-krayin-extensions' => 'کاوش افزونه‌های Sijilna',
                 'title' => 'نصب کامل شد',
+                'title-info' => 'Sijilna با موفقیت بر روی سیستم شما نصب شد.',
             ],
 
             'ready-for-installation' => [
                 'create-databsae-table' => 'ایجاد جدول پایگاه داده',
                 'install' => 'نصب',
+                'install-info' => 'Sijilna برای نصب',
                 'install-info-button' => 'برای شروع، دکمه زیر را کلیک کنید',
                 'populate-database-table' => 'پر کردن جداول پایگاه داده',
                 'start-installation' => 'شروع نصب',
@@ -250,6 +257,8 @@ return [
                 'locale' => 'زبان',
                 'main' => 'شروع',
                 'select-locale' => 'انتخاب زبان',
+                'title' => 'نصب Sijilna شما',
+                'welcome-title' => 'به Sijilna خوش آمدید',
             ],
 
             'server-requirements' => [
@@ -276,10 +285,16 @@ return [
             ],
 
             'back' => 'بازگشت',
+            'krayin' => 'Sijilna',
+            'krayin-info' => 'یک پروژه اجتماعی توسط',
+            'krayin-logo' => 'لوگوی Sijilna',
             'continue' => 'ادامه',
+            'installation-description' => 'نصب Sijilna معمولاً شامل چندین مرحله است. در اینجا یک طرح کلی از فرآیند نصب Sijilna آمده است',
             'installation-info' => 'خوشحالیم که شما را اینجا می‌بینیم!',
             'installation-title' => 'به نصب خوش آمدید',
             'installation-wizard' => 'زبان جادوگر نصب',
+            'title' => 'نصب‌کننده Sijilna',
+            'webkul' => '',
         ],
     ],
 ];

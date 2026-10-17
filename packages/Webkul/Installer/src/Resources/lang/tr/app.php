@@ -130,6 +130,7 @@ return [
         'index' => [
             'create-administrator' => [
                 'admin' => 'Yönetici',
+                'krayin' => 'Sijilna',
                 'confirm-password' => 'Şifreyi Onayla',
                 'email' => 'E-posta',
                 'email-address' => 'admin@ornek.com',
@@ -144,6 +145,7 @@ return [
                 'application-name' => 'Uygulama Adı',
                 'argentine-peso' => 'Arjantin Pezosu (ARS)',
                 'australian-dollar' => 'Avustralya Doları (AUD)',
+                'krayin' => 'Sijilna',
                 'bangladeshi-taka' => 'Bangladeş Takası (BDT)',
                 'brazilian-real' => 'Brezilya Reali (BRL)',
                 'british-pound-sterling' => 'İngiliz Sterlini (GBP)',
@@ -227,19 +229,24 @@ return [
             ],
 
             'installation-processing' => [
+                'krayin' => 'Sijilna Kurulumu',
                 'krayin-info' => 'Veritabanı tabloları oluşturuluyor, bu birkaç dakika sürebilir',
                 'title' => 'Kurulum',
             ],
 
             'installation-completed' => [
                 'admin-panel' => 'Yönetici Paneli',
+                'krayin-forums' => 'Sijilna Forumu',
                 'customer-panel' => 'Müşteri Paneli',
+                'explore-krayin-extensions' => 'Sijilna Uzantılarını Keşfedin',
                 'title' => 'Kurulum Tamamlandı',
+                'title-info' => 'Sijilna sisteminize başarıyla kuruldu.',
             ],
 
             'ready-for-installation' => [
                 'create-databsae-table' => 'Veritabanı tablosu oluştur',
                 'install' => 'Yükleme',
+                'install-info' => 'Kurulum için Sijilna',
                 'install-info-button' => 'Aşağıdaki düğmeye tıklayın',
                 'populate-database-table' => 'Veritabanı tablolarını doldur',
                 'start-installation' => 'Kurulumu Başlat',
@@ -250,6 +257,8 @@ return [
                 'locale' => 'Yerel',
                 'main' => 'Başlangıç',
                 'select-locale' => 'Yerel Seçin',
+                'title' => 'Sijilna kurulumunuz',
+                'welcome-title' => 'Sijilna\'ya hoş geldiniz',
             ],
 
             'server-requirements' => [
@@ -276,10 +285,16 @@ return [
             ],
 
             'back' => 'Geri',
+            'krayin' => 'Sijilna',
+            'krayin-info' => 'bir Topluluk Projesi',
+            'krayin-logo' => 'Sijilna Logosu',
             'continue' => 'Devam Et',
+            'installation-description' => 'Sijilna kurulumu genellikle birkaç adım içerir. İşte Sijilna\'nun kurulum sürecine genel bir bakış',
             'installation-info' => 'Sizi burada görmekten mutluluk duyuyoruz!',
             'installation-title' => 'Kurulum\'a Hoş Geldiniz',
             'installation-wizard' => 'Kurulum Sihirbazı dili',
+            'title' => 'Sijilna Kurulum Sihirbazı',
+            'webkul' => '',
         ],
     ],
 ];
