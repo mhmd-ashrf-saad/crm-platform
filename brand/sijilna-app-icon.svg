@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" width="256" height="256" role="img" aria-labelledby="sijilna-app-icon-title">
+  <title id="sijilna-app-icon-title">Sijilna app icon</title>
+  <!-- Sijilna brand asset. Fork-owned; not an upstream core file.
+     Source of truth: brand/palette.md and .agents/context/operations/brand.md.
+     Letterforms are outlines (no <text>), so no font needs to be installed. -->
+  <rect width="256" height="256" rx="56" fill="#0B3C5D"/>
+  <g transform="translate(34.4 35.48) scale(0.72)">
+    <path fill="#FAF7F1" d="M108 78 A15 15 0 0 1 138 78 L138 108 L150 108 L150 78 A15 15 0 0 1 180 78 L180 108 L192 108 L192 78 A15 15 0 0 1 222 78 L222 138 L89 138 L89 194 L50 194 A15 15 0 0 1 50 164 L59 164 L59 108 L108 108 Z"/>
+  </g>
+</svg>

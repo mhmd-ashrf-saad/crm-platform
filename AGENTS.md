@@ -1,6 +1,7 @@
-# Krayin CRM: Agent Instructions
+# Sijilna: Agent Instructions
 
-This repository ships reusable **agent skills** for developing Krayin CRM. These
+This repository ships reusable **agent skills** for developing Sijilna, a
+self-hosted Arabic-first CRM. These
 instructions apply to all AI coding agents (Claude Code, Codex, Copilot, Cursor,
 Kilo Code, etc.).
 
@@ -8,7 +9,7 @@ Kilo Code, etc.).
 
 ## Framework Context
 
-- **Product:** Krayin CRM (Webkul) — an open-source Laravel CRM.
+- **Product:** Sijilna — a self-hosted, Arabic-first CRM built on Krayin CRM (Webkul), MIT licensed.
 - **Stack:** Laravel `^12.0`, PHP `^8.3`, Pest `^3.0`, Laravel Pint `^1.18`.
 - **Follow Krayin's own conventions** — use the patterns already present in this
   repository's modules; do not import patterns from other Laravel products.
@@ -93,6 +94,19 @@ This is a **private commercial fork of Krayin CRM** (upstream is MIT licensed).
   review trail live on `main`.
 - Remotes: `origin` = `github.com/mhmd-ashrf-saad/crm-platform.git`,
   `upstream` = `github.com/krayin/laravel-crm.git`. Do not push to `upstream`.
+
+## Rebrand boundary
+
+Rebranding covers user-facing surfaces (login, header/footer, page titles,
+dashboard text, PDFs, email templates and signatures, installer banner, error pages, favicon)
+and repo identity (README, `composer.json` package name, GitHub description and
+topics, `.env.example` comments). It excludes PHP namespaces, `packages/Webkul/**`
+paths, composer package and dependency names, upstream issue templates and CI
+workflows, `config/krayin-vite.php` without an override path, and `vendor/` —
+those stay upstream so `2.2` keeps merging. Apply branding through an override or
+configuration surface, never a core edit. Upstream is MIT: forking is permitted,
+trademark rights are not. See
+[.agents/context/guides/rebrand-boundary.md](.agents/context/guides/rebrand-boundary.md).
 
 ## The running system
 

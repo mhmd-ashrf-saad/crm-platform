@@ -1,6 +1,7 @@
 <?php
 
 use App\Providers\AppServiceProvider;
+use App\Providers\BrandingServiceProvider;
 use Barryvdh\DomPDF\ServiceProvider;
 use Konekt\Concord\ConcordServiceProvider;
 use Prettus\Repository\Providers\RepositoryServiceProvider;
@@ -61,4 +62,5 @@ return [
     UserServiceProvider::class,
     WarehouseServiceProvider::class,
     WebFormServiceProvider::class,
+    BrandingServiceProvider::class,
 ];

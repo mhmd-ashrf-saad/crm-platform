@@ -130,7 +130,7 @@ return [
         'index' => [
             'create-administrator' => [
                 'admin' => 'مدير',
-                'krayin' => 'Krayin',
+                'krayin' => 'مسؤول',
                 'confirm-password' => 'تأكيد كلمة المرور',
                 'email' => 'البريد الإلكتروني',
                 'email-address' => 'admin@example.com',
@@ -145,7 +145,7 @@ return [
                 'application-name' => 'اسم التطبيق',
                 'argentine-peso' => 'البيزو الأرجنتيني (ARS)',
                 'australian-dollar' => 'الدولار الأسترالي (AUD)',
-                'krayin' => 'Krayin',
+                'krayin' => 'سجلنا',
                 'bangladeshi-taka' => 'التاكا البنغلاديشي (BDT)',
                 'brazilian-real' => 'الريال البرازيلي (BRL)',
                 'british-pound-sterling' => 'الجنيه الإسترليني البريطاني (GBP)',
@@ -229,24 +229,24 @@ return [
             ],
 
             'installation-processing' => [
-                'krayin' => 'تثبيت Krayin',
+                'krayin' => 'جارٍ تثبيت سجلنا',
                 'krayin-info' => 'إنشاء جداول قاعدة البيانات، وقد يستغرق ذلك بضع دقائق',
                 'title' => 'التثبيت',
             ],
 
             'installation-completed' => [
                 'admin-panel' => 'لوحة المشرف',
-                'krayin-forums' => 'منتديات Krayin',
+                'krayin-forums' => 'دعم سجلنا',
                 'customer-panel' => 'لوحة العميل',
-                'explore-krayin-extensions' => 'استكشاف امتدادات Krayin',
+                'explore-krayin-extensions' => 'استكشاف إضافات سجلنا',
                 'title' => 'اكتمال التثبيت',
-                'title-info' => 'تم تثبيت Krayin بنجاح على نظامك.',
+                'title-info' => 'تم تثبيت سجلنا بنجاح.',
             ],
 
             'ready-for-installation' => [
                 'create-databsae-table' => 'إنشاء جدول قاعدة البيانات',
                 'install' => 'التثبيت',
-                'install-info' => 'Krayin للتثبيت',
+                'install-info' => 'سجلنا جاهز للتثبيت',
                 'install-info-button' => 'انقر على الزر أدناه ل',
                 'populate-database-table' => 'ملء جداول قاعدة البيانات',
                 'start-installation' => 'بدء التثبيت',
@@ -257,8 +257,8 @@ return [
                 'locale' => 'اللغة',
                 'main' => 'بداية',
                 'select-locale' => 'اختر اللغة',
-                'title' => 'تثبيت Krayin الخاص بك',
-                'welcome-title' => 'مرحبًا بك في Krayin',
+                'title' => 'تثبيت سجلنا',
+                'welcome-title' => 'مرحبًا بك في سجلنا',
             ],
 
             'server-requirements' => [
@@ -285,16 +285,16 @@ return [
             ],
 
             'back' => 'رجوع',
-            'krayin' => 'Krayin',
+            'krayin' => 'سجلنا',
             'krayin-info' => 'مشروع مجتمعي من قبل',
-            'krayin-logo' => 'شعار Krayin',
+            'krayin-logo' => 'شعار سجلنا',
             'continue' => 'متابعة',
-            'installation-description' => 'عادة ما تتضمن عملية تثبيت Krayin عدة خطوات. إليك نظرة عامة عامة على عملية التثبيت krayin',
+            'installation-description' => 'يتم تثبيت سجلنا على عدة خطوات. إليك ما يفعله هذا المعالج.',
             'installation-info' => 'نحن سعداء برؤيتك هنا!',
             'installation-title' => 'مرحبًا بك في التثبيت',
             'installation-wizard' => 'لغة معالج التثبيت',
-            'title' => 'مثبت Krayin',
-            'webkul' => 'Webkul',
+            'title' => 'مثبّت سجلنا',
+            'webkul' => '',
         ],
     ],
 ];

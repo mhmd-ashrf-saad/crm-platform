@@ -337,7 +337,6 @@ return [
         ],
         'layouts' => [
             'powered-by' => [
-                'description' => 'Desarrollado por :krayin, un proyecto de código abierto de :webkul.',
             ],
             'header' => [
                 'mega-search' => [
@@ -2304,17 +2303,12 @@ return [
     'help' => [
         'index' => [
             'title' => 'Ayuda y recursos',
-            'description' => 'Todo lo que necesitas para sacar el máximo partido a Krayin Admin: alojamiento, soporte y servicios profesionales, además de extensiones y documentación para desarrolladores.',
             'contact-us' => 'Contáctanos',
             'view-all' => 'Ver todo',
             'still-need-help-title' => '¿Todavía necesitas ayuda?',
-            'still-need-help-description' => 'Habla con el equipo de Krayin sobre alojamiento, desarrollo personalizado o cualquier otra cosa.',
-
             'services' => [
                 'title' => 'Servicios y recursos',
                 'cloud-hosting' => [
-                    'title' => 'Alojamiento en la nube',
-                    'description' => 'Alojamiento en la nube gestionado y rentable: prueba y lanza Krayin en la nube en minutos, totalmente optimizado y escalable.',
                 ],
                 'support' => [
                     'title' => 'Soporte y mantenimiento',
@@ -2322,7 +2316,6 @@ return [
                 ],
                 'extensions' => [
                     'title' => 'Extensiones',
-                    'description' => 'Explora complementos oficiales y de la comunidad para ampliar Krayin con nuevos conectores, canales y funciones.',
                 ],
             ],
 
@@ -2338,14 +2331,12 @@ return [
                 ],
                 'api-docs' => [
                     'title' => 'Documentación de la API',
-                    'description' => 'Referencia completa de la API REST con endpoints, autenticación y ejemplos para integrar Krayin con tu stack.',
                 ],
             ],
 
             'community' => [
                 'forums' => [
                     'title' => 'Foros de la comunidad',
-                    'description' => 'Conecta con miles de usuarios y desarrolladores de Krayin para compartir consejos y resolver problemas.',
                     'link' => 'Únete a la comunidad',
                 ],
                 'tutorials' => [

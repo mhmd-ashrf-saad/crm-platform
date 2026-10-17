@@ -130,7 +130,6 @@ return [
         'index' => [
             'create-administrator' => [
                 'admin' => 'Administrador',
-                'krayin' => 'Krayin',
                 'confirm-password' => 'Confirmar Senha',
                 'email' => 'Email',
                 'email-address' => 'admin@exemplo.com',
@@ -145,7 +144,6 @@ return [
                 'application-name' => 'Nome da Aplicação',
                 'argentine-peso' => 'Peso Argentino (ARS)',
                 'australian-dollar' => 'Dólar Australiano (AUD)',
-                'krayin' => 'Krayin',
                 'bangladeshi-taka' => 'Taka de Bangladesh (BDT)',
                 'brazilian-real' => 'Real Brasileiro (BRL)',
                 'british-pound-sterling' => 'Libra Esterlina (GBP)',
@@ -229,24 +227,19 @@ return [
             ],
 
             'installation-processing' => [
-                'krayin' => 'Instalação do Krayin',
                 'krayin-info' => 'Criando as tabelas do banco de dados, isso pode levar alguns momentos',
                 'title' => 'Instalação',
             ],
 
             'installation-completed' => [
                 'admin-panel' => 'Painel de Administração',
-                'krayin-forums' => 'Fórum do Krayin',
                 'customer-panel' => 'Painel do Cliente',
-                'explore-krayin-extensions' => 'Explorar Extensões do Krayin',
                 'title' => 'Instalação Concluída',
-                'title-info' => 'O Krayin foi instalado com sucesso no seu sistema.',
             ],
 
             'ready-for-installation' => [
                 'create-databsae-table' => 'Criar as tabelas do banco de dados',
                 'install' => 'Instalar',
-                'install-info' => 'Krayin para Instalação',
                 'install-info-button' => 'Clique no botão abaixo para',
                 'populate-database-table' => 'Preencher as tabelas do banco de dados',
                 'start-installation' => 'Iniciar Instalação',
@@ -257,8 +250,6 @@ return [
                 'locale' => 'Localidade',
                 'main' => 'Início',
                 'select-locale' => 'Selecionar Localidade',
-                'title' => 'Instalação do Krayin',
-                'welcome-title' => 'Bem-vindo ao Krayin',
             ],
 
             'server-requirements' => [
@@ -285,16 +276,10 @@ return [
             ],
 
             'back' => 'Voltar',
-            'krayin' => 'Krayin',
-            'krayin-info' => 'um Projeto Comunitário por',
-            'krayin-logo' => 'Logotipo Krayin',
             'continue' => 'Continuar',
-            'installation-description' => 'A instalação do Krayin geralmente envolve várias etapas. Aqui está um resumo do processo de instalação do Krayin.',
             'installation-info' => 'Estamos felizes em vê-lo aqui!',
             'installation-title' => 'Bem-vindo à Instalação',
             'installation-wizard' => 'Assistente de Instalação - Idioma',
-            'title' => 'Instalador do Krayin',
-            'webkul' => 'Webkul',
         ],
     ],
 ];

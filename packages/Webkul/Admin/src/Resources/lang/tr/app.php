@@ -337,7 +337,6 @@ return [
         ],
         'layouts' => [
             'powered-by' => [
-                'description' => ':webkul tarafından geliştirilen açık kaynaklı bir proje olan :krayin tarafından desteklenmektedir.',
             ],
             'header' => [
                 'mega-search' => [
@@ -2304,17 +2303,12 @@ return [
     'help' => [
         'index' => [
             'title' => 'Yardım ve Kaynaklar',
-            'description' => 'Krayin Admin panelinden en iyi şekilde yararlanmanız için gereken her şey — barındırma, destek ve profesyonel hizmetlerin yanı sıra eklentiler ve geliştirici dokümantasyonu.',
             'contact-us' => 'Bize ulaşın',
             'view-all' => 'Tümünü gör',
             'still-need-help-title' => 'Hâlâ yardıma mı ihtiyacınız var?',
-            'still-need-help-description' => 'Barındırma, özel geliştirme veya başka her konuda Krayin ekibiyle görüşün.',
-
             'services' => [
                 'title' => 'Hizmetler ve Kaynaklar',
                 'cloud-hosting' => [
-                    'title' => 'Bulut Barındırma',
-                    'description' => 'Uygun maliyetli, yönetilen bulut barındırma — Krayin uygulamasını dakikalar içinde bulutta deneyip yayına alın; tamamen optimize edilmiş ve ölçeklenebilir.',
                 ],
                 'support' => [
                     'title' => 'Destek ve Bakım',
@@ -2322,7 +2316,6 @@ return [
                 ],
                 'extensions' => [
                     'title' => 'Eklentiler',
-                    'description' => 'Krayin uygulamasını yeni bağlayıcılar, kanallar ve özelliklerle genişletmek için resmi ve topluluk eklentilerine göz atın.',
                 ],
             ],
 
@@ -2338,14 +2331,12 @@ return [
                 ],
                 'api-docs' => [
                     'title' => 'API Dokümanları',
-                    'description' => 'Krayin uygulamasını sisteminize entegre etmek için uç noktalar, kimlik doğrulama ve örnekler içeren eksiksiz REST API referansı.',
                 ],
             ],
 
             'community' => [
                 'forums' => [
                     'title' => 'Topluluk Forumları',
-                    'description' => 'İpuçlarını paylaşmak ve sorunları çözmek için binlerce Krayin kullanıcısı ve geliştiricisiyle bağlantı kurun.',
                     'link' => 'Topluluğa katılın',
                 ],
                 'tutorials' => [

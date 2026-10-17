@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="30 69 192 125" width="192" height="125" role="img" aria-labelledby="sijilna-favicon-title">
+  <title id="sijilna-favicon-title">Sijilna favicon</title>
+  <!-- Sijilna brand asset: the 16 px cut of the mark. Humbs are 24 units wide with 18-unit
+       gaps (2.0 px ink / 1.5 px gap at 16 px) so the three entries stay separate when rasterised;
+       the primary mark merges them below ~24 px. Fork-owned; not an upstream core file.
+       Letterforms are outlines (no <text>), so no font needs to be installed. -->
+  <path fill="#0B3C5D" d="M114 81 A12 12 0 0 1 138 81 L138 108 L156 108 L156 81 A12 12 0 0 1 180 81 L180 108 L198 108 L198 81 A12 12 0 0 1 222 81 L222 138 L84 138 L84 194 L45 194 A15 15 0 0 1 45 164 L54 164 L54 108 L114 108 Z"/>
+</svg>

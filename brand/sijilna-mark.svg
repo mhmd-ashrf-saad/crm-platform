@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" width="256" height="256" role="img" aria-labelledby="sijilna-mark-title">
+  <title id="sijilna-mark-title">Sijilna mark</title>
+  <!-- Sijilna monogram: the Arabic seen (س) of سجلنا built as a register — three ruled
+       entry humps on a bound baseline, the tail descending as the register spine.
+       One union path: fills only, no strokes, no text, no gradients, no rasters.
+       Single colour: brand ink #0B3C5D. Glyph bbox x 35-222, y 63-194. -->
+  <path fill="#0B3C5D" d="M108 78 A15 15 0 0 1 138 78 L138 108 L150 108 L150 78 A15 15 0 0 1 180 78 L180 108 L192 108 L192 78 A15 15 0 0 1 222 78 L222 138 L89 138 L89 194 L50 194 A15 15 0 0 1 50 164 L59 164 L59 108 L108 108 Z"/>
+</svg>

@@ -337,7 +337,7 @@ return [
         ],
         'layouts' => [
             'powered-by' => [
-                'description' => 'Powered by :krayin, an open-source project by :webkul.',
+                'description' => 'Powered by Sijilna.',
             ],
             'header' => [
                 'mega-search' => [
@@ -2311,17 +2311,17 @@ return [
     'help' => [
         'index' => [
             'title' => 'Help & Resources',
-            'description' => 'Everything you need to get the most out of Krayin Admin — hosting, support and professional services, plus extensions and developer documentation.',
+            'description' => 'Everything you need to run Sijilna well — support, maintenance and documentation, plus a place to ask questions.',
             'contact-us' => 'Contact us',
             'view-all' => 'View all',
             'still-need-help-title' => 'Still need a hand?',
-            'still-need-help-description' => 'Talk to the Krayin team about hosting, custom development or anything else.',
+            'still-need-help-description' => 'Contact Sijilna support about your installation, customisation or anything else.',
 
             'services' => [
                 'title' => 'Services & Resources',
                 'cloud-hosting' => [
-                    'title' => 'Cloud Hosting',
-                    'description' => 'Cost-effective, managed cloud hosting — try and launch Krayin on the cloud in minutes, fully optimised and scalable.',
+                    'title' => 'Self-hosted Deployment',
+                    'description' => 'Sijilna runs on your own server. This covers installing it, updating it and backing it up.',
                 ],
                 'support' => [
                     'title' => 'Support & Maintenance',
@@ -2329,7 +2329,7 @@ return [
                 ],
                 'extensions' => [
                     'title' => 'Extensions',
-                    'description' => 'Browse official and community add-ons to extend Krayin with new connectors, channels and features.',
+                    'description' => 'Browse add-ons that extend Sijilna with new connectors, channels and fields.',
                 ],
             ],
 
@@ -2345,14 +2345,14 @@ return [
                 ],
                 'api-docs' => [
                     'title' => 'API Docs',
-                    'description' => 'Full REST API reference with endpoints, authentication and examples to integrate Krayin with your stack.',
+                    'description' => 'Full REST API reference with endpoints, authentication and examples to integrate Sijilna with your stack.',
                 ],
             ],
 
             'community' => [
                 'forums' => [
                     'title' => 'Community Forums',
-                    'description' => 'Connect with thousands of other Krayin users and developers to share tips and solve problems.',
+                    'description' => 'Ask questions and share answers with other Sijilna users.',
                     'link' => 'Join the community',
                 ],
                 'tutorials' => [

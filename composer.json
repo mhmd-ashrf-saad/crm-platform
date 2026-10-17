@@ -1,7 +1,7 @@
 {
-    "name": "krayin/laravel-crm",
+    "name": "sijilna/crm",
     "type": "project",
-    "description": "Krayin CRM",
+    "description": "Sijilna — a self-hosted, Arabic-first CRM and sales platform built on Krayin CRM.",
     "keywords": [
         "framework",
         "laravel"

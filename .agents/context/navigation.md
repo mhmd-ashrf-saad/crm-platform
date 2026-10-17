@@ -11,8 +11,8 @@ authoritative.
 
 | Category | Purpose | Files |
 | -------- | ------- | ----- |
-| [operations/](operations/navigation.md) | How this checkout is provisioned, served, stored and reset | environment-and-deployment, provisioning, database |
-| [guides/](guides/navigation.md) | Rules an agent must follow while working here | testing, agent-workflow-rules |
+| [operations/](operations/navigation.md) | How this checkout is provisioned, served, stored, reset and branded | environment-and-deployment, provisioning, database, brand |
+| [guides/](guides/navigation.md) | Rules an agent must follow while working here | testing, agent-workflow-rules, rebrand-boundary |
 | [errors/](errors/navigation.md) | Failures that actually happened here, and how to detect each | lands-from-experience |
 
 ## Entry points

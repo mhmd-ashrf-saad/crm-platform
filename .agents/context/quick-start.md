@@ -38,3 +38,4 @@ make serve / make stop
 - Pest and the double-env trap → [guides/testing.md](guides/testing.md)
 - Beads, workflow rules, proving work → [guides/agent-workflow-rules.md](guides/agent-workflow-rules.md)
 - Past failures and their checks → [errors/lands-from-experience.md](errors/lands-from-experience.md)
+- Rebrand scope and attribution → [guides/rebrand-boundary.md](guides/rebrand-boundary.md)
