@@ -246,27 +246,47 @@ before touching MySQL's buffer pool: a slow CRM is better than an OOM kill.
 
 ## Backups
 
-**The `sijilna-db-data` volume is NOT in the existing `/opt/homelab` restic
-backup set.** That set covers host paths, and a Docker named volume lives under
-`/var/lib/docker/volumes/sijilna-db-data/_data` — copying that directory out
-from under a running MySQL is not a safe backup anyway.
+The `sijilna-db-data` volume is never copied: a Docker named volume lives under
+`/var/lib/docker/volumes/sijilna-db-data/_data`, and copying a live InnoDB
+directory is not a backup — it is the exact mistake the homelab backup script was
+written to replace.
 
-Either add a dump step to the restic run:
+Since 2026-10-20 the host's nightly restic run covers this deployment
+(`/opt/homelab/homelab-backup.sh`, `homelab-backup.timer`, 03:00):
+
+| What | Where it lands in the snapshot |
+| ---- | ---- |
+| the whole `/opt/sijilna` tree, **including `.env`** | `/var/lib/homelab-staging/sijilna/` |
+| a logical dump of the `sijilna` database | `/var/lib/homelab-staging/sijilna-mysql.sql` |
+
+The dump is taken *inside* `sijilna-db` with `mysqldump --single-transaction
+--quick --routines --triggers --events --databases`: a consistent InnoDB snapshot
+with no table locks, streaming rather than buffering, keeping the objects a plain
+data dump drops, and naming the schema so an import needs no `CREATE DATABASE`.
+The credentials come from the container's own environment through `MYSQL_PWD`, so
+they never appear in argv or in the log. The run fails unless the dump ends with
+mysqldump's `-- Dump completed` trailer and is non-empty — exit status alone does
+not prove a complete dump.
+
+If `sijilna-db` is stopped at 03:00 the dump is skipped with a loud warning and
+the run still succeeds, because the stack may have been stopped deliberately.
+That night's snapshot then has the tree but no SQL, so restoring from it needs the
+previous night's dump.
+
+`.env` is in the snapshot on purpose: `APP_KEY` is what decrypts the encrypted
+columns in the restored database, so a restore without it yields a site that runs
+and shows garbage. The corollary is worth stating plainly — whoever holds the
+restic repository, or the 03:30 laptop copy of it, holds the database dump and
+the key together.
 
 ```bash
-mkdir -p /opt/sijilna/backup
-sudo docker compose -f /opt/sijilna/app/deploy/docker-compose.yml exec -T db \
-  sh -c 'MYSQL_PWD="$MYSQL_ROOT_PASSWORD" mysqldump --single-transaction \
-         --routines --events -u root "$MYSQL_DATABASE"' \
-  > /opt/sijilna/backup/sijilna-$(date +%F).sql
+# restore (fresh target, never over the live tree)
+sudo restic restore latest --target /var/tmp/restore
+sudo cp -a /var/tmp/restore/var/lib/homelab-staging/sijilna/app/. /opt/sijilna/app/
+# then, against a FRESH volume, import the dump and start the stack
+sudo docker exec -i sijilna-db sh -c 'MYSQL_PWD="$MYSQL_ROOT_PASSWORD" mysql -u root' \
+  < /var/tmp/restore/var/lib/homelab-staging/sijilna-mysql.sql
 ```
-
-and make sure `/opt/sijilna/backup` is inside the restic `--include` set, or back
-the volume up through a small sidecar container. The restic set covers
-`/opt/homelab` only, so **nothing under `/opt/sijilna` is backed up today** — not
-the volume, not uploaded files under `storage/app/public`, and not `.env`. Losing
-`.env` alone is enough to make encrypted columns unreadable, so it belongs in the
-same dump as the database.
 
 ## Working inside the stack
 

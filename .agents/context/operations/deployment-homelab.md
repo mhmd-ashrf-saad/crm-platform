@@ -106,11 +106,14 @@ nginx a few MB, OPcache 128 MB shared once. If the box swaps, lower
 
 ## Open risks
 
-1. **No backup covers this deployment.** Restic still backs up `/opt/homelab`
-   only: neither `/opt/sijilna` nor the `sijilna-db-data` volume is in the set.
-   Losing the host loses all CRM data, and losing `.env` alone makes encrypted
-   columns unreadable — the dump step in `deploy/README.md` → Backups is written
-   but **not scheduled**.
+1. **Backups now cover this deployment, with two caveats.** Since 2026-10-20 the
+   nightly restic run stages `/opt/sijilna` *and* a `mysqldump` of the `sijilna`
+   database (`/var/lib/homelab-staging/sijilna/` and `…/sijilna-mysql.sql`), so the
+   earlier gap is closed. Caveats: a night on which `sijilna-db` was stopped has
+   no SQL in its snapshot, and the snapshot now holds `.env` (with `APP_KEY`) next
+   to the dump, so a copy of the restic repo — including the 03:30 laptop copy —
+   is both the data and the key. Treat a lost or leaked repository copy as a
+   credential compromise, not just a data leak.
 2. **No uptime monitor.** Uptime Kuma has no check for `crm.mohamedlabs.com`, so
    a dead tunnel on a URL a client was shown produces no alert.
 3. **The administrator password is a demo credential** on a public login page.
