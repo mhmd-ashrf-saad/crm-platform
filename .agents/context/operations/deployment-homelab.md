@@ -114,8 +114,11 @@ nginx a few MB, OPcache 128 MB shared once. If the box swaps, lower
    to the dump, so a copy of the restic repo — including the 03:30 laptop copy —
    is both the data and the key. Treat a lost or leaked repository copy as a
    credential compromise, not just a data leak.
-2. **No uptime monitor.** Uptime Kuma has no check for `crm.mohamedlabs.com`, so
-   a dead tunnel on a URL a client was shown produces no alert.
+2. **Monitored since 2026-10-20.** Uptime Kuma (container `uptime-kuma`, `127.0.0.1:3001`)
+   has monitor **11 `Sijilna CRM`** — HTTP GET on
+   `https://crm.mohamedlabs.com/admin/login`, accepted `200-299`, interval 60 s,
+   `maxretries = 0` like every other monitor here, bound to the Telegram
+   notification (id 1). It is ungrouped like the rest; there is no status page.
 3. **The administrator password is a demo credential** on a public login page.
    Rotate it before the instance is described to anyone as a real CRM.
 4. **`storage/installed` is a one-file kill-switch** (see above). It is also the

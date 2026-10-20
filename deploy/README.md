@@ -138,6 +138,10 @@ curl -s https://crm.mohamedlabs.com/admin/login | grep -c 'https://'         # n
 # 4. Containers, including the database healthcheck
 sudo docker compose -f deploy/docker-compose.yml ps          # all three Up; db (healthy)
 
+# 4b. Monitoring: Uptime Kuma checks https://crm.mohamedlabs.com/admin/login every
+#     60s (monitor 11, Telegram on failure). A DOWN there while the stack is up
+#     means the tunnel, not the app.
+
 # 5. Count rows, not tables: the installer seeded an admin, so this is >= 1
 sudo docker compose -f deploy/docker-compose.yml exec -T db sh -c \
   'MYSQL_PWD="$MYSQL_PASSWORD" mysql -u"$MYSQL_USER" -N -e "select count(*) from users;" "$MYSQL_DATABASE"'
