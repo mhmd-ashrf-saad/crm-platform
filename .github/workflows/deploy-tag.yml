@@ -1,0 +1,246 @@
+name: Deploy Tag
+
+# Publishes the deployable marker tag `deploy-<short sha>` for a green commit
+# on `main`. It deploys nothing itself.
+#
+# WHY A TAG AND NOT A DEPLOY
+#   The homelab pulls; CI never reaches the server. A systemd timer runs
+#   `deploy/deploy.sh` on the host every three minutes. That script fetches
+#   tags, takes the newest `deploy-*` tag that is an ancestor of `origin/main`,
+#   dumps the database, checks the tag out, rebuilds when the image inputs
+#   changed, and gates on a health check. So the only decision this workflow
+#   makes is *what is deployable*, and the server therefore needs no credential
+#   that can push.
+#
+# WHY workflow_run AND NOT push
+#   A push run means "one workflow for this commit finished", not "all of them
+#   did". Being woken by each of the four and refusing to tag until every
+#   check-run on the commit is completed and green is what makes a
+#   late-finishing workflow impossible to outrun: the first three to finish see
+#   the fourth's check-run still in progress and do nothing, and the fourth
+#   tags.
+#
+# WHY THE CHECKS API AND NOT `needs:` IN ONE WORKFLOW
+#   The four suites are separate workflows on their own triggers (one of them
+#   is path-filtered and does not run for a docs-only commit). Merging them
+#   into one workflow graph would mean rewriting all four; reading the checks
+#   API asks the same question without touching them.
+#
+# SAFETY OF A workflow_run TRIGGER
+#   `workflow_run` runs with write permissions in the base-repo context, which
+#   is dangerous exactly when the job checks out or executes the triggering
+#   run's code. This job never checks anything out: it reads a sha from the
+#   payload and calls the API. Every input arrives through `env:`, never
+#   inline `${{ }}` inside the script, so there is nothing to inject into --
+#   and the `if:` above limits it to push runs on `main` anyway.
+permissions:
+  contents: write # create the tag
+  checks: read # list every check-run on the commit
+  # Reading `actions/runs` needs this. It is what catches a workflow that has
+  # been queued -- its run exists, its check-runs may not yet. That is the one
+  # gap the checks API alone cannot see.
+  actions: read
+
+on:
+  workflow_run:
+    workflows:
+      - CI
+      - Linting Tests
+      - Admin | Playwright Tests
+      - Skills Consistency
+    types: [completed]
+    branches: [main]
+
+# One tagger at a time: four workflows finishing seconds apart would otherwise
+# race to create the same ref and the loser would get a 422. Deliberately NOT
+# cancel-in-progress -- every queued run re-reads the live state, and the last
+# one to run is the one with the most complete picture. Tag creation is
+# idempotent anyway, so a duplicate is noise, not a failure.
+concurrency:
+  group: deploy-tag-main
+  cancel-in-progress: false
+
+jobs:
+  tag:
+    name: Tag the commit as deployable
+
+    runs-on: ubuntu-latest
+
+    # A run woken by a pull_request run, by a run on another branch, or by a
+    # run that did not succeed must not tag.
+    if: >-
+      github.event.workflow_run.conclusion == 'success' &&
+      github.event.workflow_run.event == 'push' &&
+      github.event.workflow_run.head_branch == 'main'
+
+    timeout-minutes: 10
+
+    steps:
+      - name: Tag the commit
+        env:
+          # The repository's own token. No personal access token, no secret to
+          # rotate: `contents: write` above is the whole privilege this needs.
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO: ${{ github.repository }}
+          SHA: ${{ github.event.workflow_run.head_sha }}
+          RUNNER_TEMP: ${{ runner.temp }}
+        run: |
+          set -euo pipefail
+
+          # `head_sha` is a full object name in a real workflow_run payload.
+          # Anything shorter is resolved through the API rather than trusted:
+          # the git refs endpoint rejects an abbreviated sha with a 422, so a
+          # short one here would fail at the very last step of a green run.
+          if [ "${#SHA}" -ne 40 ]; then
+            SHA="$(gh api "repos/${REPO}/commits/${SHA}" --jq '.sha')"
+          fi
+
+          # 7 characters: the width `git log --oneline` and `git rev-parse
+          # --short` both use on a repository this size, so the tag reads the
+          # same as every sha in this project's history.
+          short="${SHA:0:7}"
+          tag="deploy-${short}"
+
+          echo "commit=${SHA} tag=${tag}"
+
+          # Conclusions that are not failures. `skipped` is allowed on purpose:
+          # a path-filtered workflow whose jobs are all skipped, or a job with
+          # an `if:` that evaluates false, still reports a completed check-run
+          # with a `skipped` conclusion -- and a commit is not undeployable
+          # because one job decided it had nothing to do. Everything else
+          # (failure, cancelled, timed_out, action_required, startup_failure,
+          # stale) blocks the tag.
+          allowed="success neutral skipped"
+
+          # ---- 1. every check-run on the commit, finished and green --------
+          #
+          # One request per page, emitted as TSV: gh's embedded jq runs per
+          # page, so nothing has to reassemble a paginated JSON body.
+          checks_tsv="${RUNNER_TEMP}/checks.tsv"
+          gh api --paginate \
+            "repos/${REPO}/commits/${SHA}/check-runs?per_page=100" \
+            --jq '.check_runs[]
+                  | [.name, .status, (.conclusion // "none")] | @tsv' \
+            > "$checks_tsv"
+
+          total=0
+          pending=0
+          bad=0
+          while IFS=$'\t' read -r name status conclusion; do
+            [ -n "$name" ] || continue
+            total=$((total + 1))
+
+            if [ "$status" != "completed" ]; then
+              echo "pending: ${name} (${status})"
+              pending=1
+              continue
+            fi
+
+            case " ${allowed} " in
+              *" ${conclusion} "*)
+                echo "ok:      ${name} (${conclusion})"
+                ;;
+              *)
+                echo "::error::check '${name}' concluded '${conclusion}'"
+                bad=1
+                ;;
+            esac
+          done < "$checks_tsv"
+
+          if [ "$total" -eq 0 ]; then
+            echo "::error::no check-runs reported for ${SHA} -- refusing to"
+            echo "::error::tag a commit that nothing verified"
+            exit 1
+          fi
+
+          # ---- 2. no workflow run for this commit still in flight ----------
+          #
+          # The checks API cannot see a run that has been queued but has not
+          # yet created its check-runs, so a workflow starting a second after
+          # this job could still slip past step 1. A run is created at queue
+          # time, which closes that window. This job's own run is excluded by
+          # name. What remains is a workflow GitHub has not created at all yet,
+          # which nothing outside GitHub can observe -- see deploy/README.md.
+          runs_tsv="${RUNNER_TEMP}/runs.tsv"
+          gh api --paginate \
+            "repos/${REPO}/actions/runs?head_sha=${SHA}&per_page=100" \
+            --jq '.workflow_runs[]
+                  | select(.name != "Deploy Tag")
+                  | [.name, .status, (.conclusion // "none")] | @tsv' \
+            > "$runs_tsv"
+
+          while IFS=$'\t' read -r name status conclusion; do
+            [ -n "$name" ] || continue
+            if [ "$status" != "completed" ]; then
+              echo "pending run: ${name} (${status})"
+              pending=1
+              continue
+            fi
+            if [ "$conclusion" != "success" ] &&
+               [ "$conclusion" != "skipped" ]; then
+              echo "::error::workflow '${name}' for ${SHA} concluded"
+              echo "::error::'${conclusion}'"
+              bad=1
+            fi
+          done < "$runs_tsv"
+
+          # A pending check is not a failure: another workflow_run event is
+          # already on its way for it, and *that* run re-evaluates. Exiting 0
+          # with a notice keeps the status board honest -- red here means "this
+          # commit is not deployable", which is not the same as "not yet".
+          if [ "$pending" -ne 0 ]; then
+            echo "::notice::${SHA} still has unfinished checks; a later"
+            echo "::notice::workflow_run will re-evaluate"
+            exit 0
+          fi
+
+          if [ "$bad" -ne 0 ]; then
+            echo "::error::${SHA} is not deployable: a check or workflow run"
+            echo "::error::for it did not succeed"
+            exit 1
+          fi
+
+          # ---- 3. create the tag, idempotently ----------------------------
+          #
+          # A lightweight ref, not an annotated tag object: `git fetch --tags`
+          # on the server gets the commit either way, and one API call beats
+          # creating a tag object first.
+          if existing="$(gh api "repos/${REPO}/git/ref/tags/${tag}" \
+                            2>/dev/null)"; then
+            at="$(printf '%s' "$existing" | jq -r '.object.sha')"
+            if [ "$at" != "$SHA" ]; then
+              echo "::error::${tag} already exists at ${at}, not at ${SHA}"
+              echo "::error::-- refusing to move a published deploy tag"
+              exit 1
+            fi
+            echo "::notice::${tag} already points at ${SHA}; nothing to do"
+            echo "- \`${tag}\` already existed at \`${SHA}\`" \
+              >> "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+
+          if ! gh api --method POST "repos/${REPO}/git/refs" \
+                 -f ref="refs/tags/${tag}" -f sha="${SHA}"; then
+            # Concurrency above serialises the four workflow_run events, but
+            # two runs can still arrive close enough that both see a 404. The
+            # loser's POST fails with "Reference already exists"; that is
+            # success, not failure -- provided the ref it lost to is the ref it
+            # wanted.
+            if existing="$(gh api "repos/${REPO}/git/ref/tags/${tag}" \
+                              2>/dev/null)"; then
+              at="$(printf '%s' "$existing" | jq -r '.object.sha')"
+              if [ "$at" != "$SHA" ]; then
+                echo "::error::${tag} was created at ${at} by another run,"
+                echo "::error::not at ${SHA}"
+                exit 1
+              fi
+              echo "::notice::${tag} was created by a concurrent run at ${SHA}"
+              exit 0
+            fi
+            exit 1
+          fi
+
+          echo "::notice::created ${tag} at ${SHA} -- the homelab will deploy"
+          echo "::notice::it within about three minutes"
+          echo "- created \`${tag}\` at \`${SHA}\`" \
+            "(all ${total} checks green)" >> "$GITHUB_STEP_SUMMARY"

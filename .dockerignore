@@ -52,6 +52,12 @@ playwright
 storage
 
 # --- Not needed at run time --------------------------------------------------
+# The deploy runner and its documentation. They sit inside the build context
+# because they describe and operate this stack, but nothing in the image reads
+# them -- and excluding them is what lets deploy/deploy.sh skip a rebuild for a
+# docs-only commit instead of re-running composer install for the same bytes.
+deploy/README.md
+deploy/deploy.sh
 tests
 bin
 brand
