@@ -10,6 +10,8 @@ This changelog consists of the bug & security fixes and new features being inclu
 
 * [enhancement] Moved the `beads` skill into the canonical `.github/skills` directory, linked it from `.agents/skills`, and made the skills-consistency workflow run for changes under `.agents/`.
 
+* [feature] Added a self-contained production container stack under `deploy/` — PHP-FPM 8.3, nginx and MySQL 8.4 on host loopback port 3102, built from `deploy/docker-compose.yml` — plus an `APP_FORCE_HTTPS` flag that forces `https://` URLs where a Cloudflare Tunnel terminates TLS in front of the app.
+
 ## **v2.2.7 (16th of Oct 2026)**
 
 * [fixed] Fixed a web form submission creating a duplicate contact when the address differed only in case.

@@ -1,0 +1,69 @@
+# Build context filter for deploy/docker/php.Dockerfile.
+#
+# The Docker build context is the REPOSITORY ROOT (`context: ..` in
+# deploy/docker-compose.yml), so the image gets the application but none of the
+# machine-local state. Two of these entries are load-bearing:
+#
+#   * `.env` / `deploy/.env` -- the deployment secrets live there; a build context
+#     is not a secret store.
+#   * `storage` -- this checkout's storage/installed marker would be copied into a
+#     fresh image and convince the entrypoint that a brand-new database was
+#     already installed.
+#
+# Matching note: like .gitignore only in spirit, a pattern WITHOUT a slash matches
+# at the context root only (verified with docker build), so `vendor` does not also
+# match `packages/x/vendor`, and nested files need their own patterns.
+
+# --- VCS and agent tooling ---------------------------------------------------
+.git
+.github
+.gitignore
+.gitattributes
+.beads
+.agents
+.ai
+.claude
+.codex
+.cursor
+.kilocode
+.idea
+.vscode
+.vagrant
+.editorconfig
+.styleci.yml
+
+# --- Secrets -----------------------------------------------------------------
+.env
+.env.*
+deploy/.env
+!deploy/.env.deploy.example
+
+# --- Installed dependencies and build scratch --------------------------------
+vendor
+node_modules
+package-lock.json
+.phpunit.cache
+.phpunit.result.cache
+.php_cs.cache
+playwright-report
+test-results
+blob-report
+playwright
+storage
+
+# --- Not needed at run time --------------------------------------------------
+tests
+bin
+brand
+docs
+ignorables
+data
+docker-compose-collection
+*.hot
+
+# --- Runtime state (the storage/ exclusion above already covers logs and
+#     framework caches; these are the paths a dev machine also leaves behind) --
+bootstrap/cache/packages.php
+bootstrap/cache/services.php
+bootstrap/cache/config.php
+bootstrap/cache/routes-*.php

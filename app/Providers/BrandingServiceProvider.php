@@ -6,6 +6,7 @@ use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\URL;
 use Illuminate\Support\ServiceProvider;
 use Sijilna\Brand\Brand;
 
@@ -44,6 +45,33 @@ class BrandingServiceProvider extends ServiceProvider
         $this->prependBrandViewNamespaces($brandPath);
         $this->registerBrandAssetRoute($brandPath);
         $this->replaceVendorLogoRoute($brandPath);
+        $this->forceHttpsScheme();
+    }
+
+    /**
+     * Force https for URLs generated behind the Cloudflare Tunnel.
+     *
+     * The tunnel terminates TLS at Cloudflare's edge and forwards plain HTTP to
+     * nginx (see deploy/docker-compose.yml), so `$request->isSecure()` is false
+     * and every url()/asset() call renders `http://...`. A browser on the https
+     * page then blocks those requests as mixed content, which breaks the login
+     * form's action and the admin assets. Laravel's usual lever is
+     * TrustProxies, but that is configured in bootstrap/app.php and this fork
+     * does not name the tunnel as a trusted proxy, so the scheme is forced here
+     * instead -- no core file is touched.
+     *
+     * GATED ON AN EXPLICIT FLAG, default off: `make serve` runs this checkout on
+     * http://127.0.0.1:8000, where forcing https would point every generated URL
+     * at a scheme nothing is listening on. Only a deployment that sets
+     * APP_FORCE_HTTPS=true in .env (see deploy/.env.deploy.example) is affected.
+     */
+    protected function forceHttpsScheme(): void
+    {
+        if (! filter_var(env('APP_FORCE_HTTPS', false), FILTER_VALIDATE_BOOL)) {
+            return;
+        }
+
+        URL::forceScheme('https');
     }
 
     /**
