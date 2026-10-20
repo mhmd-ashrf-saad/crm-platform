@@ -104,6 +104,19 @@ Three containers measured at roughly **470 MB RSS** together, leaving about
 nginx a few MB, OPcache 128 MB shared once. If the box swaps, lower
 `pm.max_children` to 3 before touching MySQL's buffer pool.
 
+## Deploying
+
+Pushing to `main` deploys, and nothing else does. Four CI workflows must pass, then
+`.github/workflows/deploy-tag.yml` publishes `deploy-<sha>`; the host's
+`sijilna-deploy.timer` runs `/opt/sijilna/deploy.sh` every 3 minutes, which dumps
+the database, checks the tag out, rebuilds only when the build inputs changed,
+health-gates `/admin/login` and rolls back (previous tag, `sijilna-app:pre-deploy`,
+pre-deploy dump when migrations were added) if the gate fails.
+
+A red `main` produces no tag, so an undeployed commit is the pipeline working.
+Runbook and drill measurements: `deploy/README.md`. State is
+`/opt/sijilna/deployed-tag`; the log is `/var/log/sijilna-deploy.log`.
+
 ## Open risks
 
 1. **Backups now cover this deployment, with two caveats.** Since 2026-10-20 the
