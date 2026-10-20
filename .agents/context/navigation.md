@@ -1,4 +1,4 @@
-<!-- Context: navigation.md | Priority: critical | Version: 1.0 | Updated: 2026-10-16 -->
+<!-- Context: navigation.md | Priority: critical | Version: 1.0 | Updated: 2026-10-20 -->
 
 # Context Navigation
 
@@ -11,7 +11,7 @@ authoritative.
 
 | Category | Purpose | Files |
 | -------- | ------- | ----- |
-| [operations/](operations/navigation.md) | How this checkout is provisioned, served, stored, reset and branded | environment-and-deployment, provisioning, database, brand |
+| [operations/](operations/navigation.md) | How this checkout is provisioned, served, stored, reset and branded; where the live homelab demo runs | environment-and-deployment, deployment-homelab, provisioning, database, brand |
 | [guides/](guides/navigation.md) | Rules an agent must follow while working here | testing, agent-workflow-rules, rebrand-boundary |
 | [errors/](errors/navigation.md) | Failures that actually happened here, and how to detect each | lands-from-experience |
 
@@ -19,6 +19,7 @@ authoritative.
 
 - [quick-start.md](quick-start.md) — 60-second orientation for a fresh session.
 - `scripts/README.md` — the full operational runbook (canonical detail).
+- `deploy/README.md` — the homelab deployment runbook (containers, tunnel, verification).
 - `Makefile` — the only sanctioned command surface; `make` with no arguments lists it.
 - `AGENTS.md` — upstream conventions plus the fork-specific project section.
 
