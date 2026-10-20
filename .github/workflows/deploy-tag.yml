@@ -116,10 +116,24 @@ jobs:
           #
           # One request per page, emitted as TSV: gh's embedded jq runs per
           # page, so nothing has to reassemble a paginated JSON body.
+          #
+          # This job's OWN check-run is excluded, because it is in progress by
+          # definition while this code runs. Without the exclusion the gate saw
+          # itself and always decided "still finishing" -- measured on the first
+          # real push of this workflow (2026-10-20, 73bc5df): three runs, each
+          # `pending: Tag the commit as deployable (in_progress)`, each exiting
+          # 0 with a notice, and no tag ever created. `details_url` carries this
+          # run's id, so matching on it excludes exactly this run whatever the
+          # job is later renamed to, and leaves every other workflow's
+          # check-runs -- including a second Deploy Tag run for that commit --
+          # fully in scope.
           checks_tsv="${RUNNER_TEMP}/checks.tsv"
           gh api --paginate \
             "repos/${REPO}/commits/${SHA}/check-runs?per_page=100" \
             --jq '.check_runs[]
+                  | select((.details_url // "")
+                           | contains("/runs/" + env.GITHUB_RUN_ID + "/")
+                           | not)
                   | [.name, .status, (.conclusion // "none")] | @tsv' \
             > "$checks_tsv"
 
