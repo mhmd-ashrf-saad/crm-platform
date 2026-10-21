@@ -4,6 +4,8 @@ This changelog consists of the bug & security fixes and new features being inclu
 
 ## **v2.2.8 (Upcoming)**
 
+* [feature] Added a client-facing Arabic user manual under `docs/client-guide/` — 17 chapters covering orientation, login, dashboard, leads and pipeline, the lead record, contacts, activities, quotes, products and inventory, mail, team and permissions, configuration, automation, web forms and import, troubleshooting, limits and provider, plus a glossary — with a verified-facts digest and a screenshot catalog for the writer and operator.
+
 * [feature] Added a tag-gated pull-based deploy pipeline for the homelab: `.github/workflows/deploy-tag.yml` publishes `deploy-<short sha>` only once every check-run on a `main` commit is completed and green, and `deploy/deploy.sh` — run by `sijilna-deploy.timer` every three minutes — dumps the database, deploys the newest tag that is reachable from `origin/main`, rebuilds only when the image inputs changed, gates on an HTTP 200 health check, and rolls back to the previous tag and image (restoring the pre-deploy dump when migrations were applied) with a single Telegram alert on failure. Deploys are documented end to end in `deploy/README.md`.
 
 * [fixed] Fixed the Admin Playwright suite failing intermittently on the organization and person create cases: the tests typed into the form before the page had finished loading, so the mount discarded the value and the form was never submitted.
