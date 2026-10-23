@@ -22,7 +22,9 @@ This changelog consists of the bug & security fixes and new features being inclu
 
 * [fixed] Fixed a green commit on `main` that still never reached the homelab because nothing tagged it after the fact: a scheduled reconciler in `.github/workflows/reconcile-deploy-tags.yml` sweeps recent `main` commits, backfills any `deploy-*` tag that is missing, and raises a tracked alarm when `main`'s tip stays green and untagged across runs rather than waiting on an event that never arrives.
 
-* [fixed] Fixed a hung Playwright shard or a stalled browser download stalling a deploy with no upper bound: every shard job and the browser install step in `.github/workflows/admin_playwright_tests.yml` are now time-bounded, and the install retries a bounded number of times before failing the job.
+* [fixed] Fixed a hung Playwright shard or a stalled browser download stalling a deploy with no upper bound: every shard job and the browser install step in `.github/workflows/admin_playwright_tests.yml` are now time-bounded, and the install is bounded by a single measured attempt that fails the job visibly.
+
+* [fixed] Fixed the Playwright install bound itself taking CI red: a retry loop killed a slow `--with-deps` install at the 240 second cap, which left `dpkg` locked or half-configured, so each retry failed instantly and 5 of 15 shards failed. Measured install time on healthy shards was 42-80 seconds, so the retry is gone and the install is one 600 second attempt inside a 15 minute step, reporting a timeout (`124`/`137`) and a genuine failure separately and never retrying after a kill.
 
 * [enhancement] Added unattended provisioning for a second Sijilna instance: `deploy/provision-instance.sh` clones a checkout, writes the `.env`, generates the database passwords and instance identity, and refuses to proceed against an `.env` that is not production-safe (`APP_ENV=production`, `APP_DEBUG=false`), while `deploy/docker-compose.yml` takes the project, container, image, volume and published-port names from seven `SIJILNA_*` keys so two instances cannot collide.
 
