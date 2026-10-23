@@ -20,14 +20,13 @@ jobs:
     # is what converts a stall like that into a visible failure instead of a
     # silent one: the install step below is capped at 15 minutes and this job at
     # 25, so a browser install that hangs has two ceilings over it instead of
-    # none, and exhausting the step's retries fails the step on its own.
+    # none, and the install's own attempt cap fails it before either fires.
     #
-    # Neither cap promises that no slow shard is ever cancelled. Attempt 1 can
-    # burn its full four minutes and attempt 2 can still succeed, leaving
-    # composer install, the Krayin installer and an atypically long shard to
-    # approach the cap together; should they reach it, the 25-minute job cap is
-    # what fires, and the job fails closed -- red, never silently green. That is
-    # the difference the caps buy.
+    # Neither cap promises that no slow shard is ever cancelled. A slow browser
+    # install can leave composer install, the Krayin installer and an atypically
+    # long shard to approach the cap together; should they reach it, the
+    # 25-minute job cap is what fires, and the job fails closed -- red, never
+    # silently green. That is the difference the caps buy.
     timeout-minutes: 25
 
     strategy:
@@ -74,14 +73,27 @@ jobs:
 
       # `--with-deps` apt-installs the OS libraries and then downloads the
       # browser builds. Both halves are network work that can stall with no
-      # output and no error, which is exactly the 29-minute hang above. Each
-      # attempt is capped at 4 minutes (roughly twice a healthy install) and a
-      # stalled attempt is retried, so a transient hang costs one retried step
-      # instead of a whole cancelled run. The loop still exits 1 when every
-      # attempt fails: the error is never swallowed, only delayed by the
-      # retries. 3 x 4 min plus the backoff stays under this step's 15-minute
-      # cap, and the step cap stays under the job's 25-minute cap, so the
-      # tightest bound is always the one that fires first.
+      # output and no error, which is exactly the 29-minute hang above.
+      #
+      # A retry loop used to sit here: three attempts of 4 minutes each. Run
+      # 40014155978 (commit 83749e3b) showed why that is worse than no retry.
+      # On the 5 shards that failed, attempt 1 was killed by `timeout` (exit
+      # 124) in the middle of apt/dpkg work, which left dpkg half-configured,
+      # so attempts 2 and 3 failed immediately (exit 1). The retries never
+      # rescued a stall; they turned a slow install into a certain failure.
+      #
+      # Measured on that same run, the 10 healthy shards installed in 42-80s
+      # (median 49s) with all 15 shards contending, so the routine cost is well
+      # under a minute and a half. One attempt capped at 10 minutes is about
+      # 7.5x the worst healthy install, and there is now exactly one attempt,
+      # so no path retries on top of a killed, half-configured dpkg.
+      #
+      # Bounds, tightest first: 600s in this attempt plus a 30s kill-after grace
+      # (630s), the step's 15 minutes (900s), the job's 25. The attempt cap is
+      # what fires on a stalled download. The step cap only fires if the process
+      # ignores KILL or sits in uninterruptible IO -- if 15 minutes is ever the
+      # thing that reports, the attempt cap did not govern, and that is the
+      # anomaly to investigate.
       - name: Install Playwright Browsers
         working-directory: packages/Webkul/Admin
         timeout-minutes: 15
@@ -89,37 +101,35 @@ jobs:
           set -uo pipefail
 
           # GitHub runs `run:` blocks as `bash -eo pipefail`. `-e` would abort
-          # the step on the first non-zero attempt, so the retry loop below
-          # would never run; turn it off and check every exit status by hand.
+          # this block on `timeout`'s non-zero exit before the message below is
+          # printed, so it is turned off and the status is checked by hand.
           set +e
 
-          attempts=3
-          attempt_timeout=240
-          backoff=15
+          attempt_timeout=600
 
-          for ((attempt = 1; attempt <= attempts; attempt++)); do
-            echo "::group::playwright install attempt ${attempt}/${attempts}"
-            # `timeout` puts the command in its own process group and signals
-            # that group, so a stalled download is killed rather than left
-            # holding the step; --kill-after covers a child that ignores TERM.
-            timeout --kill-after=20 "${attempt_timeout}" \
-              npx playwright install --with-deps
-            status=$?
-            echo "::endgroup::"
+          # `timeout` signals the command's whole process group, so a stalled
+          # download is killed rather than left holding the step; --kill-after
+          # covers a child that ignores TERM and escalates to KILL, which
+          # reports 137 instead of 124.
+          timeout --kill-after=30 "${attempt_timeout}" \
+            npx playwright install --with-deps
+          status=$?
 
-            if [ "${status}" -eq 0 ]; then
-              echo "Playwright browsers installed on attempt ${attempt}."
-              exit 0
-            fi
+          if [ "${status}" -eq 0 ]; then
+            echo "Playwright browsers installed."
+            exit 0
+          fi
 
-            echo "::warning::Attempt ${attempt}/${attempts} failed or hit" \
-              "the ${attempt_timeout}s cap (exit ${status});" \
-              "retrying in ${backoff}s."
-            sleep "${backoff}"
-          done
+          # A kill and a genuine failure are reported apart on purpose. One
+          # "failed or hit the cap" line for both is what hid this regression.
+          if [ "${status}" -eq 124 ] || [ "${status}" -eq 137 ]; then
+            echo "::error::Playwright browser install TIMED OUT after" \
+              "${attempt_timeout}s (exit ${status}); killed, not retried."
+          else
+            echo "::error::Playwright browser install FAILED with exit" \
+              "code ${status}."
+          fi
 
-          echo "::error::Playwright browser install did not complete in" \
-            "${attempts} attempts of ${attempt_timeout}s each."
           exit 1
 
       - name: Setting Environment
