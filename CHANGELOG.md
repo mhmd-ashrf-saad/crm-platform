@@ -16,6 +16,10 @@ This changelog consists of the bug & security fixes and new features being inclu
 
 * [feature] Added a self-contained production container stack under `deploy/` — PHP-FPM 8.3, nginx and MySQL 8.4 on host loopback port 3102, built from `deploy/docker-compose.yml` — plus an `APP_FORCE_HTTPS` flag that forces `https://` URLs where a Cloudflare Tunnel terminates TLS in front of the app.
 
+* [fixed] Fixed PDF export failing with a server error in the production image whenever the interface was in Arabic or Hebrew, because mPDF could not create its temporary directory inside the image.
+
+* [fixed] Fixed a green commit on `main` sometimes never being tagged `deploy-<sha>` — leaving the homelab silently on an older tag — because the tag workflow exited as soon as any other workflow's checks were still finishing and trusted a later event to re-evaluate it; it now re-checks the checks and workflow runs every 20 seconds for up to six minutes instead, still fails at once on a real failure, and only gives up after that deadline.
+
 ## **v2.2.7 (16th of Oct 2026)**
 
 * [fixed] Fixed a web form submission creating a duplicate contact when the address differed only in case.

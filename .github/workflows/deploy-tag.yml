@@ -14,11 +14,11 @@ name: Deploy Tag
 #
 # WHY workflow_run AND NOT push
 #   A push run means "one workflow for this commit finished", not "all of them
-#   did". Being woken by each of the four and refusing to tag until every
-#   check-run on the commit is completed and green is what makes a
-#   late-finishing workflow impossible to outrun: the first three to finish see
-#   the fourth's check-run still in progress and do nothing, and the fourth
-#   tags.
+#   did". Being woken by each of the four and having each wake wait briefly for
+#   the very state it was woken for is what makes a late-finishing workflow
+#   impossible to outrun: the first wake that sees every check-run on the
+#   commit completed and green does the tagging, whether or not a later event
+#   ever arrives.
 #
 # WHY THE CHECKS API AND NOT `needs:` IN ONE WORKFLOW
 #   The four suites are separate workflows on their own triggers (one of them
@@ -112,107 +112,166 @@ jobs:
           # stale) blocks the tag.
           allowed="success neutral skipped"
 
-          # ---- 1. every check-run on the commit, finished and green --------
+          # ---- 1+2. collect both views, then retry while anything is late --
           #
-          # One request per page, emitted as TSV: gh's embedded jq runs per
-          # page, so nothing has to reassemble a paginated JSON body.
+          # Both questions are re-asked on every iteration, because both feed
+          # the same two flags: a run that is visible but whose check-runs have
+          # not settled yet only clears through the checks API, and a run that
+          # was not visible at all only appears in the runs API.
           #
-          # This job's OWN check-run is excluded, because it is in progress by
-          # definition while this code runs. Without the exclusion the gate saw
-          # itself and always decided "still finishing" -- measured on the first
-          # real push of this workflow (2026-10-20, 73bc5df): three runs, each
-          # `pending: Tag the commit as deployable (in_progress)`, each exiting
-          # 0 with a notice, and no tag ever created. `details_url` carries this
-          # run's id, so matching on it excludes exactly this run whatever the
-          # job is later renamed to, and leaves every other workflow's
-          # check-runs -- including a second Deploy Tag run for that commit --
-          # fully in scope.
-          checks_tsv="${RUNNER_TEMP}/checks.tsv"
-          gh api --paginate \
-            "repos/${REPO}/commits/${SHA}/check-runs?per_page=100" \
-            --jq '.check_runs[]
-                  | select((.details_url // "")
-                           | contains("/runs/" + env.GITHUB_RUN_ID + "/")
-                           | not)
-                  | [.name, .status, (.conclusion // "none")] | @tsv' \
-            > "$checks_tsv"
+          # The retry is what lets a wake that arrives a few seconds early still
+          # tag. It replaces an earlier version that exited 0 with a notice on
+          # ANY pending state, on the assumption that another workflow_run event
+          # was on its way and would re-evaluate. That assumption is false
+          # whenever the waking event is the last one -- measured on 2026-10-21
+          # (9b95d8e2 on main): the run woken by the Playwright workflow's
+          # `completed` event read shard 12 of 15 as `in_progress` in the checks
+          # API, because that workflow's per-job check-runs had not all settled
+          # yet. All three runs for that sha (39611049115, 39611090045,
+          # 39611786888) succeeded and each exited 0 with the notice, no fourth
+          # run ever appeared, `deploy-9b95d8e2` was never created, and the
+          # homelab stayed two commits behind on the newest tag it could see. A
+          # wake has no successor to rely on; it has to wait for the state it
+          # was woken for.
+          #
+          # 20 s apart, 360 s in total: long enough to cover the tail of the
+          # slowest workflow settling its own check-runs, and well inside this
+          # job's `timeout-minutes: 10`, so the bounded wait is never the thing
+          # that kills the job.
+          poll_interval=20
+          deadline=360
+          started=$SECONDS
+          attempt=0
 
-          total=0
-          pending=0
-          bad=0
-          while IFS=$'\t' read -r name status conclusion; do
-            [ -n "$name" ] || continue
-            total=$((total + 1))
+          while :; do
+            attempt=$((attempt + 1))
+            total=0
+            pending=0
+            bad=0
 
-            if [ "$status" != "completed" ]; then
-              echo "pending: ${name} (${status})"
-              pending=1
-              continue
-            fi
+            # ---- 1. every check-run on the commit, finished and green ------
+            #
+            # One request per page, emitted as TSV: gh's embedded jq runs per
+            # page, so nothing has to reassemble a paginated JSON body.
+            #
+            # This job's OWN check-run is excluded, because it is in progress
+            # by definition while this code runs. Without the exclusion the gate
+            # saw itself and always decided "still finishing" -- measured on the
+            # first real push of this workflow (2026-10-20, 73bc5df): three
+            # runs, each `pending: Tag the commit as deployable (in_progress)`,
+            # each exiting 0 with a notice, and no tag ever created.
+            # `details_url` carries this run's id, so matching on it excludes
+            # exactly this run whatever the job is later renamed to, and leaves
+            # every other workflow's check-runs -- including a second Deploy Tag
+            # run for that commit -- fully in scope.
+            checks_tsv="${RUNNER_TEMP}/checks.tsv"
+            gh api --paginate \
+              "repos/${REPO}/commits/${SHA}/check-runs?per_page=100" \
+              --jq '.check_runs[]
+                    | select((.details_url // "")
+                             | contains("/runs/" + env.GITHUB_RUN_ID + "/")
+                             | not)
+                    | [.name, .status, (.conclusion // "none")] | @tsv' \
+              > "$checks_tsv"
 
-            case " ${allowed} " in
-              *" ${conclusion} "*)
-                echo "ok:      ${name} (${conclusion})"
-                ;;
-              *)
-                echo "::error::check '${name}' concluded '${conclusion}'"
+            while IFS=$'\t' read -r name status conclusion; do
+              [ -n "$name" ] || continue
+              total=$((total + 1))
+
+              if [ "$status" != "completed" ]; then
+                echo "pending: ${name} (${status})"
+                pending=1
+                continue
+              fi
+
+              case " ${allowed} " in
+                *" ${conclusion} "*)
+                  echo "ok:      ${name} (${conclusion})"
+                  ;;
+                *)
+                  echo "::error::check '${name}' concluded '${conclusion}'"
+                  bad=1
+                  ;;
+              esac
+            done < "$checks_tsv"
+
+            # ---- 2. no workflow run for this commit still in flight --------
+            #
+            # The checks API cannot see a run that has been queued but has not
+            # yet created its check-runs, so a workflow starting a second after
+            # this job could still slip past step 1. A run is created at queue
+            # time, which closes that window. This job's own run is excluded by
+            # name. What remains is a workflow GitHub has not created at all
+            # yet, which nothing outside GitHub can observe -- see
+            # deploy/README.md.
+            runs_tsv="${RUNNER_TEMP}/runs.tsv"
+            gh api --paginate \
+              "repos/${REPO}/actions/runs?head_sha=${SHA}&per_page=100" \
+              --jq '.workflow_runs[]
+                    | select(.name != "Deploy Tag")
+                    | [.name, .status, (.conclusion // "none")] | @tsv' \
+              > "$runs_tsv"
+
+            while IFS=$'\t' read -r name status conclusion; do
+              [ -n "$name" ] || continue
+              if [ "$status" != "completed" ]; then
+                echo "pending run: ${name} (${status})"
+                pending=1
+                continue
+              fi
+              if [ "$conclusion" != "success" ] &&
+                 [ "$conclusion" != "skipped" ]; then
+                echo "::error::workflow '${name}' for ${SHA} concluded"
+                echo "::error::'${conclusion}'"
                 bad=1
-                ;;
-            esac
-          done < "$checks_tsv"
+              fi
+            done < "$runs_tsv"
 
-          if [ "$total" -eq 0 ]; then
-            echo "::error::no check-runs reported for ${SHA} -- refusing to"
-            echo "::error::tag a commit that nothing verified"
-            exit 1
-          fi
-
-          # ---- 2. no workflow run for this commit still in flight ----------
-          #
-          # The checks API cannot see a run that has been queued but has not
-          # yet created its check-runs, so a workflow starting a second after
-          # this job could still slip past step 1. A run is created at queue
-          # time, which closes that window. This job's own run is excluded by
-          # name. What remains is a workflow GitHub has not created at all yet,
-          # which nothing outside GitHub can observe -- see deploy/README.md.
-          runs_tsv="${RUNNER_TEMP}/runs.tsv"
-          gh api --paginate \
-            "repos/${REPO}/actions/runs?head_sha=${SHA}&per_page=100" \
-            --jq '.workflow_runs[]
-                  | select(.name != "Deploy Tag")
-                  | [.name, .status, (.conclusion // "none")] | @tsv' \
-            > "$runs_tsv"
-
-          while IFS=$'\t' read -r name status conclusion; do
-            [ -n "$name" ] || continue
-            if [ "$status" != "completed" ]; then
-              echo "pending run: ${name} (${status})"
-              pending=1
-              continue
+            # Something concluded that is neither success nor neutral nor
+            # skipped. Waiting cannot turn that into a deployable commit, so
+            # this is checked before anything else and never retried.
+            if [ "$bad" -ne 0 ]; then
+              echo "::error::${SHA} is not deployable: a check or workflow run"
+              echo "::error::for it did not succeed"
+              exit 1
             fi
-            if [ "$conclusion" != "success" ] &&
-               [ "$conclusion" != "skipped" ]; then
-              echo "::error::workflow '${name}' for ${SHA} concluded"
-              echo "::error::'${conclusion}'"
-              bad=1
+
+            # Everything visible is green and nothing is late: fall through to
+            # tagging. `total` must be non-zero for this to count, so an empty
+            # checks API is never mistaken for "no news is good news".
+            if [ "$total" -ne 0 ] && [ "$pending" -eq 0 ]; then
+              echo "green:   ${total} check(s) on ${SHA} (poll ${attempt})"
+              break
             fi
-          done < "$runs_tsv"
 
-          # A pending check is not a failure: another workflow_run event is
-          # already on its way for it, and *that* run re-evaluates. Exiting 0
-          # with a notice keeps the status board honest -- red here means "this
-          # commit is not deployable", which is not the same as "not yet".
-          if [ "$pending" -ne 0 ]; then
-            echo "::notice::${SHA} still has unfinished checks; a later"
-            echo "::notice::workflow_run will re-evaluate"
-            exit 0
-          fi
+            if [ "$total" -eq 0 ]; then
+              echo "wait: no check-runs for ${SHA} yet (poll ${attempt})"
+            else
+              echo "wait: ${SHA} still has unfinished checks (poll ${attempt})"
+            fi
 
-          if [ "$bad" -ne 0 ]; then
-            echo "::error::${SHA} is not deployable: a check or workflow run"
-            echo "::error::for it did not succeed"
-            exit 1
-          fi
+            elapsed=$((SECONDS - started))
+            if [ "$elapsed" -ge "$deadline" ]; then
+              # No check-run at all after the whole deadline: nothing ever
+              # verified this commit, which is a failure of the gate, not a
+              # commit that needs longer.
+              if [ "$total" -eq 0 ]; then
+                echo "::error::no check-runs reported for ${SHA} -- refusing to"
+                echo "::error::tag a commit that nothing verified"
+                exit 1
+              fi
+
+              # Still unfinished after the whole deadline is not deployable,
+              # but it is not a failure either: red here means "this commit is
+              # not deployable", which is not the same as "not yet".
+              echo "::notice::${SHA} still has unfinished checks after"
+              echo "::notice::${elapsed}s; not tagging it -- a later"
+              echo "::notice::workflow_run will have to re-evaluate"
+              exit 0
+            fi
+
+            sleep "$poll_interval"
+          done
 
           # ---- 3. create the tag, idempotently ----------------------------
           #

@@ -94,6 +94,19 @@ RUN composer install \
 # `public` itself is chowned, not its contents: the entrypoint runs artisan as
 # www-data and `storage:link` has to create public/storage inside this directory.
 # Copying up ~35 MB of public assets to change their owner would double the layer.
+#
+# vendor/mpdf/mpdf/tmp is created here for the same reason the fallback
+# directories above are: mPDF defaults its tempDir to `vendor/mpdf/mpdf/tmp`
+# (Config/ConfigVariables.php:455), the composer install above ran as root so
+# that path is `root:root`, and the FPM worker runs as www-data. At render time
+# ServiceFactory builds Cache($tempDir.'/mpdf') and
+# Cache($tempDir.'/mpdf/ttfontdata') and mkdirs them, which fails with
+# `mkdir(): Permission denied` in vendor/mpdf/mpdf/src/Cache.php and turns the
+# request into a 500. Only the RTL locales reach that code — Arabic and Hebrew,
+# the only two locales PDFHandler routes to mPDF. English and Persian go
+# through dompdf, whose temp handling does not live under vendor/ and is
+# unaffected. Guarded so the build still works if
+# mPDF ever leaves the dependency set.
 RUN set -eux; \
     mkdir -p \
         storage/framework/cache \
@@ -103,7 +116,11 @@ RUN set -eux; \
         storage/app/public \
         bootstrap/cache; \
     chown -R www-data:www-data storage bootstrap/cache config; \
-    chown www-data:www-data public
+    chown www-data:www-data public; \
+    if [ -d vendor/mpdf/mpdf ]; then \
+        mkdir -p vendor/mpdf/mpdf/tmp; \
+        chown -R www-data:www-data vendor/mpdf/mpdf/tmp; \
+    fi
 
 COPY deploy/docker/php.ini /usr/local/etc/php/conf.d/zz-app.ini
 COPY deploy/docker/php-fpm.conf /usr/local/etc/php-fpm.d/zz-pool.conf

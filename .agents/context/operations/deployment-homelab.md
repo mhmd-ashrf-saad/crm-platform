@@ -94,6 +94,27 @@ Fix, host-side and one-time:
 `644`; the file holds `APP_KEY` and the database passwords. The entrypoint
 cannot repair this itself — the mount is read-only.
 
+## PDF export failing under the Arabic locale
+
+The instance runs `APP_LOCALE=ar`, and a quote PDF or dashboard report 500'd with
+`production.ERROR: mkdir(): Permission denied at
+/var/www/html/vendor/mpdf/mpdf/src/Cache.php:47`.
+
+Cause: `Webkul\Core\Traits\PDFHandler::downloadPDF()` picks mPDF for the RTL
+locales and dompdf for English, and mPDF defaults its `tempDir` to
+`vendor/mpdf/mpdf/tmp`. `composer install` in the image runs as root, so that
+directory is `root:root 0755`, while PHP-FPM runs as uid 33; mPDF then builds
+`mpdf/` and `mpdf/ttfontdata` beneath it at render time and the `mkdir` fails.
+English was never affected, and neither was local development, which runs
+`APP_LOCALE=en` and has a world-writable `vendor/` on the NTFS mount.
+
+Fix: the image's runtime-directory step now creates
+`vendor/mpdf/mpdf/tmp` and chowns it to `www-data`, guarded on the directory
+existing. Chowning that path inside a running container
+(`docker exec -u root sijilna-app …`) proves the diagnosis but does not survive
+the next recreate — only a rebuild does. Locales routed to mPDF today: `ar`,
+`he`.
+
 ## Memory budget
 
 Three containers measured at roughly **470 MB RSS** together, leaving about

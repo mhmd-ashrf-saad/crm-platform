@@ -56,7 +56,11 @@ storage
 # because they describe and operate this stack, but nothing in the image reads
 # them -- and excluding them is what lets deploy/deploy.sh skip a rebuild for a
 # docs-only commit instead of re-running composer install for the same bytes.
+# The markdown changelog and documentation follow the same rule: nothing in the
+# image reads them, and excluding them keeps a mixed code-and-changelog commit
+# from re-running composer install.
 deploy/README.md
+CHANGELOG.md
 deploy/deploy.sh
 tests
 bin
