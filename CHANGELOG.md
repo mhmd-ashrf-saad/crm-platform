@@ -20,6 +20,14 @@ This changelog consists of the bug & security fixes and new features being inclu
 
 * [fixed] Fixed a green commit on `main` sometimes never being tagged `deploy-<sha>` — leaving the homelab silently on an older tag — because the tag workflow exited as soon as any other workflow's checks were still finishing and trusted a later event to re-evaluate it; it now re-checks the checks and workflow runs every 20 seconds for up to six minutes instead, still fails at once on a real failure, and only gives up after that deadline.
 
+* [fixed] Fixed a green commit on `main` that still never reached the homelab because nothing tagged it after the fact: a scheduled reconciler in `.github/workflows/reconcile-deploy-tags.yml` sweeps recent `main` commits, backfills any `deploy-*` tag that is missing, and raises a tracked alarm when `main`'s tip stays green and untagged across runs rather than waiting on an event that never arrives.
+
+* [fixed] Fixed a hung Playwright shard or a stalled browser download stalling a deploy with no upper bound: every shard job and the browser install step in `.github/workflows/admin_playwright_tests.yml` are now time-bounded, and the install retries a bounded number of times before failing the job.
+
+* [enhancement] Added unattended provisioning for a second Sijilna instance: `deploy/provision-instance.sh` clones a checkout, writes the `.env`, generates the database passwords and instance identity, and refuses to proceed against an `.env` that is not production-safe (`APP_ENV=production`, `APP_DEBUG=false`), while `deploy/docker-compose.yml` takes the project, container, image, volume and published-port names from seven `SIJILNA_*` keys so two instances cannot collide.
+
+* [fixed] Fixed a failed mail send being invisible: the mail transport now logs the server's own error at `ERROR` before re-throwing, a production instance booted on a mailer that cannot fail (`log`, `array`, `null`) logs `CRITICAL`, and `make mail-test` sends a real message and exits non-zero when the relay refuses it.
+
 ## **v2.2.7 (16th of Oct 2026)**
 
 * [fixed] Fixed a web form submission creating a duplicate contact when the address differed only in case.
