@@ -40,6 +40,13 @@
 # on purpose: two instances sharing `sijilna-app:latest` means the second
 # build retags the image the live containers and deploy.sh's rollback tag are
 # compared against.
+#
+# `name:` below is NOT authoritative: an exported COMPOSE_PROJECT_NAME outranks
+# it, so every command that matters is run as `docker compose -p <project> ...`
+# (deploy/provision-instance.sh's compose() does exactly that). Do not drop the
+# -p and rely on this line -- a stack that silently resolves to `sijilna` joins
+# the live instance's `sijilna_default` network, where the `db` alias points at
+# the live database.
 name: ${SIJILNA_PROJECT:-sijilna}
 
 services:

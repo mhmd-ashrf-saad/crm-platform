@@ -259,13 +259,19 @@ It refuses, before writing anything, when: a required variable is missing; the
 project name is not a valid compose project name; the database name or user
 contains anything but `[A-Za-z0-9_]`; the port is not a number in range; the
 hostname carries a scheme or a path; `SIJILNA_INSTANCE_DIR` is not an absolute
-path or is `/opt/sijilna`; the project name is `sijilna` (the live instance); a
+path or is `/opt/sijilna`; the project name is `sijilna` (the live instance);
+`COMPOSE_PROJECT_NAME` is set in the environment (it outranks both
+`SIJILNA_PROJECT` and the compose file's `name:`, so it would start a different
+project than the one just validated — `unset` it); `KRAYIN_ADMIN_EMAIL` is not a
+plain dotted email address (it is the one value written into `.env` that an
+operator types freely, and a newline in it would inject a second `.env` line); a
 container name, the data volume or the host port is already owned by **another**
 compose project, or a container of the same project name was created from a
 **different checkout** (ownership is read from the
 `com.docker.compose.project` and `com.docker.compose.project.working_dir` labels,
-so a stopped container and a bare volume count too); or an `APP_DEBUG=true` /
-`APP_ENV=local` is already recorded in an existing `.env`.
+so a stopped container and a bare volume count too); or an existing `.env` records
+`APP_DEBUG=true`, an `APP_ENV` other than `production`, or an `APP_FORCE_HTTPS`
+that is not `true`.
 
 It never runs `docker volume prune`, `docker system prune`, `docker compose
 down -v`, or `rm -rf` on a volume, and it never rewrites an existing `.env`: the
@@ -335,8 +341,11 @@ ss -ltnp | grep ':3103'                    # 127.0.0.1:3103, never 0.0.0.0:3103
 curl -s -o /dev/null -w '%{http_code}\n' http://127.0.0.1:3103/admin/login    # 200
 curl -s -o /dev/null -w '%{http_code}\n' http://127.0.0.1:3103/up             # 200
 
-# 3. three containers, and only this instance's
-sudo docker compose --env-file /opt/sijilna-test/app/.env \
+# 3. three containers, and only this instance's. The -p is not optional: an
+#    exported COMPOSE_PROJECT_NAME outranks the compose file's name: (and the
+#    --env-file value), so a command without -p would show -- or act on -- the
+#    wrong project.
+sudo docker compose -p sijilna-test --env-file /opt/sijilna-test/app/.env \
   -f /opt/sijilna-test/app/deploy/docker-compose.yml ps
 
 # 4. it did not disturb the live instance: its three containers are untouched
@@ -395,8 +404,14 @@ instance's own checkout:
 
 ```bash
 cd /opt/sijilna-test/app
-sudo docker compose --env-file .env -f deploy/docker-compose.yml down -v   # deletes sijilna-test-db-data
+sudo docker compose -p sijilna-test --env-file .env -f deploy/docker-compose.yml down -v   # deletes sijilna-test-db-data
 ```
+
+Never run this (or any other `docker compose` command here) without `-p`: an
+exported `COMPOSE_PROJECT_NAME` outranks the compose file's `name:` and the
+`--env-file` value, so a `-p`-less command would act on a different project than
+the one you are looking at — and `down -v` is the one command that deletes a
+volume.
 
 `-v` is the whole point (the volume is the data) and there is no undo. Confirm
 the volume name in the command's output before you type it, and never run it in

@@ -214,12 +214,39 @@ env_value() {
         sed -e 's/^"//' -e 's/"$//' -e "s/^'//" -e "s/'$//" | tr -d '\r'
 }
 
+# Every value written into .env passes through here, and this is the last gate
+# in front of all of them: a CR or an LF inside a value ends its KEY= line and
+# starts another one, and both of our .env readers are last-wins (docker
+# compose's --env-file interpreter, and PHP's immutable dotenv behind env_file),
+# so the injected line is the value the instance actually boots with.
+#
+# The live defect this closes: KRAYIN_ADMIN_EMAIL was the one caller-supplied
+# value in the write path with no charset gate, and
+#     KRAYIN_ADMIN_EMAIL=$'admin@client.test\nAPP_DEBUG=true'
+# turned debug mode ON for the first boot. That boot then created
+# storage/installed, so the .env gate refused the instance for the rest of its
+# life -- installed, publicly reachable, with stack traces on. The email now has
+# its own strict shape check (validate_admin_email); this one exists so the class
+# cannot come back through some future value nobody thought to gate.
+assert_env_value_is_single_line() {
+    local key="$1" value="$2"
+    case "$value" in
+        *[[:cntrl:]]*)
+            die "refusing to write $key into .env: its value contains a control character
+    (newline, carriage return, tab or similar). One '\\n' in a value injects a second
+    KEY=VALUE line, and .env is last-wins for both docker compose and PHP, so the
+    injected line is what the instance would boot with. Nothing was written."
+            ;;
+    esac
+}
+
 # Replaces KEY=VALUE in place, or appends it. awk with -v instead of sed so a
 # value containing / & or . cannot turn into a runaway substitution; the temp
 # file is written next to the target, so the rename cannot cross filesystems.
 set_env_value() {
     local file="$1" key="$2" value="$3" tmp
     [ -f "$file" ] || die "internal error: $file does not exist"
+    assert_env_value_is_single_line "$key" "$value"
     tmp="$(mktemp "${file}.XXXXXX")"
     if ! awk -v key="$key" -v val="$value" '
         BEGIN { done = 0 }
@@ -267,6 +294,23 @@ validate_identity() {
         )"
     fi
 
+    # COMPOSE_PROJECT_NAME outranks BOTH the compose file's `name:` and the
+    # SIJILNA_PROJECT that --env-file supplies, so an export left over in the
+    # operator's shell silently moves this stack onto another project -- and on
+    # this host that project is `sijilna`, whose `sijilna_default` network and
+    # `db` service alias belong to the live instance. Container names stay
+    # interpolated, so nothing live is renamed; the network and the database are
+    # what collide. compose() pins `-p "$PROJECT"` regardless, and this refuses
+    # to run at all while the variable is set: a silent override of a
+    # security-relevant value is not something to pass quietly.
+    if [ -n "${COMPOSE_PROJECT_NAME:-}" ]; then
+        die "COMPOSE_PROJECT_NAME is set in the environment ('$COMPOSE_PROJECT_NAME').
+    It overrides both SIJILNA_PROJECT and deploy/docker-compose.yml's name:, so this run
+    would not start the project it just validated. On this host it would attach the new
+    containers to the live instance's network. Unset it and re-run:
+      unset COMPOSE_PROJECT_NAME"
+    fi
+
     # A compose project name is [a-z0-9][a-z0-9_-]*, and every container, image
     # and volume name is this string plus a suffix, so an invalid character here
     # would fail much later, inside compose, with a less obvious message.
@@ -298,9 +342,15 @@ validate_identity() {
         die "SIJILNA_INSTANCE_DIR must be an absolute path without a trailing slash or '..'; got '$INSTANCE_DIR'"
     fi
 
-    if [ -n "$ADMIN_EMAIL" ] && [[ "$ADMIN_EMAIL" != *@* ]]; then
-        die "KRAYIN_ADMIN_EMAIL does not look like an email address: '$ADMIN_EMAIL'"
-    fi
+    # The write path, value by value, so that no input reaches .env ungated:
+    # APP_KEY (generated), APP_ENV/APP_DEBUG/APP_FORCE_HTTPS (literals here),
+    # APP_URL (INSTANCE_HOSTNAME, checked above), DB_DATABASE/DB_USERNAME
+    # (checked above), DB_PASSWORD/DB_ROOT_PASSWORD/KRAYIN_ADMIN_PASSWORD
+    # (validate_secret_charset), SESSION_COOKIE and the SIJILNA_* identity block
+    # (derived from the checked PROJECT and WEB_PORT), and KRAYIN_ADMIN_EMAIL --
+    # the only free-form one, which validate_admin_email owns. Anything added
+    # later is covered by assert_env_value_is_single_line inside set_env_value.
+    validate_admin_email "$ADMIN_EMAIL"
 
     # The live instance is not a special case of "another instance": its volume
     # holds the demo data and its containers are what deploy.sh rolls back onto.
@@ -330,6 +380,27 @@ validate_identity() {
     validate_secret_charset SIJILNA_DB_PASSWORD "$DB_PASSWORD"
     validate_secret_charset SIJILNA_DB_ROOT_PASSWORD "$DB_ROOT_PASSWORD"
     validate_secret_charset KRAYIN_ADMIN_PASSWORD "$ADMIN_PASSWORD"
+}
+
+# KRAYIN_ADMIN_EMAIL is the one write-path value an operator types freely, so it
+# gets the strictest shape check rather than the "does it contain an @" this
+# script started with. Two jobs: the address has to be one that
+# scripts/create-admin.php's FILTER_VALIDATE_EMAIL accepts (a refusal there is a
+# container that restart-loops after MySQL is already initialised), and it must
+# be unable to carry a newline, '$', '#', a quote or a backslash into .env --
+# see assert_env_value_is_single_line for what a second line inside .env buys an
+# attacker. `admin@localhost` and `a@b..c` are refused here because PHP's filter
+# refuses them; refusing early names the variable, refusing late names a log.
+validate_admin_email() {
+    local value="$1"
+    [ -n "$value" ] || return 0
+    ((${#value} <= 254)) || die "KRAYIN_ADMIN_EMAIL is ${#value} characters long; the maximum is 254"
+    [[ "$value" =~ ^[A-Za-z0-9][A-Za-z0-9._%+-]*@[A-Za-z0-9][A-Za-z0-9.-]*\.[A-Za-z]{2,}$ ]] ||
+        die "KRAYIN_ADMIN_EMAIL is not a plain email address: '$value'
+    Allowed: letters, digits and . _ % + - before the @; letters, digits, - and . after
+    it; and a dotted domain with a 2+ letter last label. That set excludes exactly the
+    characters .env, docker compose and PHP read differently -- a newline, \$, #, a quote
+    or a backslash -- and it matches what scripts/create-admin.php will accept."
 }
 
 validate_secret_charset() {
@@ -372,7 +443,11 @@ resolve_identity() {
 preflight_binaries() {
     local bin
     local -a missing=()
-    for bin in git docker curl openssl; do
+    # ss is not optional: check_host_port uses it to see a listener that is not a
+    # container (a hand-started nginx, a stray process). Without it that check
+    # reads as "nothing is listening", which fails OPEN -- the one thing a safety
+    # check must never do.
+    for bin in git docker curl openssl ss; do
         command -v "$bin" >/dev/null 2>&1 || missing+=("$bin")
     done
     ((${#missing[@]} == 0)) || die "missing required command(s): ${missing[*]}"
@@ -469,7 +544,11 @@ check_volume_name() {
 
 port_is_listening() {
     local port="$1"
-    command -v ss >/dev/null 2>&1 || return 1
+    # A check that cannot run must not answer "nobody holds this port".
+    command -v ss >/dev/null 2>&1 ||
+        die "cannot check whether loopback port $port is free: 'ss' is not installed.
+    Refusing to skip a safety check and start a stack on a port something else may hold.
+    Install iproute2 (which provides ss) and re-run."
     ss -ltnH 2>/dev/null | awk '{print $4}' | grep -Eq "[:.]${port}\$"
 }
 
@@ -600,6 +679,22 @@ adopt_env_file() {
             ;;
     esac
 
+    # Not one of the seven identity keys, but the README's mixed-content reasoning
+    # depends on it: behind the Tunnel nginx receives plain HTTP, so without this
+    # flag Laravel writes http:// asset URLs into every page and the browser
+    # blocks them. An operator-crafted .env must not be able to boot that.
+    recorded="$(env_value "$ENV_FILE" APP_FORCE_HTTPS || true)"
+    case "$recorded" in
+        true | True | TRUE | 1) ;;
+        *)
+            die "$ENV_FILE sets APP_FORCE_HTTPS='${recorded:-<empty>}'. The Tunnel forwards plain HTTP, so
+    without this flag Laravel generates http:// asset URLs and the browser blocks them as
+    mixed content. Refusing to start it. Fix it with:
+      sed -i 's|^APP_FORCE_HTTPS=.*|APP_FORCE_HTTPS=true|' $ENV_FILE
+    and append 'APP_FORCE_HTTPS=true' first if the key is absent entirely."
+            ;;
+    esac
+
     assert_recorded APP_URL "https://$INSTANCE_HOSTNAME" ""
     assert_recorded DB_DATABASE "$DB_NAME" ""
     assert_recorded DB_USERNAME "$DB_USER" ""
@@ -686,7 +781,11 @@ write_env_file() {
 
     # The instance identity, explicit instead of implied by the compose
     # defaults. Written as a block so `grep SIJILNA_ $ENV_FILE` answers "which
-    # instance is this?" in one line each.
+    # instance is this?" in one line each. Written with cat and not
+    # set_env_value because these keys may be absent from the template -- so the
+    # line-boundary gate lives in validate_identity instead: every value below is
+    # PROJECT plus a fixed suffix, or the numeric WEB_PORT, and PROJECT matched
+    # ^[a-z0-9][a-z0-9_-]*$ before this function ran.
     cat >>"$tmp" <<EOF
 
 # --- instance identity ------------------------------------------------------
@@ -766,7 +865,12 @@ prepare_storage() {
 # ------------------------------------------------------------------- docker
 
 compose() {
-    docker compose --env-file "$ENV_FILE" -f "$COMPOSE_FILE" "$@"
+    # `-p` is not decoration. Project resolution is: -p, then COMPOSE_PROJECT_NAME,
+    # then the file's `name:`, then the directory name -- so without this flag a
+    # stray COMPOSE_PROJECT_NAME in the operator's shell silently starts a
+    # different project than the one every collision check above validated.
+    # "$PROJECT" is the checked value; the file's name: is only its fallback.
+    docker compose --env-file "$ENV_FILE" -p "$PROJECT" -f "$COMPOSE_FILE" "$@"
 }
 
 containers_ok() {
