@@ -177,6 +177,158 @@ brand rows seeded by `sijilna:brand`, `/admin/login` **200**, `/` **302** to
 hands nginx plain HTTP, which is exactly the mixed content `APP_FORCE_HTTPS`
 exists to prevent.
 
+## Mail: sending as a real domain
+
+An instance that cannot send mail still looks healthy: it boots, it logs in, and
+every email-shaped feature reports success. What made that possible here was not
+one bug but three layers of silence, all now removed:
+
+| Layer | What it did | Where it is fixed |
+| ----- | ----------- | ----------------- |
+| `MAIL_MAILER=log` in this template | the `log` driver **cannot fail**: the message is written to `storage/logs/laravel.log`, the send returns success, and nothing is delivered | this template now ships `smtp`, and a production instance booted with `log`/`array`/`null` writes a **critical** log line on every boot |
+| `MAIL_HOST=mailhog`, a container that was never created | every send was a connection refusal | the development `.env` points at a real relay |
+| `catch (\Exception $e) {}` around `Mail::queue()` in `packages/Webkul/Automation/src/Helpers/Entity/*` | the workflow "send email to person / sales owner" action threw the failure away: no log line, no failed job, no session flash | `app/Support/Mail/ReportingTransport` reports the failure at error level *before* re-throwing it, so a swallow can no longer hide it. The vendor files stay untouched |
+
+`storage/logs/laravel.log` is now where a broken transport shows up, at `ERROR`, with
+the mail server's own words — the same text `make mail-test` prints.
+
+### Configure a provider
+
+`.env` holds the mail configuration; `deploy/.env.deploy.example` documents each key.
+The short version, for Brevo:
+
+```dotenv
+MAIL_MAILER=smtp
+MAIL_HOST=smtp-relay.brevo.com
+MAIL_PORT=587
+MAIL_ENCRYPTION=tls
+MAIL_USERNAME=        # Brevo -> SMTP & API -> SMTP: account email, or xxxxxxxx@smtp-brevo.com
+MAIL_PASSWORD=        # the SMTP *key* from that screen (xsmtpsib-...), not the account password
+MAIL_FROM_ADDRESS=support@mohamedlabs.com
+MAIL_DOMAIN=mohamedlabs.com
+```
+
+Three things have to be true before a message is accepted, and they fail in this
+order — which is why the exact reply matters more than "mail is broken":
+
+1. **The sending IP is allowed to use the key.** Brevo keys can be restricted to
+authorized IPs; a connection from anywhere else is refused at `AUTH` time with
+`525 5.7.1 Unauthorized IP address`. Fix it at Brevo -> SMTP & API -> SMTP ->
+Authorized IPs, adding the instance's public egress IP. Nothing about the
+domain matters until this passes.
+2. **The credentials are right.** A wrong or revoked key gives
+`535 Authentication failed`.
+3. **The sender is verified.** `550`/`553` mean `MAIL_FROM_ADDRESS` is not a
+verified sender at the provider, or its domain is not authenticated yet (next
+section).
+
+Keep `QUEUE_CONNECTION=sync`. With a real queue driver, `Mail::queue()` only
+enqueues: a send that fails later lands in `failed_jobs`, which nobody reads, and
+the failure stops being loud again.
+
+### Prove delivery
+
+```bash
+# from the checkout (reads this checkout's .env)
+make mail-test MAIL_TO=you@example.com
+
+# inside the deployed stack (reads /var/www/html/.env)
+sudo docker compose -f deploy/docker-compose.yml exec app \
+  env MAIL_TO=you@example.com php scripts/mail-test.php
+```
+
+`scripts/mail-test.php` sends through the configured transport, not a fake. It
+prints the resolved host, port, encryption and From address, then the SMTP
+conversation with the credential lines stripped (verified: the script counts
+remaining occurrences of the username and password in its own output and refuses
+to call the run clean if either is present), and it exits non-zero when the
+server refuses the message. Exit `2` means no valid recipient was given, so
+nothing was attempted.
+
+A run that reaches the relay ends with the relay's queue id, for example
+`250 2.0.0 Ok: queued as <id>`. A run that does not ends with the server's code:
+`525`/`535`/`550` per the list above, or `Connection could not be established`
+when nothing is listening / DNS or egress is blocked.
+
+Do not treat a green `make mail-test` as "the client will see it": it proves the
+relay accepted the message. Landing in the inbox is the records below.
+
+### Deliverability records at Cloudflare
+
+Measured on `mohamedlabs.com` on 2026-10-23 — this is the starting state, and it
+is **not authenticated for Brevo**:
+
+```bash
+dig +short TXT mohamedlabs.com                     # "v=spf1 include:_spf.mx.cloudflare.net ~all"
+dig +short TXT mail._domainkey.mohamedlabs.com     # (nothing)
+dig +short TXT _dmarc.mohamedlabs.com              # (nothing)
+dig +short MX  mohamedlabs.com                     # route1/2/3.mx.cloudflare.net (Email Routing)
+```
+
+Three records are needed. Until all three exist, a verified sender still gets
+filtered by Gmail, and Brevo's own "Authenticate this domain" check stays red.
+
+**1. SPF — add Brevo to the existing record, never replace it.**
+
+| Type | Name | Value |
+| ---- | ---- | ----- |
+| TXT | `@` | `v=spf1 include:_spf.mx.cloudflare.net include:spf.brevo.com ~all` |
+
+Why: the record lists the servers allowed to send as this domain. The existing
+`include:_spf.mx.cloudflare.net` is what authorizes Cloudflare Email Routing's
+own outbound mail; `include:spf.brevo.com` adds Brevo's relays. A domain must
+have **exactly one** SPF TXT record — a second one is a permanent
+`permerror`, and every sender on the domain then fails — so this is an edit of
+the existing value, not a new record. Copy the include Brevo prints in its
+"Authenticate this domain" panel if it differs from `spf.brevo.com`.
+
+**2. DKIM — one record Brevo generates per domain.**
+
+| Type | Name | Value |
+| ---- | ---- | ----- |
+| TXT | `mail._domainkey` | `brevo-code:<value Brevo generates>` |
+| TXT | `mail2._domainkey` | `brevo-code:<value Brevo generates>` |
+
+The value cannot be written here, and must not be invented: it is a key pair
+whose private half Brevo holds, so a placeholder simply fails the signature
+check. Copy both records exactly from Brevo -> Senders & IPs -> Domains ->
+`mohamedlabs.com` -> Authenticate -> DKIM, keeping whatever selector names Brevo
+shows (current accounts use `mail._domainkey` and `mail2._domainkey`). Set them
+as **DNS only** if the toggle appears: a proxied record is not served as TXT.
+
+**3. DMARC — start at `p=none` and read the reports.**
+
+| Type | Name | Value |
+| ---- | ---- | ----- |
+| TXT | `_dmarc` | `v=DMARC1; p=none; rua=mailto:dmarc@mohamedlabs.com; adkim=r; aspf=r; pct=100` |
+
+Why: it tells receivers what to do when SPF and DKIM disagree with the From
+domain, and `rua` sends them aggregate reports. `p=none` only measures — with a
+mailbox that also receives forwarded mail, moving straight to `quarantine` or
+`reject` can silently bin legitimate messages. Watch the reports for a week or
+two, then tighten to `p=quarantine`. `dmarc@` must be a mailbox that exists;
+`rua` to a dead address means the reports are dropped and the record looks fine.
+
+**The risk in editing SPF here.** `mohamedlabs.com` already sends mail through
+Cloudflare Email Routing (its MX points at `route*.mx.cloudflare.net`). Email
+Routing does not need the domain's own SPF to forward, but anything else that
+sends as this domain does: an "send as" account in Gmail, a form-to-email
+plugin, a printer, `mail()` on another host. Replacing the SPF value instead of
+appending to it de-authorizes all of them at once, and the symptom appears in
+someone else's inbox days later. Append, keep one record, and note who else was
+sending before the change.
+
+**Verify the records propagate:**
+
+```bash
+for n in @ mail._domainkey mail2._domainkey _dmarc; do printf '%s: ' "$n"; dig +short TXT "$n.mohamedlabs.com" | tr '\n' ' '; echo; done
+```
+
+Then re-run Brevo's domain check until SPF and both DKIM selectors are green, and
+send one more `make mail-test`. A message that reaches Gmail's inbox — not spam —
+with `spf=pass` and `dkim=pass` in its headers (Gmail: "Show original") is the
+end of this work; anything less is a record still missing.
+
 ## Update
 
 An update is a **green `main` and nothing else**. A commit on `main` whose checks

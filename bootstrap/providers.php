@@ -2,6 +2,7 @@
 
 use App\Providers\AppServiceProvider;
 use App\Providers\BrandingServiceProvider;
+use App\Providers\MailDeliveryServiceProvider;
 use Barryvdh\DomPDF\ServiceProvider;
 use Konekt\Concord\ConcordServiceProvider;
 use Prettus\Repository\Providers\RepositoryServiceProvider;
@@ -63,4 +64,11 @@ return [
     WarehouseServiceProvider::class,
     WebFormServiceProvider::class,
     BrandingServiceProvider::class,
+
+    /*
+     * Registered last: it replaces the `mail.manager` singleton, so it has to run after
+     * every provider that could resolve a mailer during its own boot. See
+     * app/Providers/MailDeliveryServiceProvider.php for why a failed send must be loud.
+     */
+    MailDeliveryServiceProvider::class,
 ];

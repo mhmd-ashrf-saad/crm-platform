@@ -64,8 +64,11 @@ PORT ?= $(shell printf '%s' '$(ENV_APP_URL)' | sed -nE 's|^https?://[^:/]+:([0-9
 HOST ?= 127.0.0.1
 DB_CONTAINER ?= crm-platform-mysql
 LOG ?= storage/logs/serve.log
+# Recipient for `make mail-test`. Deliberately no default: the test mail has to go where the
+# operator can actually receive it, and a hardcoded address would prove nothing.
+MAIL_TO ?=
 
-.PHONY: help setup serve stop restart status test test-db lint lint-check admin logs db-reset db-shell
+.PHONY: help setup serve stop restart status test test-db lint lint-check admin logs db-reset db-shell mail-test
 
 help: ## List the make targets (default target)
 	@printf '\nKrayin CRM dev commands  (checkout: %s)\n\n' '$(ROOT)'
@@ -267,6 +270,19 @@ admin: ## Create/update the admin account (requires KRAYIN_ADMIN_EMAIL and KRAYI
 	    exit 1
 	fi
 	php scripts/create-admin.php
+
+mail-test: ## Send one real email through the configured mailer (MAIL_TO=<address>; non-zero exit when it fails)
+	@cd '$(ROOT)'
+	set -u
+	to="$${MAIL_TO:-$(MAIL_TO)}"
+	# No recipient, no send: this target never guesses an address, and never defaults to the
+	# operator's own From address, so a green result always means mail arrived somewhere real.
+	if [ -z "$$to" ]; then
+	    echo "mail-test: refusing - no recipient." >&2
+	    echo "mail-test: make mail-test MAIL_TO=you@example.com" >&2
+	    exit 2
+	fi
+	MAIL_TO="$$to" php scripts/mail-test.php
 
 logs: ## Tail the dev server log (LOG=storage/logs/laravel.log for application errors)
 	@cd '$(ROOT)'
