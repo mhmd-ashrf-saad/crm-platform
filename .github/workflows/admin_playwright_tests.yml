@@ -12,6 +12,24 @@ jobs:
   admin_playwright_test:
     runs-on: ${{ matrix.operating-systems }}
 
+    # A shard takes about six minutes when nothing goes wrong. Without a bound,
+    # a stalled step has no ceiling of its own: on 2026-10-23 commit 7567d5cf,
+    # shard 13 sat inside the browser install for over 29 minutes producing no
+    # failure, so `main` never went green, deploy-tag.yml never published the
+    # tag, and the homelab quietly stayed two commits behind. Bounding this job
+    # is what converts a stall like that into a visible failure instead of a
+    # silent one: the install step below is capped at 15 minutes and this job at
+    # 25, so a browser install that hangs has two ceilings over it instead of
+    # none, and exhausting the step's retries fails the step on its own.
+    #
+    # Neither cap promises that no slow shard is ever cancelled. Attempt 1 can
+    # burn its full four minutes and attempt 2 can still succeed, leaving
+    # composer install, the Krayin installer and an atypically long shard to
+    # approach the cap together; should they reach it, the 25-minute job cap is
+    # what fires, and the job fails closed -- red, never silently green. That is
+    # the difference the caps buy.
+    timeout-minutes: 25
+
     strategy:
       fail-fast: false
       matrix:
@@ -54,9 +72,55 @@ jobs:
         run: npm install
         working-directory: packages/Webkul/Admin
 
+      # `--with-deps` apt-installs the OS libraries and then downloads the
+      # browser builds. Both halves are network work that can stall with no
+      # output and no error, which is exactly the 29-minute hang above. Each
+      # attempt is capped at 4 minutes (roughly twice a healthy install) and a
+      # stalled attempt is retried, so a transient hang costs one retried step
+      # instead of a whole cancelled run. The loop still exits 1 when every
+      # attempt fails: the error is never swallowed, only delayed by the
+      # retries. 3 x 4 min plus the backoff stays under this step's 15-minute
+      # cap, and the step cap stays under the job's 25-minute cap, so the
+      # tightest bound is always the one that fires first.
       - name: Install Playwright Browsers
-        run: npx playwright install --with-deps
         working-directory: packages/Webkul/Admin
+        timeout-minutes: 15
+        run: |
+          set -uo pipefail
+
+          # GitHub runs `run:` blocks as `bash -eo pipefail`. `-e` would abort
+          # the step on the first non-zero attempt, so the retry loop below
+          # would never run; turn it off and check every exit status by hand.
+          set +e
+
+          attempts=3
+          attempt_timeout=240
+          backoff=15
+
+          for ((attempt = 1; attempt <= attempts; attempt++)); do
+            echo "::group::playwright install attempt ${attempt}/${attempts}"
+            # `timeout` puts the command in its own process group and signals
+            # that group, so a stalled download is killed rather than left
+            # holding the step; --kill-after covers a child that ignores TERM.
+            timeout --kill-after=20 "${attempt_timeout}" \
+              npx playwright install --with-deps
+            status=$?
+            echo "::endgroup::"
+
+            if [ "${status}" -eq 0 ]; then
+              echo "Playwright browsers installed on attempt ${attempt}."
+              exit 0
+            fi
+
+            echo "::warning::Attempt ${attempt}/${attempts} failed or hit" \
+              "the ${attempt_timeout}s cap (exit ${status});" \
+              "retrying in ${backoff}s."
+            sleep "${backoff}"
+          done
+
+          echo "::error::Playwright browser install did not complete in" \
+            "${attempts} attempts of ${attempt_timeout}s each."
+          exit 1
 
       - name: Setting Environment
         run: |
