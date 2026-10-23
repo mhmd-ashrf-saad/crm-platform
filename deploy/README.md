@@ -255,18 +255,36 @@ relay accepted the message. Landing in the inbox is the records below.
 
 ### Deliverability records at Cloudflare
 
-Measured on `mohamedlabs.com` on 2026-10-23 — this is the starting state, and it
-is **not authenticated for Brevo**:
+Measured on `mohamedlabs.com` on 2026-10-23, **after** the domain was
+authenticated in Brevo. Brevo created most of the records below itself through
+its Cloudflare integration, and its "Authenticate this domain" check reports
+every one of them green. What Brevo does **not** touch is an SPF record that
+already exists — it will not de-authorize a domain's other senders — so SPF is
+the one record a human still changes by hand.
+
+| Record | Created by | State now |
+| ------ | ---------- | --------- |
+| `brevo-code` TXT at `@` | Brevo | published — proves domain ownership, signs nothing |
+| `brevo1._domainkey` CNAME | Brevo | published; target serves a live 2048-bit key |
+| `brevo2._domainkey` CNAME | Brevo | published; target serves a live 2048-bit key |
+| `_dmarc` TXT | Brevo | published, `p=none`, reports go to Brevo |
+| SPF TXT at `@` | a human, by hand | includes `spf.brevo.com` |
+
+**What this does and does not prove.** The only delivery claim proven here is
+that the relay accepted a message — an SMTP `250 2.0.0 Ok: queued as <id>`.
+These records make inbox placement possible; nobody has yet observed one of these
+messages arriving in an inbox, so placement stays unproven until someone reads
+the received message's own headers.
+
+Read the current state with:
 
 ```bash
-dig +short TXT mohamedlabs.com                     # "v=spf1 include:_spf.mx.cloudflare.net ~all"
-dig +short TXT mail._domainkey.mohamedlabs.com     # (nothing)
-dig +short TXT _dmarc.mohamedlabs.com              # (nothing)
-dig +short MX  mohamedlabs.com                     # route1/2/3.mx.cloudflare.net (Email Routing)
+dig +short TXT mohamedlabs.com                       # SPF, plus this account's brevo-code TXT
+dig +short CNAME brevo1._domainkey.mohamedlabs.com   # b1.mohamedlabs-com.dkim.brevo.com.
+dig +short CNAME brevo2._domainkey.mohamedlabs.com   # b2.mohamedlabs-com.dkim.brevo.com.
+dig +short TXT _dmarc.mohamedlabs.com                # v=DMARC1; p=none; rua=mailto:rua@dmarc.brevo.com
+dig +short MX mohamedlabs.com                        # route1/2/3.mx.cloudflare.net (Email Routing)
 ```
-
-Three records are needed. Until all three exist, a verified sender still gets
-filtered by Gmail, and Brevo's own "Authenticate this domain" check stays red.
 
 **1. SPF — add Brevo to the existing record, never replace it.**
 
@@ -279,35 +297,53 @@ Why: the record lists the servers allowed to send as this domain. The existing
 own outbound mail; `include:spf.brevo.com` adds Brevo's relays. A domain must
 have **exactly one** SPF TXT record — a second one is a permanent
 `permerror`, and every sender on the domain then fails — so this is an edit of
-the existing value, not a new record. Copy the include Brevo prints in its
+the existing value, not a new record. On this domain the include is already
+present; on a fresh domain, append it. Copy the include Brevo prints in its
 "Authenticate this domain" panel if it differs from `spf.brevo.com`.
 
-**2. DKIM — one record Brevo generates per domain.**
+**2. DKIM — two CNAMEs Brevo delegates, not a TXT at `mail._domainkey`.**
 
 | Type | Name | Value |
 | ---- | ---- | ----- |
-| TXT | `mail._domainkey` | `brevo-code:<value Brevo generates>` |
-| TXT | `mail2._domainkey` | `brevo-code:<value Brevo generates>` |
+| CNAME | `brevo1._domainkey` | `b1.mohamedlabs-com.dkim.brevo.com` |
+| CNAME | `brevo2._domainkey` | `b2.mohamedlabs-com.dkim.brevo.com` |
 
-The value cannot be written here, and must not be invented: it is a key pair
-whose private half Brevo holds, so a placeholder simply fails the signature
-check. Copy both records exactly from Brevo -> Senders & IPs -> Domains ->
-`mohamedlabs.com` -> Authenticate -> DKIM, keeping whatever selector names Brevo
-shows (current accounts use `mail._domainkey` and `mail2._domainkey`). Set them
-as **DNS only** if the toggle appears: a proxied record is not served as TXT.
+For this account Brevo delegates DKIM by **CNAME**, and the target is Brevo's
+per-domain name: the domain with its dots replaced by dashes. There is **no**
+`mail._domainkey` TXT here, and a record at that name is wrong — an earlier
+version of this page told you to publish a `brevo-code:<value>` TXT there, which
+signs nothing and only makes a domain check look satisfied for the wrong reason.
+The two CNAME targets serve the public half of Brevo's 2048-bit RSA key pair
+(`k=rsa;p=MIIB…`, about 430 characters), and Brevo can rotate the key behind the
+CNAME without any change in this zone. Do not copy key material into this
+repository and do not invent a placeholder: a made-up key fails the signature
+check exactly like a missing record. Keep both records **DNS only** (grey cloud)
+— a proxied CNAME is answered by Cloudflare's edge, not by Brevo.
 
-**3. DMARC — start at `p=none` and read the reports.**
+**3. DMARC — published at `p=none`, so read the reports.**
 
 | Type | Name | Value |
 | ---- | ---- | ----- |
-| TXT | `_dmarc` | `v=DMARC1; p=none; rua=mailto:dmarc@mohamedlabs.com; adkim=r; aspf=r; pct=100` |
+| TXT | `_dmarc` | `v=DMARC1; p=none; rua=mailto:rua@dmarc.brevo.com` |
 
 Why: it tells receivers what to do when SPF and DKIM disagree with the From
 domain, and `rua` sends them aggregate reports. `p=none` only measures — with a
 mailbox that also receives forwarded mail, moving straight to `quarantine` or
 `reject` can silently bin legitimate messages. Watch the reports for a week or
-two, then tighten to `p=quarantine`. `dmarc@` must be a mailbox that exists;
-`rua` to a dead address means the reports are dropped and the record looks fine.
+two, then tighten to `p=quarantine`. The `rua` address here is the one Brevo
+publishes for a domain it manages; if you would rather read the reports yourself,
+add a second `mailto:` — and that mailbox must exist, because `rua` to a dead
+address drops the reports while the record still looks fine.
+
+**DKIM alone satisfies DMARC here, so SPF is reputation, not a blocker.** Brevo
+signs with `d=mohamedlabs.com`, and this DMARC record uses the default relaxed
+alignment (`adkim=r`). A validating DKIM signature from that domain is therefore
+enough on its own: a message whose SPF result is `softfail` — all `~all` can
+return for an IP the record does not name — still **passes DMARC**. That is why
+the SPF include never surfaced as a failure: it cost an `spf=pass`, not the DMARC
+verdict, and nothing is being rejected today for want of it. Add it anyway — it
+makes the two signals agree instead of leaving receivers to weigh a softfail —
+but treat it as a reputation improvement, not urgent breakage.
 
 **The risk in editing SPF here.** `mohamedlabs.com` already sends mail through
 Cloudflare Email Routing (its MX points at `route*.mx.cloudflare.net`). Email
@@ -318,16 +354,42 @@ appending to it de-authorizes all of them at once, and the symptom appears in
 someone else's inbox days later. Append, keep one record, and note who else was
 sending before the change.
 
-**Verify the records propagate:**
+**Verify, record by record:**
 
 ```bash
-for n in @ mail._domainkey mail2._domainkey _dmarc; do printf '%s: ' "$n"; dig +short TXT "$n.mohamedlabs.com" | tr '\n' ' '; echo; done
+# DKIM: both selectors are CNAMEs, and each target serves a live RSA key.
+for s in brevo1 brevo2; do
+  t=$(dig +short CNAME "$s._domainkey.mohamedlabs.com" | head -1)
+  k=$(dig +short TXT "$t" | tr -d '"' | grep -c 'k=rsa;p=')
+  printf '%-8s target=%s rsa-key-lines=%s\n' "$s" "${t:-MISSING}" "$k"
+done
+# want: b1./b2.mohamedlabs-com.dkim.brevo.com. and rsa-key-lines=1 for each
+
+# There must be nothing at mail._domainkey — an answer here is a leftover error.
+dig +short TXT mail._domainkey.mohamedlabs.com        # want: no output
+
+# DMARC: published, and still only measuring.
+dig +short TXT _dmarc.mohamedlabs.com
+
+# SPF: exactly one record, and it names both includes.
+dig +short TXT mohamedlabs.com | grep -c 'v=spf1'     # want: 1
+dig +short TXT mohamedlabs.com | grep spf1            # want: both includes, then ~all
+
+# The brevo-code TXT Brevo generated for this account. It is a public DNS value,
+# but it identifies the account: read it with this command, never paste it here.
+dig +short TXT mohamedlabs.com | grep -o 'brevo-code:[a-f0-9]*'
+
+# MX is still Cloudflare Email Routing — why SPF is appended, never replaced.
+dig +short MX mohamedlabs.com
 ```
 
-Then re-run Brevo's domain check until SPF and both DKIM selectors are green, and
-send one more `make mail-test`. A message that reaches Gmail's inbox — not spam —
-with `spf=pass` and `dkim=pass` in its headers (Gmail: "Show original") is the
-end of this work; anything less is a record still missing.
+Then re-run Brevo's domain check: with these records in place it reports SPF,
+DKIM and DMARC green, and its ownership check finds the `brevo-code` TXT. What
+remains is an observation, not a record — send `make mail-test` to a mailbox you
+can read, open the message source, and look for `spf=pass`, `dkim=pass` with
+`d=mohamedlabs.com`, `dmarc=pass`, and for the message sitting in the inbox rather
+than in spam. That observed header block is the end of this work; a green Brevo
+check on its own is not, and neither is the relay's `250`.
 
 ## Update
 
