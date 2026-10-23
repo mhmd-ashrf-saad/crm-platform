@@ -30,6 +30,8 @@ This changelog consists of the bug & security fixes and new features being inclu
 
 * [fixed] Fixed a failed mail send being invisible: the mail transport now logs the server's own error at `ERROR` before re-throwing, a production instance booted on a mailer that cannot fail (`log`, `array`, `null`) logs `CRITICAL`, and `make mail-test` sends a real message and exits non-zero when the relay refuses it.
 
+* [fixed] Fixed the Admin e2e shards failing on a throttled apt mirror: `--with-deps` was fetching 109 MB and 166 packages of firefox and webkit system libraries for a suite whose Playwright config declares a single `chromium` project, piling the whole webkit gstreamer/GTK4 stack on top of the 20 MB chromium needs. Installing `--with-deps chromium` and caching `~/.cache/ms-playwright` keyed on the resolved `playwright-core` version cuts the apt payload to 20 MB, drops 4.7 GB of repeated browser downloads per run to one, and takes the install step from ~35 s to ~6-13 s. The 600 second bound and its visible-failure reporting are unchanged.
+
 ## **v2.2.7 (16th of Oct 2026)**
 
 * [fixed] Fixed a web form submission creating a duplicate contact when the address differed only in case.
