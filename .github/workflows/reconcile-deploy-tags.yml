@@ -1,0 +1,665 @@
+name: Reconcile Deploy Tags
+
+# Backfills a missing `deploy-<short sha>` tag for a green commit on `main`,
+# and makes the one state that means "production is silently falling behind"
+# impossible to miss: a green `main` tip with no deploy tag.
+#
+# WHY THIS EXISTS -- measured, 2026-10-21
+#   `.github/workflows/deploy-tag.yml` reacts to exactly one kind of event: a
+#   `workflow_run` `completed` for one of the four suites. Its 360 s re-poll
+#   covers a wake that arrives too early. It cannot cover a wake that is never
+#   delivered at all, and its deadline branch deliberately exits 0 with a
+#   notice ("a later workflow_run will have to re-evaluate"), so a missed wake
+#   leaves nothing red anywhere.
+#
+#   Measured on commit 9b95d8e2: every check-run on it green, no
+#   `deploy-9b95d8e2` tag ever created, all three wakes exiting 0 with that
+#   notice, no fourth wake. The homelab's `deploy.sh` only ever deploys the
+#   newest `deploy-*` tag reachable from `origin/main`, so it stayed two
+#   commits behind for two days without a single failing check to look at.
+#
+#   This workflow asks deploy-tag.yml's question on a clock instead of on an
+#   event, so a missing event is no longer a missing answer.
+#
+# WHY THE PREDICATE IS COPIED AND NOT SIMPLIFIED
+#   A reconciler with a weaker predicate would tag commits the gate refused --
+#   worse than the gap it closes. So: every check-run on the commit completed
+#   and in {success, neutral, skipped}, AND no workflow run for the commit
+#   still queued or in progress. The second half is not redundant: a run is
+#   created at queue time, before its check-runs exist, so the checks API alone
+#   cannot see a workflow that was queued a second ago. That exact gap is why
+#   deploy-tag.yml reads `actions/runs` as well.
+#
+# IT NEVER CHECKS OUT OR EXECUTES THE TRIGGERING COMMIT'S CODE
+#   Every input arrives through `env:`, never inline Actions interpolation
+#   inside a shell script, and the job reads only the API. There is no
+#   `actions/checkout`, so there is no code path by which content from `main`
+#   can run here.
+#
+# CAN THIS WORKFLOW ITSELF KEEP A COMMIT UNTAGGED?
+#   It has to be asked: deploy-tag.yml deadlocked on exactly that on its first
+#   real push (002b1a75) because its own check-run was in scope for its own
+#   gate. Three directions were checked.
+#
+#   1. A sweep can never *wake* deploy-tag.yml. That trigger lists four named
+#      workflows and this is not one of them, so adding sweeps adds no wakes
+#      and no races for the tag.
+#   2. A sweep never waits on itself. Its own check-run is excluded three
+#      ways: by `details_url` (which carries the run id), by every job name
+#      read back from this run's own `actions/runs/<id>/jobs`, and -- only if
+#      that read fails -- by the literal name this file declares today. The
+#      hardcoded-only version of this exclusion is what failed review: it
+#      excluded "Reconcile the sweep" while the job is declared
+#      `name: Reconcile`, so it matched nothing, a sweep's own failing
+#      check-run landed on the tip, the next sweep read that as "the tip is
+#      not deployable", and the alarm step closed the open alarm as though a
+#      tag existed. Deriving the name from the run means a job rename cannot
+#      bring that back. Without the exclusion at all, every sweep would see an
+#      in-progress check of its own and refuse to tag anything, forever -- the
+#      identical deadlock deploy-tag.yml hit on its first real push
+#      (002b1a75).
+#   3. The reverse direction is not ours to fix and does not need fixing.
+#      deploy-tag.yml excludes only its own run, so while a sweep is in flight
+#      for the tip it counts this workflow's run as "still in flight" and
+#      keeps polling. That window is bounded by this whole job --
+#      `timeout-minutes: 8`, of which 4 is the sweep step and 3 the alarm step
+#      -- not by the sweep step alone. 480 s is longer than deploy-tag.yml's
+#      own 360 s re-poll, so a `deploy-tag.yml` wake that arrives inside a
+#      sweep can spend its whole window seeing this job pending and exit with
+#      its "a later workflow_run will have to re-evaluate" notice. The net
+#      effect is a delayed tag, never a lost one: this sweep tags the commit
+#      itself when the predicate passes, and a later sweep tags it if this one
+#      cannot. The worst case is that the tag is written by this workflow
+#      instead of by deploy-tag.yml -- same commit, same predicate, at most
+#      one extra 30-minute timer tick. It can delay a tag; it cannot prevent
+#      one.
+permissions:
+  # Creating `refs/tags/deploy-*` is the whole write surface. Nothing else in
+  # the repository is modified -- no branch, no commit, no release.
+  contents: write
+  # `commits/<sha>/check-runs` is how deploy-tag.yml answers "is it green".
+  checks: read
+  # `actions/runs?head_sha=` is how it answers "is anything still queued".
+  actions: read
+  # The escalation: create, update and close one fixed-title issue. `issues:
+  # write` implies read, which is what finding the existing issue needs. No
+  # secret and no webhook is involved; a token minted per run with exactly
+  # these four scopes is the entire credential story.
+  issues: write
+
+on:
+  # Every 30 minutes, not every 5. The host's `sijilna-deploy.timer` polls for
+  # new tags every 3 minutes, so the reconciliation interval -- not the deploy
+  # interval -- sets how long a missed wake can delay production. 30 minutes
+  # turns the measured two days into at most half an hour, at roughly 30 API
+  # calls per sweep (well inside the 5000/hour budget of the token), and it
+  # survives the several-minute start delays GitHub applies to scheduled runs
+  # under load: a sweep that starts late is still a sweep. Going below 15
+  # minutes would only shorten the detection latency of an alarm that is
+  # itself measured in minutes, and would multiply the wasted sweeps over an
+  # idle weekend.
+  #
+  # Known and accepted: GitHub disables a `schedule` trigger after 60 days
+  # without repository activity, and a disabled schedule is silent. That is why
+  # `workflow_dispatch` exists below -- it is the manual path back, and the
+  # escalation issue is the signal that the schedule itself died.
+  schedule:
+    - cron: '*/30 * * * *'
+  # Manual sweep, e.g. straight after deliberately re-enabling the schedule or
+  # after a long `main` outage has queued several green commits.
+  workflow_dispatch:
+
+# One sweeper at a time. Deliberately NOT cancel-in-progress: a sweep is
+# idempotent, and cancelling one halfway through a tagging loop would leave a
+# half-swept window for no benefit.
+concurrency:
+  group: reconcile-deploy-tags
+  cancel-in-progress: false
+
+jobs:
+  reconcile:
+    name: Reconcile
+    runs-on: ubuntu-latest
+
+    # 4 + 3 below, plus room to start: a hung sweep must be killed by the job
+    # deadline, not linger as a run that `deploy-tag.yml` sees as pending.
+    timeout-minutes: 8
+
+    steps:
+      # A closed window of the newest commits on `main`, not a search. Bounded
+      # because the failure this fixes is always at the tip: `deploy.sh`
+      # deploys the newest tag, so an ancient skipped commit that is already
+      # superseded needs no tag -- tagging it would produce the same running
+      # code under an older name. Ten covers any plausible burst of commits
+      # between two sweeps, and the tip is always inside it.
+      - name: Sweep main and tag every green commit
+        id: sweep
+        timeout-minutes: 4
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO: ${{ github.repository }}
+          RUNNER_TEMP: ${{ runner.temp }}
+          WINDOW: '10'
+          # "more than about 15 minutes": a commit is only allowed to be green
+          # and untagged this long before the run goes red. Well above the
+          # few seconds deploy-tag.yml needs once everything has settled, so a
+          # healthy pipeline never trips it.
+          THRESHOLD_SECONDS: '900'
+        run: |
+          set -euo pipefail
+
+          failures=0
+
+          # Conclusions that are not failures, copied from deploy-tag.yml.
+          # `skipped` is allowed on purpose: a path-filtered workflow whose
+          # jobs all skip still reports a completed check-run, and a commit is
+          # not undeployable because a job had nothing to do. Everything else
+          # (failure, cancelled, timed_out, action_required, startup_failure,
+          # stale) blocks the tag.
+          allowed_checks="success neutral skipped"
+
+          # ---- which check-runs belong to this run ------------------------
+          # Read back from this run, never hardcoded. The version of this file
+          # that failed review excluded the literal "Reconcile the sweep"
+          # while the job is declared `name: Reconcile`, so the exclusion
+          # matched nothing: a sweep's own failing check-run landed on the tip,
+          # the next sweep read it as "the tip is not deployable", and the
+          # alarm step then closed the open alarm as though the tag existed.
+          # Deriving the names from this run's own job list means a rename
+          # cannot reintroduce that.
+          self_check_names=""
+          jobs_path="repos/${REPO}/actions/runs/${GITHUB_RUN_ID}"
+          jobs_path="${jobs_path}/jobs?per_page=100"
+          if jobs_json="$(gh api "$jobs_path" 2>/dev/null)"; then
+            self_check_names="$(printf '%s' "$jobs_json" \
+              | jq -r '.jobs[]? | .name // empty')"
+          fi
+          if [ -z "$self_check_names" ]; then
+            # Degrade to the name this file declares today, never to no
+            # exclusion at all: excluding nothing is the failure above.
+            echo "::warning::could not read this run's own job names"
+            echo "::warning::falling back to the literal name Reconcile"
+            self_check_names="Reconcile"
+          fi
+          echo "excluding this run's own check-runs:" \
+            "$(printf '%s' "$self_check_names" | tr '\n' ' ')"
+          # Exported because it is read inside the `--jq` program below, and
+          # jq reaches the environment through `env.`, never through the shell.
+          export SELF_CHECK_NAMES="$self_check_names"
+
+          # Prints the sha a deploy tag points at and returns 0; returns 1 when
+          # the ref does not exist. A non-404 API error is also treated as
+          # "absent" on purpose, exactly as deploy-tag.yml does: the POST below
+          # reports "already exists" rather than silently overwriting, and the
+          # re-read after a failed POST is what decides. Guessing wrong in that
+          # window would risk moving a published deploy tag.
+          #
+          # An ANNOTATED tag's ref points at a tag object, not at a commit, so
+          # `.object.sha` is then the tag object's sha -- which never equals the
+          # commit's. Before this was dereferenced, a correctly tagged tip read
+          # as untagged: the sweep refused to move a tag that was already
+          # right, exited 1, and opened an alarm every 30 minutes that no tag
+          # could ever clear. Follow the tag object once. A lightweight ref has
+          # no tag object and is returned exactly as before. If the follow
+          # itself fails the tag object's sha is returned, which reads as "not
+          # this commit" -- the loud refusal, never a silent "tagged".
+          tag_target() {
+            local out sha type tag_json target
+            if out="$(gh api "repos/${REPO}/git/ref/tags/$1" 2>/dev/null)"; then
+              sha="$(printf '%s' "$out" | jq -r '.object.sha')"
+              type="$(printf '%s' "$out" \
+                | jq -r '.object.type // "commit"')"
+              if [ "$type" = "tag" ]; then
+                if tag_json="$(gh api "repos/${REPO}/git/tags/${sha}" \
+                     2>/dev/null)"; then
+                  target="$(printf '%s' "$tag_json" \
+                    | jq -r '.object.sha // empty' 2>/dev/null || true)"
+                  if [ -n "$target" ]; then
+                    sha="$target"
+                  fi
+                fi
+              fi
+              printf '%s' "$sha"
+              return 0
+            fi
+            return 1
+          }
+
+          # deploy-tag.yml's predicate, verbatim in meaning, into three global
+          # counters:
+          #   EV_TOTAL   check-runs visible for the commit (0 = nothing ever
+          #              verified it, which is not "no news is good news")
+          #   EV_PENDING something has not finished -- wait, do not judge
+          #   EV_BAD     something concluded neither success nor skipped
+          eval_commit() {
+            local sha="$1" name status conclusion
+            EV_TOTAL=0
+            EV_PENDING=0
+            EV_BAD=0
+
+            local checks_tsv="${RUNNER_TEMP}/checks-${sha:0:7}.tsv"
+            local runs_tsv="${RUNNER_TEMP}/runs-${sha:0:7}.tsv"
+
+            # ---- every check-run on the commit -----------------------------
+            # Three exclusions, all load-bearing:
+            #
+            #   this run, matched by the job names read back from this run
+            #     above -- so a job rename cannot break it -- and by
+            #     `details_url`, which carries the run id. The check-run for
+            #     this job is in progress by definition while this code runs;
+            #     without this the sweep sees itself as unfinished forever,
+            #     which is the identical bug deploy-tag.yml hit on its first
+            #     real push (002b1a75).
+            #     The name half applies ONLY to check-runs the Actions app
+            #     published. A name is not unique across apps: a third-party
+            #     check app publishing one called `Reconcile` with an unrelated
+            #     `details_url` was excluded by name alone, so the sweep tagged
+            #     a commit a real external check rejects -- the wrong direction,
+            #     because `deploy.sh` deploys the newest deploy tag.
+            #   deploy-tag.yml's check-run, matched by that workflow's job
+            #     name -- being woken and tagging is not a check on the code.
+            #     Excluding it is also what stops one bad tag from poisoning
+            #     every later sweep: deploy-tag.yml exits 1 when it refuses to
+            #     move a tag, and if that failure counted here, that commit
+            #     would look permanently undeployable. That is precisely the
+            #     class of silent stall this workflow exists to remove -- and
+            #     this workflow's own failing runs are excluded for exactly
+            #     the same reason: a sweep that failed is a fact about the
+            #     checker, not about the commit.
+            # jq's `$n` is not a shell variable, so the single quotes around
+            # this program are correct and deliberate.
+            # shellcheck disable=SC2016
+            gh api --paginate \
+              "repos/${REPO}/commits/${sha}/check-runs?per_page=100" \
+              --jq '.check_runs[]
+                    | select((.app.name // "") != "GitHub Actions"
+                             or (.name as $n
+                                 | (env.SELF_CHECK_NAMES | split("\n")
+                                    | any(. == $n))
+                                 | not))
+                    | select((.details_url // "")
+                             | contains("/runs/" + env.GITHUB_RUN_ID + "/")
+                             | not)
+                    | select(.name != "Tag the commit as deployable")
+                    | [.name, .status, (.conclusion // "none")] | @tsv' \
+              > "$checks_tsv"
+
+            while IFS=$'\t' read -r name status conclusion; do
+              [ -n "$name" ] || continue
+              EV_TOTAL=$((EV_TOTAL + 1))
+
+              if [ "$status" != "completed" ]; then
+                echo "  pending: ${name} (${status})"
+                EV_PENDING=1
+                continue
+              fi
+
+              case " ${allowed_checks} " in
+                *" ${conclusion} "*)
+                  echo "  ok:      ${name} (${conclusion})"
+                  ;;
+                *)
+                  echo "  bad:     ${name} (${conclusion})"
+                  EV_BAD=1
+                  ;;
+              esac
+            done < "$checks_tsv"
+
+            # ---- no workflow run for the commit still in flight ------------
+            # A run exists from queue time, so this catches a workflow whose
+            # check-runs do not exist yet -- the one hole the checks API has.
+            gh api --paginate \
+              "repos/${REPO}/actions/runs?head_sha=${sha}&per_page=100" \
+              --jq '.workflow_runs[]
+                    | select(.name != "Deploy Tag")
+                    | select(.name != "Reconcile Deploy Tags")
+                    | [.name, .status, (.conclusion // "none")] | @tsv' \
+              > "$runs_tsv"
+
+            while IFS=$'\t' read -r name status conclusion; do
+              [ -n "$name" ] || continue
+              if [ "$status" != "completed" ]; then
+                echo "  pending run: ${name} (${status})"
+                EV_PENDING=1
+                continue
+              fi
+              if [ "$conclusion" != "success" ] &&
+                 [ "$conclusion" != "skipped" ]; then
+                echo "  bad run:     ${name} (${conclusion})"
+                EV_BAD=1
+              fi
+            done < "$runs_tsv"
+          }
+
+          # ---- the window ---------------------------------------------------
+          commits_tsv="${RUNNER_TEMP}/commits.tsv"
+          gh api "repos/${REPO}/commits?sha=main&per_page=${WINDOW}" \
+            --jq '.[] | [.sha, .commit.committer.date] | @tsv' > "$commits_tsv"
+
+          tip_sha="$(head -n1 "$commits_tsv" | cut -f1)"
+          tip_date="$(head -n1 "$commits_tsv" | cut -f2)"
+          echo "tip=${tip_sha} (${tip_date})"
+
+          tagged=0
+          created=0
+          blocked=0
+
+          while IFS=$'\t' read -r sha date; do
+            [ -n "$sha" ] || continue
+            # 7 characters: the width `git log --oneline` uses on a repository
+            # this size, so a reconciled tag reads like every other one.
+            short="${sha:0:7}"
+            tag="deploy-${short}"
+            echo "commit=${sha} tag=${tag} (${date})"
+
+            # ---- already tagged: idempotence is the common case ------------
+            if at="$(tag_target "$tag")"; then
+              if [ "$at" = "$sha" ]; then
+                echo "  tagged: ${tag} -> ${at}"
+                tagged=$((tagged + 1))
+                continue
+              fi
+              # Same name, different commit: a 7-character prefix collision or
+              # a tag someone moved. Never overwrite -- `deploy.sh` would
+              # silently redeploy the other commit -- and never ignore it.
+              echo "::error::${tag} exists at ${at}, not at ${sha}"
+              echo "::error::refusing to move or ignore a published deploy tag"
+              failures=$((failures + 1))
+              continue
+            fi
+
+            # ---- decide, by deploy-tag.yml's rules ------------------------
+            eval_commit "$sha"
+
+            if [ "$EV_TOTAL" -eq 0 ]; then
+              echo "  skip: no check-run for ${sha} -- nothing verified it"
+              blocked=$((blocked + 1))
+              continue
+            fi
+            if [ "$EV_BAD" -ne 0 ]; then
+              # Red is not a stall: `main` said no, and the pipeline is
+              # working. Deploying it is not this workflow's decision to make.
+              echo "  skip: ${sha} is not deployable (a check did not succeed)"
+              blocked=$((blocked + 1))
+              continue
+            fi
+            if [ "$EV_PENDING" -ne 0 ]; then
+              echo "  wait: ${sha} still has unfinished checks or runs"
+              blocked=$((blocked + 1))
+              continue
+            fi
+
+            # ---- create the tag, idempotently -----------------------------
+            # A lightweight ref, not an annotated tag object: the host's
+            # `git fetch --tags` gets the commit either way and one API call
+            # beats two.
+            if ! gh api --method POST "repos/${REPO}/git/refs" \
+                   -f ref="refs/tags/${tag}" -f sha="${sha}" > /dev/null; then
+              # Lost a race. The `concurrency` group serialises sweeps, but
+              # deploy-tag.yml may have created the same ref in the same
+              # second. Losing is success provided the ref it lost to is the
+              # ref it wanted -- that commit is tagged, which is the goal.
+              if at="$(tag_target "$tag")"; then
+                if [ "$at" = "$sha" ]; then
+                  echo "  tagged: ${tag} was created concurrently at ${sha}"
+                  tagged=$((tagged + 1))
+                  continue
+                fi
+                echo "::error::${tag} was created at ${at}, not at ${sha}"
+                failures=$((failures + 1))
+                continue
+              fi
+              echo "::error::could not create ${tag} and it does not exist"
+              failures=$((failures + 1))
+              continue
+            fi
+
+            echo "::notice::created ${tag} at ${sha}"
+            echo "::notice::(all ${EV_TOTAL} checks green)"
+            echo "- created \`${tag}\` at \`${sha}\`" \
+              "(${EV_TOTAL} checks green)" >> "$GITHUB_STEP_SUMMARY"
+            created=$((created + 1))
+          done < "$commits_tsv"
+
+          echo "swept: $((tagged + created + blocked)) commit(s)," \
+            "${created} tagged now, ${tagged} already tagged," \
+            "${blocked} not deployable yet"
+
+          # ---- escalation: a green tip with no tag -----------------------
+          #
+          # This is the state that cost two days. Everything else -- a red
+          # commit, a run still finishing -- is the pipeline doing its job and
+          # stays quiet; a green tip is a commit the gate says is deployable
+          # and that production cannot see.
+          #
+          # The threshold is measured from the commit's own date, because "how
+          # long has this been true" is not observable from here: a sweep sees
+          # one instant. Commit age is the conservative proxy -- it can only
+          # make the alarm fire later than the condition started, never
+          # earlier, and the sweep has just had its chance to tag the commit,
+          # so an untagged-here means tagging did not happen.
+          escalate=0
+          # `tip_tagged` is deliberately not "a ref with the tip's name
+          # exists": it is 1 only when that ref resolves to the tip's own sha.
+          # The alarm step closes the issue on this value, so a
+          # `deploy-<sha7>` pointing somewhere else -- a prefix collision, or a
+          # ref someone moved -- must not read as "production can see this
+          # commit". Its name matching is the confusion the loop above already
+          # errors on.
+          tip_tagged=0
+          if [ -z "$tip_sha" ]; then
+            echo "::error::could not read the newest commit on main"
+            failures=$((failures + 1))
+          elif at="$(tag_target "deploy-${tip_sha:0:7}")"; then
+            if [ "$at" = "$tip_sha" ]; then
+              tip_tagged=1
+              echo "tip is tagged: deploy-${tip_sha:0:7} -> ${at}"
+              echo "nothing to escalate"
+            else
+              echo "::warning::deploy-${tip_sha:0:7} points at ${at}, not"
+              echo "::warning::at the tip -- the tip is still untagged"
+            fi
+          fi
+
+          if [ -n "$tip_sha" ] && [ "$tip_tagged" -eq 0 ]; then
+            now="$(date -u +%s)"
+            committed="$(date -u -d "$tip_date" +%s)"
+            age=$((now - committed))
+            echo "tip is untagged and ${age}s old" \
+              "(threshold ${THRESHOLD_SECONDS}s)"
+
+            if [ "$age" -ge "$THRESHOLD_SECONDS" ]; then
+              eval_commit "$tip_sha"
+              if [ "$EV_TOTAL" -ne 0 ] &&
+                 [ "$EV_BAD" -eq 0 ] &&
+                 [ "$EV_PENDING" -eq 0 ]; then
+                echo "::error::main tip ${tip_sha} has been green and untagged"
+                echo "::error::for ${age}s -- production cannot see it"
+                escalate=1
+              else
+                # Not green, so this is not the silent-stall shape: a red
+                # commit is a decision, an unfinished one is a wait. Say so on
+                # the run without opening an issue, and without passing
+                # judgement on why.
+                echo "::warning::main tip ${tip_sha} is untagged after ${age}s"
+                echo "::warning::and not green yet -- not escalating"
+              fi
+            fi
+          fi
+
+          # Three verdicts, not two. `unknown` is what a sweep that could not
+          # even read `main` reports, and the alarm step must be able to tell it
+          # apart from a clean sweep: clearing the alarm because the checker
+          # itself broke would be the same lie as never raising it.
+          if [ -z "$tip_sha" ]; then
+            echo "escalate=unknown" >> "$GITHUB_OUTPUT"
+          else
+            echo "escalate=${escalate}" >> "$GITHUB_OUTPUT"
+          fi
+          echo "tip_sha=${tip_sha}" >> "$GITHUB_OUTPUT"
+          echo "tip_tagged=${tip_tagged}" >> "$GITHUB_OUTPUT"
+
+          if [ "$failures" -ne 0 ]; then
+            echo "::error::${failures} commit(s) need a human"
+            exit 1
+          fi
+
+      # The alarm, and its clearing. Split from the sweep so that the sweep
+      # never writes to the issue tracker: a sweep that fails for an unrelated
+      # reason still leaves the issue exactly as truthful as it was.
+      #
+      # WHY `always()` AND NOT THE DEFAULT `success()`
+      #   The one way a green tip stays untagged while this workflow runs is
+      #   that this workflow could not create the tag -- a 403, a 422, a moved
+      #   ref -- and that path exits the sweep step non-zero. Gating the alarm
+      #   on `success()` would therefore skip it in exactly the case it exists
+      #   for: the checker failed, so nothing tells anyone. So this step runs
+      #   regardless and decides from the sweep's verdict, which is `unknown`
+      #   (not `0`) when the sweep never got far enough to have one.
+      #
+      # Fixed title, create-or-update, and closed only when the tip's own tag
+      # resolves to the tip. Two things matter here and both are about being
+      # unmissable rather than tidy: the issue is the durable record (it
+      # survives the run, unlike a log), and the non-zero exit is what turns
+      # the Actions tab red. A notice was what failed on 2026-10-21.
+      - name: Escalate or clear the alarm
+        if: always()
+        timeout-minutes: 3
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO: ${{ github.repository }}
+          RUNNER_TEMP: ${{ runner.temp }}
+          ESCALATE: ${{ steps.sweep.outputs.escalate }}
+          TIP_SHA: ${{ steps.sweep.outputs.tip_sha }}
+          TIP_TAGGED: ${{ steps.sweep.outputs.tip_tagged }}
+          # One title, forever. Changing it would open a second issue and leave
+          # the first one open and stale -- the duplicate-spam failure the
+          # create-or-update is here to prevent.
+          ALERT_TITLE: 'Deploy tag reconciler: main tip is green but untagged'
+        run: |
+          set -euo pipefail
+
+          # From the three default environment variables rather than an
+          # Actions expression: this value goes into commit-like prose, and
+          # nothing that reaches the shell comes from the payload.
+          run_url="${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}"
+          run_url="${run_url}/actions/runs/${GITHUB_RUN_ID}"
+
+          # Paginated, and with `awk` rather than `head -n1`. `head` closed
+          # this pipe after one line, and under `pipefail` the resulting
+          # SIGPIPE in `gh` would fail the step; `awk 'NR == 1'` prints the
+          # first match and keeps reading to EOF. Pagination is what makes the
+          # lookup find the issue at all: reading only the first page meant
+          # that past 100 open issues an open alarm was missed and a second
+          # issue with the same title was created -- exactly the duplicate
+          # this lookup exists to prevent, and a break of "one title,
+          # forever".
+          open_issue="$(
+            gh api --paginate "repos/${REPO}/issues?state=open&per_page=100" \
+              --jq '.[]
+                    | select(.pull_request == null)
+                    | select(.title == env.ALERT_TITLE)
+                    | .number' | awk 'NR == 1'
+          )"
+
+          # Anything that is not a verdict leaves the alarm exactly as it was.
+          # `unknown` is the sweep saying it never got far enough to have one,
+          # and clearing an alarm because the checker broke would be the same
+          # lie as never raising it.
+          if [ "${ESCALATE}" != "0" ] && [ "${ESCALATE}" != "1" ]; then
+            echo "::notice::the sweep reported no verdict; leaving the alarm"
+            echo "::notice::issue exactly as it was"
+            exit 0
+          fi
+
+          # A clean sweep closes a stale alarm -- but only when the tip really
+          # is tagged. `escalate=0` is not that statement: it is also what a
+          # sweep reports for a tip that is green and younger than the
+          # threshold, for a red tip, and for one still finishing. Closing on
+          # it produced a "Cleared: deploy-... now exists" comment for a
+          # commit that had no tag at all, which is a worse lie than silence.
+          # So the close is gated on the sweep's separate `tip_tagged` verdict:
+          # 1 only when the tag ref resolves to the tip's own sha.
+          if [ "${ESCALATE}" = "0" ]; then
+            if [ "${TIP_TAGGED}" != "1" ]; then
+              echo "::notice::the sweep did not escalate, but the tip is not"
+              echo "::notice::tagged -- leaving any alarm open"
+              exit 0
+            fi
+            if [ -z "$open_issue" ]; then
+              echo "::notice::no alarm to clear"
+              exit 0
+            fi
+            gh api --method PATCH "repos/${REPO}/issues/${open_issue}" \
+              -f state=closed > /dev/null
+            cleared="Cleared: \`deploy-${TIP_SHA:0:7}\` now exists for the"
+            cleared="${cleared} tip of \`main\`. ${run_url}"
+            gh api --method POST "repos/${REPO}/issues/${open_issue}/comments" \
+              -f body="${cleared}" > /dev/null
+            echo "::notice::closed alarm issue #${open_issue}"
+            echo "::notice::the tip is tagged"
+            exit 0
+          fi
+
+          # The body is assembled line by line rather than as a heredoc.
+          # Three reasons: the text is multi-line, it contains markdown that
+          # must not be read as a code block (this script lives in a YAML block
+          # scalar, which indents every line), and `jq --arg` then escapes it
+          # instead of this script having to. `printf '%s\n'` takes one
+          # argument per line, so a `%` in the prose is never a format
+          # directive.
+          body_file="${RUNNER_TEMP}/alarm-body.md"
+          printf '%s\n' \
+            "\`main\`'s tip is **green and untagged**, which means" \
+            "production cannot deploy it." \
+            "" \
+            "- commit: \`${TIP_SHA}\`" \
+            "- expected tag: \`deploy-${TIP_SHA:0:7}\`" \
+            "- the sweep that found it: ${run_url}" \
+            "" \
+            "Nothing is red in the pipeline that produced this state:" \
+            "\`deploy-tag.yml\` reacts only to a \`workflow_run\` completion" \
+            "and exits 0 with a notice when its deadline expires, so a" \
+            "missed wake leaves no failing check behind. That is exactly" \
+            "how commit \`9b95d8e2\` stayed undeployed for two days on" \
+            "2026-10-21." \
+            "" \
+            "What to check, in order:" \
+            "" \
+            "1. This run's log -- the sweep printed why it could not" \
+            "   create the tag. A \`403\`/\`422\` from \`git/refs\` means the" \
+            "   permissions block at the top of" \
+            "   \`.github/workflows/reconcile-deploy-tags.yml\` no longer" \
+            "   grants \`contents: write\`." \
+            "2. Whether a previous deploy tag moved: the sweep refuses to" \
+            "   touch an existing \`deploy-*\` ref that points at another" \
+            "   commit, and it is right to. Fix the ref by hand." \
+            "3. Whether the scheduled trigger is still enabled. GitHub" \
+            "   disables a \`schedule\` after 60 days without repository" \
+            "   activity, silently. Re-enable it, then run this workflow" \
+            "   manually with \`workflow_dispatch\`." \
+            "" \
+            "This issue closes itself on the first sweep that finds the tip" \
+            "tagged." \
+            > "$body_file"
+
+          payload="${RUNNER_TEMP}/alarm.json"
+          jq -n --arg title "${ALERT_TITLE}" \
+            --arg body "$(cat "$body_file")" \
+            '{title: $title, body: $body}' > "$payload"
+
+          if [ -z "$open_issue" ]; then
+            gh api --method POST "repos/${REPO}/issues" \
+              --input "$payload" > /dev/null
+            echo "::error::opened the alarm issue for ${TIP_SHA}"
+          else
+            gh api --method PATCH "repos/${REPO}/issues/${open_issue}" \
+              --input "$payload" > /dev/null
+            echo "::error::updated alarm issue #${open_issue} for ${TIP_SHA}"
+          fi
+
+          # The exit is the point. A green run with a warning annotation is
+          # what went unnoticed for two days.
+          echo "::error::main tip is green and untagged -- failing this run so"
+          echo "::error::the Actions tab shows it"
+          exit 1
