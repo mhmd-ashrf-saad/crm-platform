@@ -271,7 +271,8 @@ compose project, or a container of the same project name was created from a
 `com.docker.compose.project` and `com.docker.compose.project.working_dir` labels,
 so a stopped container and a bare volume count too); or an existing `.env` records
 `APP_DEBUG=true`, an `APP_ENV` other than `production`, or an `APP_FORCE_HTTPS`
-that is not `true`.
+that is none of `true`, `True`, `TRUE` or `1` — the spellings the check accepts
+as true.
 
 It never runs `docker volume prune`, `docker system prune`, `docker compose
 down -v`, or `rm -rf` on a volume, and it never rewrites an existing `.env`: the
@@ -356,8 +357,10 @@ sudo docker inspect -f '{{.Name}} started={{.State.StartedAt}}' \
 curl -s -o /dev/null -w '%{http_code}\n' https://crm-test.mohamedlabs.com/admin/login   # 200
 curl -s -o /dev/null -w '%{redirect_url}\n' https://crm-test.mohamedlabs.com/          # https://...
 
-# 6. rows, not tables: the installer created one administrator
-sudo docker compose --env-file /opt/sijilna-test/app/.env \
+# 6. rows, not tables: the installer created one administrator. Same -p rule as
+#    step 3: without it an exported COMPOSE_PROJECT_NAME resolves this to the
+#    live project, where the `db` service name is the live database.
+sudo docker compose -p sijilna-test --env-file /opt/sijilna-test/app/.env \
   -f /opt/sijilna-test/app/deploy/docker-compose.yml exec -T db sh -c \
   'MYSQL_PWD="$MYSQL_PASSWORD" mysql -u"$MYSQL_USER" -N -e "select count(*) from users;" "$MYSQL_DATABASE"'
 ```

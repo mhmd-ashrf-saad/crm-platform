@@ -400,7 +400,12 @@ validate_admin_email() {
     Allowed: letters, digits and . _ % + - before the @; letters, digits, - and . after
     it; and a dotted domain with a 2+ letter last label. That set excludes exactly the
     characters .env, docker compose and PHP read differently -- a newline, \$, #, a quote
-    or a backslash -- and it matches what scripts/create-admin.php will accept."
+    or a backslash. Every address it accepts is one scripts/create-admin.php accepts, for
+    the plain set we allow; the reverse is deliberately not true. PHP's filter also takes
+    RFC-extension characters -- an apostrophe in Admin.O'Neil@sub.domain.co.uk, a quoted
+    local part -- and it is our own .env and compose --env-file readers that would parse
+    those differently, so do not widen this check to match FILTER_VALIDATE_EMAIL: the gap
+    is intentional, and PHP accepting more is not a mismatch to fix on this side."
 }
 
 validate_secret_charset() {
