@@ -13,12 +13,39 @@
 # Paths are relative to THIS file (deploy/): `..` is the checkout root, and
 # `.env` is deploy/.env -- see deploy/README.md for how it relates to the
 # Laravel .env mounted into the app container. No `version:` key: obsolete.
-name: sijilna
+#
+# INSTANCE IDENTITY. Every name a second instance on this host would collide on
+# -- the compose project, the three containers, the image tag, the data volume
+# and the loopback port -- is interpolated from deploy/.env with a default that
+# is EXACTLY the homelab instance's value. An .env that sets none of the
+# SIJILNA_* keys below (which is every .env written before
+# deploy/provision-instance.sh existed) therefore resolves to the same stack it
+# always did: `docker compose -f deploy/docker-compose.yml config` is unchanged.
+# Do not "clean up" these defaults -- they are what keeps the live deployment
+# at /opt/sijilna resolvable without an .env edit, and deploy/deploy.sh's
+# rollback path hardcodes the same names. Those seven defaults are the instance
+# identity:
+#
+#     SIJILNA_PROJECT        compose project      default: sijilna
+#     SIJILNA_DB_CONTAINER   container            default: sijilna-db
+#     SIJILNA_APP_CONTAINER  container            default: sijilna-app
+#     SIJILNA_WEB_CONTAINER  container            default: sijilna-web
+#     SIJILNA_IMAGE          image name (tag is always :latest)
+#                                                default: sijilna-app
+#     SIJILNA_DB_VOLUME      the data volume      default: sijilna-db-data
+#     SIJILNA_WEB_PORT       published loopback   default: 3102
+#
+# a second instance sets all seven to its own values in its own .env; see
+# "Second instance" in deploy/README.md. The image name is part of the identity
+# on purpose: two instances sharing `sijilna-app:latest` means the second
+# build retags the image the live containers and deploy.sh's rollback tag are
+# compared against.
+name: ${SIJILNA_PROJECT:-sijilna}
 
 services:
   db:
     image: mysql:8.4
-    container_name: sijilna-db
+    container_name: ${SIJILNA_DB_CONTAINER:-sijilna-db}
     # DB_DATABASE, DB_USERNAME, DB_PASSWORD and DB_ROOT_PASSWORD are declared
     # below as ${...} forms, which compose interpolates from deploy/.env. There
     # is deliberately NO env_file here: mounting the whole application
@@ -39,9 +66,11 @@ services:
       - --max-connections=60
     volumes:
       # THE DATA. This named volume is the only copy of every client database;
-      # `docker volume prune` and `docker system prune` delete it irreversibly.
-      # It is NOT covered by the /opt/homelab restic backup set -- see
-      # deploy/README.md -> Backups.
+      # `docker volume prune` and `docker system prune` delete it irreversibly,
+      # and nothing copies it directly (see deploy/README.md -> Backups: the
+      # nightly restic run stages a mysqldump of it, not the InnoDB directory).
+      # The source below is this file's volume KEY and stays fixed; the actual
+      # volume name is set by the `volumes:` block at the bottom of this file.
       - sijilna-db-data:/var/lib/mysql
     healthcheck:
       # Pings with the application user, not root: a root-only ping would report
@@ -65,8 +94,8 @@ services:
       # what is actually sent.
       context: ..
       dockerfile: deploy/docker/php.Dockerfile
-    image: sijilna-app:latest
-    container_name: sijilna-app
+    image: ${SIJILNA_IMAGE:-sijilna-app}:latest
+    container_name: ${SIJILNA_APP_CONTAINER:-sijilna-app}
     # The container environment. The first-boot administrator pair
     # (KRAYIN_ADMIN_EMAIL / KRAYIN_ADMIN_PASSWORD) is read from here too; remove
     # them after the first successful boot.
@@ -91,11 +120,13 @@ services:
 
   web:
     image: nginx:alpine
-    container_name: sijilna-web
+    container_name: ${SIJILNA_WEB_CONTAINER:-sijilna-web}
     ports:
       # Loopback ONLY: the Cloudflare Tunnel connects from this host. Never
-      # 0.0.0.0:3102 -- that publishes the CRM to the entire LAN.
-      - 127.0.0.1:3102:80
+      # 0.0.0.0:3102 -- that publishes the CRM to the entire LAN. A second
+      # instance takes a different loopback port (SIJILNA_WEB_PORT), because
+      # two stacks cannot publish the same host port.
+      - 127.0.0.1:${SIJILNA_WEB_PORT:-3102}:80
     volumes:
       - ../public:/var/www/html/public:ro
       - ../storage:/var/www/html/storage:ro
@@ -105,5 +136,9 @@ services:
     restart: unless-stopped
 
 volumes:
+  # The key is fixed so every instance's compose file looks the same; `name:` is
+  # what actually labels the volume on the host, and it is what a second
+  # instance must change. Two instances sharing one volume name would share one
+  # MySQL data directory.
   sijilna-db-data:
-    name: sijilna-db-data
+    name: ${SIJILNA_DB_VOLUME:-sijilna-db-data}
