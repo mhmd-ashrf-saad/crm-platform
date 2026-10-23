@@ -193,10 +193,33 @@ jobs:
           # reports "already exists" rather than silently overwriting, and the
           # re-read after a failed POST is what decides. Guessing wrong in that
           # window would risk moving a published deploy tag.
+          #
+          # An ANNOTATED tag's ref points at a tag object, not at a commit, so
+          # `.object.sha` is then the tag object's sha -- which never equals the
+          # commit's. Before this was dereferenced, a correctly tagged tip read
+          # as untagged: the sweep refused to move a tag that was already
+          # right, exited 1, and opened an alarm every 30 minutes that no tag
+          # could ever clear. Follow the tag object once. A lightweight ref has
+          # no tag object and is returned exactly as before. If the follow
+          # itself fails the tag object's sha is returned, which reads as "not
+          # this commit" -- the loud refusal, never a silent "tagged".
           tag_target() {
-            local out
+            local out sha type tag_json target
             if out="$(gh api "repos/${REPO}/git/ref/tags/$1" 2>/dev/null)"; then
-              printf '%s' "$out" | jq -r '.object.sha'
+              sha="$(printf '%s' "$out" | jq -r '.object.sha')"
+              type="$(printf '%s' "$out" \
+                | jq -r '.object.type // "commit"')"
+              if [ "$type" = "tag" ]; then
+                if tag_json="$(gh api "repos/${REPO}/git/tags/${sha}" \
+                     2>/dev/null)"; then
+                  target="$(printf '%s' "$tag_json" \
+                    | jq -r '.object.sha // empty' 2>/dev/null || true)"
+                  if [ -n "$target" ]; then
+                    sha="$target"
+                  fi
+                fi
+              fi
+              printf '%s' "$sha"
               return 0
             fi
             return 1
@@ -227,6 +250,12 @@ jobs:
             #     without this the sweep sees itself as unfinished forever,
             #     which is the identical bug deploy-tag.yml hit on its first
             #     real push (002b1a75).
+            #     The name half applies ONLY to check-runs the Actions app
+            #     published. A name is not unique across apps: a third-party
+            #     check app publishing one called `Reconcile` with an unrelated
+            #     `details_url` was excluded by name alone, so the sweep tagged
+            #     a commit a real external check rejects -- the wrong direction,
+            #     because `deploy.sh` deploys the newest deploy tag.
             #   deploy-tag.yml's check-run, matched by that workflow's job
             #     name -- being woken and tagging is not a check on the code.
             #     Excluding it is also what stops one bad tag from poisoning
@@ -243,10 +272,11 @@ jobs:
             gh api --paginate \
               "repos/${REPO}/commits/${sha}/check-runs?per_page=100" \
               --jq '.check_runs[]
-                    | select(.name as $n
-                             | (env.SELF_CHECK_NAMES | split("\n")
-                                | any(. == $n))
-                             | not)
+                    | select((.app.name // "") != "GitHub Actions"
+                             or (.name as $n
+                                 | (env.SELF_CHECK_NAMES | split("\n")
+                                    | any(. == $n))
+                                 | not))
                     | select((.details_url // "")
                              | contains("/runs/" + env.GITHUB_RUN_ID + "/")
                              | not)
