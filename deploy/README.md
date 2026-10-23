@@ -19,6 +19,12 @@ Only `sijilna-web` publishes a port, and the mapping is `127.0.0.1:3102:80`.
 Publishing it on `0.0.0.0` would put the CRM on the whole LAN — that is a hard
 rule on this host, not a preference.
 
+This directory is also the provisioning path for a **second** instance on the
+same host (another client, a test copy, a staging stack). Every name a second
+stack would collide on is an `SIJILNA_*` key in `deploy/.env` whose default is
+the value in the table above, so the live deployment resolves exactly as it
+always has. See [Second instance](#second-instance).
+
 The front-end assets are committed (`public/build`,
 `public/{admin,installer,webform}/build`), so the image has **no Node build
 step**: `docker compose up -d --build` is the whole deploy.
@@ -176,6 +182,243 @@ brand rows seeded by `sijilna:brand`, `/admin/login` **200**, `/` **302** to
 `http://` ones — the count that matters, because a tunnel terminates TLS and
 hands nginx plain HTTP, which is exactly the mixed content `APP_FORCE_HTTPS`
 exists to prevent.
+
+## Second instance
+
+A second instance is another client, a test copy, or a staging stack on the same
+host. It is the same application, the same image build and the same three
+services — what differs is the identity, and the identity is seven `SIJILNA_*`
+keys in `deploy/.env`:
+
+| `deploy/.env` key | Compose uses it for | Live instance (default) | `crm-test` |
+| ----------------- | ------------------- | ----------------------- | ---------- |
+| `SIJILNA_PROJECT` | compose project name (and the `sijilna_default` network) | `sijilna` | `sijilna-test` |
+| `SIJILNA_DB_CONTAINER` | `db` container name | `sijilna-db` | `sijilna-test-db` |
+| `SIJILNA_APP_CONTAINER` | `app` container name | `sijilna-app` | `sijilna-test-app` |
+| `SIJILNA_WEB_CONTAINER` | `web` container name | `sijilna-web` | `sijilna-test-web` |
+| `SIJILNA_IMAGE` | image name (the tag is always `:latest`) | `sijilna-app` | `sijilna-test-app` |
+| `SIJILNA_DB_VOLUME` | the MySQL data volume | `sijilna-db-data` | `sijilna-test-db-data` |
+| `SIJILNA_WEB_PORT` | published loopback port | `3102` | `3103` |
+
+On the live instance all seven keys are **absent** from `deploy/.env`, and that
+is the contract: their defaults — the third column — are exactly what
+`/opt/sijilna` resolves to today. Do not fill them in "for clarity": an `.env`
+that names them differently starts a different stack against a different
+volume. `deploy/deploy.sh` keeps rolling back onto containers whose names it
+hardcodes (`sijilna-db`, `sijilna-app`, `sijilna-web`), so those defaults are
+load-bearing in more than one place.
+
+### Provision it
+
+```bash
+# 1. Resolve and check. Writes nothing, clones nothing, starts nothing.
+sudo SIJILNA_INSTANCE_HOSTNAME=crm-test.mohamedlabs.com \
+     SIJILNA_INSTANCE_DIR=/opt/sijilna-test/app \
+     SIJILNA_PROJECT=sijilna-test \
+     SIJILNA_WEB_PORT=3103 \
+     SIJILNA_DB_NAME=sijilna_test \
+     SIJILNA_DB_USER=sijilna_test \
+     KRAYIN_ADMIN_EMAIL='admin@client.test' \
+     KRAYIN_ADMIN_PASSWORD='<chosen>' \
+     bash deploy/provision-instance.sh --dry-run
+
+# 2. The same command without --dry-run provisions the instance.
+```
+
+Run it from a checkout of this repository (any clone works — the script clones
+its own checkout into `SIJILNA_INSTANCE_DIR`, so it does not matter where you
+invoke it from). Values come from the environment and never from argv, because a
+password in argv is a password in `ps`, in `/proc/<pid>/cmdline` and in the
+shell history. Missing ones are reported together, before anything is written.
+
+Required: `SIJILNA_INSTANCE_HOSTNAME`, `SIJILNA_INSTANCE_DIR`, `SIJILNA_PROJECT`,
+`SIJILNA_WEB_PORT`, `SIJILNA_DB_NAME`, `SIJILNA_DB_USER`, plus
+`KRAYIN_ADMIN_EMAIL` / `KRAYIN_ADMIN_PASSWORD` **while the instance has no
+`storage/installed` marker and no pair recorded in `.env`** — on a re-run the
+pair is neither asked for nor used.
+
+Optional: `SIJILNA_DB_PASSWORD` and `SIJILNA_DB_ROOT_PASSWORD` (otherwise 48
+hex characters are generated), `SIJILNA_REPO_URL` and `SIJILNA_GIT_REF`
+(defaults `git@github.com:mhmd-ashrf-saad/crm-platform.git` and `main`, so a
+private clone needs the deploy key described under "What lives where"),
+`SIJILNA_HEALTH_ATTEMPTS` / `SIJILNA_HEALTH_INTERVAL`, `SIJILNA_MIN_FREE_MB`,
+`SIJILNA_STOP_AFTER_ENV=1` (write and harden `.env`, then stop before building),
+and `SIJILNA_ALLOW_MAIN_INSTANCE=1`.
+
+What it does, in order: validate every input → refuse any identity that already
+belongs to someone else → clone or reuse the checkout → write `.env` from
+`deploy/.env.deploy.example` (fresh `APP_KEY`, fresh database passwords,
+`APP_ENV=production`, `APP_DEBUG=false`, `APP_URL=https://<hostname>`, a
+per-instance `SESSION_COOKIE`) → symlink `deploy/.env` → hand `.env` to
+`uid:<deploy user> gid:33` at mode `640` → `docker compose up -d --build` →
+health-gate `http://127.0.0.1:<port>/admin/login` for up to six minutes →
+prove the running application is in production with debug off and that its
+error page carries no stack trace → print every value it resolved.
+
+It refuses, before writing anything, when: a required variable is missing; the
+project name is not a valid compose project name; the database name or user
+contains anything but `[A-Za-z0-9_]`; the port is not a number in range; the
+hostname carries a scheme or a path; `SIJILNA_INSTANCE_DIR` is not an absolute
+path or is `/opt/sijilna`; the project name is `sijilna` (the live instance);
+`COMPOSE_PROJECT_NAME` is set in the environment (it outranks both
+`SIJILNA_PROJECT` and the compose file's `name:`, so it would start a different
+project than the one just validated — `unset` it); `KRAYIN_ADMIN_EMAIL` is not a
+plain dotted email address (it is the one value written into `.env` that an
+operator types freely, and a newline in it would inject a second `.env` line); a
+container name, the data volume or the host port is already owned by **another**
+compose project, or a container of the same project name was created from a
+**different checkout** (ownership is read from the
+`com.docker.compose.project` and `com.docker.compose.project.working_dir` labels,
+so a stopped container and a bare volume count too); or an existing `.env` records
+`APP_DEBUG=true`, an `APP_ENV` other than `production`, or an `APP_FORCE_HTTPS`
+that is none of `true`, `True`, `TRUE` or `1` — the spellings the check accepts
+as true.
+
+It never runs `docker volume prune`, `docker system prune`, `docker compose
+down -v`, or `rm -rf` on a volume, and it never rewrites an existing `.env`: the
+`APP_KEY` and the generated database passwords are the ones the existing data
+volume was created with.
+
+### Re-running is the update path
+
+Re-running the same command is safe and is how this instance gets new code:
+the checkout is reused (never fetched, checked out or cleaned — it may be
+running), `.env` is left byte-identical, `storage/installed` keeps the installer
+from running again, and the administrator is not recreated. `up -d --build`
+rebuilds the image only when its inputs changed; the `app` container is moved
+onto the new image explicitly, because on this host's containerd image store
+`up -d` alone can leave the old container running (same defect `deploy.sh`
+handles — see "The containerd image-store trap").
+
+### The tunnel rule and the DNS record are yours to add
+
+The script does not touch Cloudflare, and must not: the zone and the tunnel
+belong to the vault, not to this repository. Two host-level things make
+`https://crm-test.mohamedlabs.com` resolve to this instance.
+
+**1. A DNS record.** A proxied `CNAME` for the hostname's first label in zone
+`mohamedlabs.com`, pointing at the tunnel:
+
+```text
+crm-test  CNAME  9de8ce79-ea20-4cb0-9720-ee5d54272a46.cfargotunnel.com  (proxied)
+```
+
+**2. An ingress rule above the catch-all**, in tunnel `homelab-demos`. Order is
+the whole semantics — the first rule whose hostname matches wins, and a rule
+below `service: http_status:404` never fires:
+
+```yaml
+# config.yml form (a config-file-managed tunnel)
+  - hostname: crm-test.mohamedlabs.com
+    service: http://127.0.0.1:3103
+```
+
+```text
+# dashboard form (tunnel homelab-demos -> Public Hostnames -> Add a public hostname)
+Subdomain:   crm-test
+Domain:      mohamedlabs.com
+Path:        (empty)
+Service:     HTTP
+URL:         127.0.0.1:3103
+```
+
+This tunnel is managed remotely, so the dashboard is the live surface: adding
+the rule there is version 3 of the configuration, and the existing
+`crm.mohamedlabs.com` → `http://localhost:3102` and `demo1` rules stay as they
+are. `localhost` and `127.0.0.1` are interchangeable here because `cloudflared`
+runs on the same host as the containers.
+
+The tunnel forwards plain HTTP, so nginx never terminates TLS; that is why the
+script writes `APP_FORCE_HTTPS=true` — without it Laravel emits `http://` asset
+URLs and the browser blocks them as mixed content.
+
+### Verify the second instance
+
+```bash
+# 1. loopback only, on its own port
+ss -ltnp | grep ':3103'                    # 127.0.0.1:3103, never 0.0.0.0:3103
+
+# 2. it answers locally
+curl -s -o /dev/null -w '%{http_code}\n' http://127.0.0.1:3103/admin/login    # 200
+curl -s -o /dev/null -w '%{http_code}\n' http://127.0.0.1:3103/up             # 200
+
+# 3. three containers, and only this instance's. The -p is not optional: an
+#    exported COMPOSE_PROJECT_NAME outranks the compose file's name: (and the
+#    --env-file value), so a command without -p would show -- or act on -- the
+#    wrong project.
+sudo docker compose -p sijilna-test --env-file /opt/sijilna-test/app/.env \
+  -f /opt/sijilna-test/app/deploy/docker-compose.yml ps
+
+# 4. it did not disturb the live instance: its three containers are untouched
+sudo docker inspect -f '{{.Name}} started={{.State.StartedAt}}' \
+  sijilna-db sijilna-app sijilna-web
+
+# 5. the tunnel leg, once the rule and the DNS record exist
+curl -s -o /dev/null -w '%{http_code}\n' https://crm-test.mohamedlabs.com/admin/login   # 200
+curl -s -o /dev/null -w '%{redirect_url}\n' https://crm-test.mohamedlabs.com/          # https://...
+
+# 6. rows, not tables: the installer created one administrator. Same -p rule as
+#    step 3: without it an exported COMPOSE_PROJECT_NAME resolves this to the
+#    live project, where the `db` service name is the live database.
+sudo docker compose -p sijilna-test --env-file /opt/sijilna-test/app/.env \
+  -f /opt/sijilna-test/app/deploy/docker-compose.yml exec -T db sh -c \
+  'MYSQL_PWD="$MYSQL_PASSWORD" mysql -u"$MYSQL_USER" -N -e "select count(*) from users;" "$MYSQL_DATABASE"'
+```
+
+Then log in at `https://crm-test.mohamedlabs.com/admin/login`. A page that
+renders is not proof: log in, then open Dashboard and one record.
+
+### What is NOT automated for a second instance
+
+All four of these are per-instance host work, and none of them is done by the
+script:
+
+1. **Memory.** This host is 4 GB and one stack measures about 470 MB RSS. A
+   second stack is another ~470 MB, and the ceilings in `deploy/docker/` were
+   sized for one. Before adding an instance here, lower `pm.max_children` (4) in
+   `deploy/docker/php-fpm.conf` **in the repository** and commit it — do not
+   hand-edit `/opt/sijilna/app`, a dirty tracked file is a hard stop for
+   `deploy.sh` — then rebuild both stacks. The script warns when less than
+   `SIJILNA_MIN_FREE_MB` (default 1500) of memory is available; it does not
+   refuse, because that judgement belongs to the operator. Watch `free -m`
+   after the first boot: swap pressure is what makes the OOM killer choose a
+   victim, and the victim can be the live instance's PHP-FPM workers.
+2. **Backups.** The nightly restic run stages `/opt/sijilna` and dumps the
+   `sijilna` database. It does not know about `/opt/sijilna-test` or
+   `sijilna_test`, so a second instance is **not backed up at all** until
+   `/opt/homelab/homelab-backup.sh` is extended. Do that before it holds
+   anything worth keeping.
+3. **The deploy pipeline.** `deploy/deploy.sh` is written for exactly one
+   instance: it hardcodes `sijilna-db` / `sijilna-app` / `sijilna-web`, the
+   `sijilna-app` image, `HEALTH_URL=http://127.0.0.1:3102/admin/login`, the state
+   file `/opt/sijilna/deployed-tag` and a `sijilna-deploy.timer`. A second
+   instance has **no automatic deploy**; re-running
+   `deploy/provision-instance.sh` is its update path, and it is safe to run at
+   any time for exactly the reasons listed under "Re-running is the update
+   path". Nothing about `crm.mohamedlabs.com` changes when it runs.
+4. **Monitoring.** Uptime Kuma monitor 11 covers `crm.mohamedlabs.com` only. Add
+   a monitor for the new hostname if it matters.
+
+### Destroying a second instance, deliberately
+
+There is no non-destructive way to remove an instance: its database lives in
+its own named volume. Export what matters first, then — and only then — from the
+instance's own checkout:
+
+```bash
+cd /opt/sijilna-test/app
+sudo docker compose -p sijilna-test --env-file .env -f deploy/docker-compose.yml down -v   # deletes sijilna-test-db-data
+```
+
+Never run this (or any other `docker compose` command here) without `-p`: an
+exported `COMPOSE_PROJECT_NAME` outranks the compose file's `name:` and the
+`--env-file` value, so a `-p`-less command would act on a different project than
+the one you are looking at — and `down -v` is the one command that deletes a
+volume.
+
+`-v` is the whole point (the volume is the data) and there is no undo. Confirm
+the volume name in the command's output before you type it, and never run it in
+`/opt/sijilna`: that volume is the live demo's database.
 
 ## Update
 
