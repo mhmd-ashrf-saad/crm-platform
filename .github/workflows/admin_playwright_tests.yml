@@ -71,6 +71,35 @@ jobs:
         run: npm install
         working-directory: packages/Webkul/Admin
 
+      # The browser builds land in ~/.cache/ms-playwright, and 15 shards each
+      # fetching 313 MiB of them is 4.7 GiB per run for content that only
+      # changes when Playwright does. Caching also takes that download off the
+      # critical path for a shard whose connection is throttled the way run
+      # 40016547957's were, which leaves only the ~20 MiB apt half to fetch.
+      #
+      # The key is the resolved playwright-core version, read from
+      # packages/Webkul/Admin/node_modules/playwright-core/package.json. That
+      # package owns browsers.json, the file that names the exact build of
+      # every browser and the URLs they come from, so the key changes whenever
+      # the installed browsers can. A Playwright upgrade changes the version
+      # and with it the key, forcing a fresh download; and because the cache
+      # directory is organised by build number (chromium-1248), a stale cache
+      # could never serve a wrong build even if it were restored.
+      - name: Resolve Playwright Version
+        id: pw
+        working-directory: packages/Webkul/Admin
+        run: |
+          version=$(node -p \
+            "require('./node_modules/playwright-core/package.json').version")
+          echo "Resolved playwright-core ${version}"
+          echo "version=${version}" >> "${GITHUB_OUTPUT}"
+
+      - name: Cache Playwright Browsers
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ steps.pw.outputs.version }}
+
       # `--with-deps` apt-installs the OS libraries and then downloads the
       # browser builds. Both halves are network work that can stall with no
       # output and no error, which is exactly the 29-minute hang above.
@@ -87,6 +116,33 @@ jobs:
       # under a minute and a half. One attempt capped at 10 minutes is about
       # 7.5x the worst healthy install, and there is now exactly one attempt,
       # so no path retries on top of a killed, half-configured dpkg.
+      #
+      # Run 40016547957 finally showed *what* stalls, and it is not the browser
+      # download. Every shard logs `Need to get 109 MB of archives` and
+      # `166 newly installed` for the apt half. The healthy shards fetched
+      # those 109 MB from azure.archive.ubuntu.com in 29-36s (shard 8:
+      # 20:07:04 to 20:07:33, shard 4: 20:07:14 to 20:07:51), shard 9 took
+      # 408s and only just passed, and the 4 that died were still on archive
+      # 24 of about 100 after 590s -- all four on the same object,
+      # `Get:24 ... libcodec2-1.2 ... [8998 kB]`, at roughly 45 KB/s. 45 KB/s
+      # for 109 MB is about 40 minutes, and 45 KB/s for the ~78 MB that the
+      # original 29-minute hang could have fetched is exactly 29 minutes: that
+      # "hang" was never a deadlock, it was this same download on a throttled
+      # mirror. The browser builds come from cdn.playwright.dev in about 13s
+      # for 527 MiB and have never stalled.
+      #
+      # So the payload, not the bound, was the bug. `--with-deps` with no
+      # browser argument installs the OS libraries for all three engines, but
+      # this suite runs exactly one: tests/e2e-pw/playwright.config.ts declares
+      # a single project, `chromium` with devices["Desktop Chrome"], and no
+      # spec touches firefox or webkit. Playwright's own ubuntu24.04 table
+      # wants 79 packages for all three engines and 33 for chromium alone, and
+      # of the 166 packages the runner actually installs for all three, 157 are
+      # outside chromium's closure -- the whole webkit gstreamer/GTK4 stack,
+      # including libcodec2-1.2, the one object every dying shard stalled on.
+      # Chromium-only is ~20 MiB where all-three was 99-109 MB, which puts even
+      # a fully throttled mirror at roughly 470s instead of 40 minutes: inside
+      # this attempt's 600s rather than far outside it.
       #
       # Bounds, tightest first: 600s in this attempt plus a 30s kill-after grace
       # (630s), the step's 15 minutes (900s), the job's 25. The attempt cap is
@@ -111,8 +167,14 @@ jobs:
           # download is killed rather than left holding the step; --kill-after
           # covers a child that ignores TERM and escalates to KILL, which
           # reports 137 instead of 124.
+          #
+          # `chromium` is not a narrowing of the suite, it is the suite: the one
+          # project in playwright.config.ts. It still pulls
+          # chromium-headless-shell (the build headless runs use) and ffmpeg
+          # (video: retain-on-failure); Playwright adds both itself for any
+          # browser argument.
           timeout --kill-after=30 "${attempt_timeout}" \
-            npx playwright install --with-deps
+            npx playwright install --with-deps chromium
           status=$?
 
           if [ "${status}" -eq 0 ]; then
