@@ -53,6 +53,16 @@ function pdfExportLocale(string $locale): void
     );
 }
 
+/**
+ * The dashboard export builds its report from the default lead pipeline, which the export reads
+ * without a null check (`Webkul\Admin\Helpers\Reporting\Lead` dereferences `$this->pipeline->stages`).
+ * The suite runs in parallel against per-process databases that are migrated but not seeded, so the
+ * pipeline only exists when a test creates it; without this the export 500s before it can be checked.
+ */
+beforeEach(function () {
+    securityTestPipeline();
+});
+
 it('sends the dashboard export as application/pdf', function (string $locale, bool $streamed) {
     pdfExportLocale($locale);
 
