@@ -16,7 +16,15 @@ name: CI
 # `success`) — and it does not need to: the commit it would have tagged has
 # already been replaced on `main`, and `deploy/deploy.sh` deploys the newest
 # `deploy-*` tag reachable from `origin/main`, never an intermediate one.
+# THE MANUAL LEVER. A push can produce no run at all — measured 2026-10-29: the
+# head commit's message quoted the marker GitHub reads as "skip this push", and
+# the whole fleet stayed silent while the push itself landed. The same silence
+# comes from a path filter, from a concurrency cancel, or from a transient. With
+# no `workflow_dispatch` there is nothing to do about it but push again, and a
+# second push is a new commit with a new tree. This makes the question askable
+# on demand: `gh workflow run ci.yml --ref main`.
 on:
+  workflow_dispatch:
   push:
     branches: ['main', '2.*']
     paths-ignore: &not-build-relevant

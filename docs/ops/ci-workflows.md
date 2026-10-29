@@ -71,3 +71,34 @@ unset input, and a shell that defines the variables by hand exercises that
 hand-built environment rather than the job's. The manual path is a
 `workflow_dispatch` run, which the workflow exposes for exactly this reason.
 
+
+## A keyword quoted in a commit message suppresses the whole push
+
+Measured 2026-10-29, and it cost a release push. GitHub reads its skip keywords
+out of the commit message as a **substring**, anywhere in the message, quoted or
+not. This file and the workflows in it name that keyword in prose, because the
+`Linting Tests` commit must not carry it — and when the resulting commit message
+contained the keyword inside backticks, GitHub treated the sentence as an
+instruction. The push landed (`pushed_at` moved, and the third-party check apps
+received the push event) and **no workflow was created at all**: no `CI`, no
+`Linting Tests`, no `Admin | Playwright Tests`, therefore no `workflow_run` and
+no deploy tag.
+
+The dangerous part is what happens next. `Reconcile Deploy Tags` tags a commit
+whose check-runs are all green — and a commit with **no** check-runs satisfies
+that vacuously, which is deliberate, because a docs-only push legitimately
+produces none. So a push silenced this way is still tagged and still pulled by
+the homelab: an untested tree becomes production, with nothing red to look at.
+
+Two rules follow, and neither is optional:
+
+- **Never write the keyword in a commit message**, not even inside backticks, not
+  even to say the message does not contain it. Refer to "the skip marker".
+- **`workflow_dispatch` on every gate** is the only lever that does not require a
+  new commit. It was added to all three gates after this incident; before that,
+  the sole remedy for a silent push was another push, which is a different tree.
+
+Diagnose it by absence, not by error: `gh run list --branch main` showing nothing
+for a sha that `git log origin/main` already has, while
+`gh api repos/<owner>/<repo>/commits/<sha>/check-suites` shows the third-party
+apps and no Actions suite.
