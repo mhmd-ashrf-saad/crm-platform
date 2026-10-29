@@ -201,6 +201,23 @@ cleared with `php artisan config:clear`.
 Add tests for new behaviour. Run `make lint` before committing — CI applies Pint
 formatting.
 
+## Support
+
+Support is part of the annual maintenance contract attached to the licence; it is
+not a free channel. While an installation is under maintenance it gets updates and
+security patches for the `2.2` line, upgrade assistance when moving between
+releases, and an answer when something breaks. The written Arabic manual in
+`docs/client-guide/ar/` — 17 chapters, from first login to troubleshooting — is
+the self-service reference shipped with the product.
+
+The licence is perpetual, so an installation whose maintenance has lapsed keeps
+running and keeps its data; what stops is the patches and the answer, not the
+software.
+
+Support is given by whoever supplied the installation, under that contract. There
+is no public issue tracker, forum or community for this product, and none of the
+upstream project's channels apply to it.
+
 ## Licence and attribution
 
 Sijilna is an independent fork of [Krayin CRM](https://github.com/krayin/laravel-crm),
@@ -217,3 +234,9 @@ This product is not affiliated with, endorsed by, or sponsored by Webkul Softwar
 The MIT grant conveys no trademark rights, so the upstream name and marks are
 used here only to describe the origin of the code, never to imply that this
 product is official, endorsed or sponsored by Webkul Software.
+
+Upstream fixes are still pulled in: `upstream` points at the Krayin repository,
+the `2.2` branch tracks upstream's `2.2`, and an upstream release arrives by
+merging `2.2` into `main`. Those remotes and the merge rule are documented in
+`AGENTS.md` ("What this repository is"); nothing is pulled
+automatically.
