@@ -1,6 +1,34 @@
 name: Linting Tests
 
-on: [push, pull_request]
+# THE ONLY AUTOMATIC PINT GUARD. Nothing else in this repository formats or
+# checks formatting on a push (`make lint-check` is a manual target), so this
+# workflow is kept rather than deleted.
+#
+# Its cost is not the minute the job takes, it is what the job causes: it
+# commits to `main`, and that commit runs the whole fleet again — 15 Playwright
+# shards included. Three narrowings, all of them free:
+#
+#   - `push` only. Committing a formatting fix into a pull_request's head branch
+#     costs a second fleet run for a branch nobody deploys.
+#   - `main` and `2.*` only.
+#   - `paths` limited to PHP sources. A docs, brand or asset-only push cannot
+#     change what Pint does, and used to pay for a composer install anyway.
+#
+# The commit message deliberately does NOT carry `[skip ci]`: a formatting
+# commit that skips the fleet has no check-runs, so `Deploy Tag`'s "every
+# check-run on this commit is green" would be vacuously true and an untested
+# commit would be tagged. Paying for the re-run is the safe side of that trade.
+on:
+  push:
+    branches: ['main', '2.*']
+    paths:
+      - '**/*.php'
+      - 'pint.json'
+      - '.github/workflows/auto_commits.yml'
+
+concurrency:
+  group: lint-${{ github.ref }}
+  cancel-in-progress: true
 
 permissions:
   contents: write

@@ -1,6 +1,38 @@
 name: CI
 
-on: [push, pull_request]
+# THE ONLY GUARD ON THE PHP TEST SUITE. Nothing else in this repository runs
+# Pest, so this workflow is never removed — its trigger is narrowed instead
+# (a private fork is billed per Actions minute; run the suite once per relevant
+# commit, not once per commit).
+#
+# paths-ignore keeps a docs-only or brand-only commit from paying for a MySQL
+# service, a composer install and a full Pest run. A doc-only commit therefore
+# produces no check-run here; `Deploy Tag` only waits for the check-runs that
+# exist, and `Reconcile Deploy Tags` backfills the tag on its 30-minute sweep,
+# so a docs-only push still reaches the homelab.
+#
+# concurrency cancels a superseded run on the same ref. The cancelled run's
+# conclusion is `cancelled`, so `Deploy Tag` does not wake on it (it requires
+# `success`) — and it does not need to: the commit it would have tagged has
+# already been replaced on `main`, and `deploy/deploy.sh` deploys the newest
+# `deploy-*` tag reachable from `origin/main`, never an intermediate one.
+on:
+  push:
+    branches: ['main', '2.*']
+    paths-ignore: &not-build-relevant
+      - '**/*.md'
+      - 'docs/**'
+      - 'brand/**'
+      - '.agents/**'
+      - 'LICENSE'
+      - '.github/skills/**'
+  pull_request:
+    branches: ['main', '2.*']
+    paths-ignore: *not-build-relevant
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   tests:
@@ -21,17 +53,20 @@ jobs:
           MYSQL_DATABASE: krayin
         ports:
           - 3306:3306
-        options: --health-cmd="mysqladmin ping" --health-interval=10s --health-timeout=5s --health-retries=5
+        options: >-
+          --health-cmd="mysqladmin ping"
+          --health-interval=10s --health-timeout=5s --health-retries=5
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v2
+        uses: actions/checkout@v4
 
       - name: Setup PHP
         uses: shivammathur/setup-php@v2
         with:
           php-version: ${{ matrix.php-versions }}
-          extensions: curl, gd, intl, mbstring, openssl, pdo, pdo_mysql, tokenizer, zip
+          extensions: >-
+            curl, gd, intl, mbstring, openssl, pdo, pdo_mysql, tokenizer, zip
           ini-values: error_reporting=E_ALL
           tools: composer:v2
 
@@ -39,11 +74,13 @@ jobs:
         run: composer install --no-interaction --prefer-dist --no-progress
 
       - name: Set Testing Environment
+        env:
+          MYSQL_PORT: ${{ job.services.mysql.ports['3306'] }}
         run: |
           cp .env.example .env
           sed -i "s|^\(APP_ENV=\s*\).*$|\1testing|" .env
           sed -i "s|^\(DB_HOST=\s*\).*$|\1127.0.0.1|" .env
-          sed -i "s|^\(DB_PORT=\s*\).*$|\1${{ job.services.mysql.ports['3306'] }}|" .env
+          sed -i "s|^\(DB_PORT=\s*\).*$|\1$MYSQL_PORT|" .env
           sed -i "s|^\(DB_DATABASE=\s*\).*$|\1krayin|" .env
           sed -i "s|^\(DB_USERNAME=\s*\).*$|\1root|" .env
           sed -i "s|^\(DB_PASSWORD=\s*\).*$|\1root|" .env

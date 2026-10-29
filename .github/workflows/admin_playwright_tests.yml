@@ -1,6 +1,46 @@
 name: Admin | Playwright Tests
 
-on: [push, pull_request]
+# THE ONLY GUARD ON THE ADMIN UI IN A BROWSER. Nothing else runs the Playwright
+# suite, so it is kept — but it is the single most expensive workflow here: 15
+# shards, each paying a composer install, a Krayin install, an npm install and a
+# browser download before its shard runs, on a private repository billed per
+# minute. A docs-only commit used to buy all fifteen.
+#
+# The allow-list below is what bounds it: the suite only runs when something
+# that can change the admin UI changed. A Markdown, brand-asset or docs-only
+# push produces no check-run here, so `Deploy Tag` wakes on the workflows that
+# did run and `Reconcile Deploy Tags` backfills the tag on its sweep.
+#
+# concurrency cancels a superseded run on the same ref: a push followed a minute
+# later by a fix used to leave 30 shards running, 15 of them already obsolete.
+on:
+  push:
+    branches: ['main', '2.*']
+    paths: &ui-relevant
+      - 'app/**'
+      - 'bootstrap/**'
+      - 'config/**'
+      - 'database/**'
+      - 'lang/**'
+      - 'packages/**'
+      - 'public/**'
+      - 'resources/**'
+      - 'routes/**'
+      - 'composer.json'
+      - 'composer.lock'
+      - 'package.json'
+      - 'package-lock.json'
+      - 'phpunit.xml'
+      - 'pint.json'
+      - 'vite.config.js'
+      - '.github/workflows/admin_playwright_tests.yml'
+  pull_request:
+    branches: ['main', '2.*']
+    paths: *ui-relevant
+
+concurrency:
+  group: admin-playwright-${{ github.ref }}
+  cancel-in-progress: true
 
 permissions:
   contents: read
@@ -35,10 +75,10 @@ jobs:
         operating-systems: [ubuntu-latest]
         php-versions: ['8.3']
         node-version: ['22.13.1']
-        shard-index: [1,2,3,4,5,6,7,8,9,10,11,12,13,14,15]
+        shard-index: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15]
         shard-total: [15]
 
-    name: Admin | Playwright Tests | Shard ${{ matrix.shard-index }} Of ${{ matrix.shard-total }}
+    name: Shard ${{ matrix.shard-index }} / ${{ matrix.shard-total }}
 
     services:
       mysql:
@@ -48,7 +88,9 @@ jobs:
           MYSQL_DATABASE: krayin
         ports:
           - 3306
-        options: --health-cmd="mysqladmin ping" --health-interval=10s --health-timeout=5s --health-retries=5
+        options: >-
+          --health-cmd="mysqladmin ping"
+          --health-interval=10s --health-timeout=5s --health-retries=5
 
     steps:
       - name: Checkout
@@ -58,7 +100,9 @@ jobs:
         uses: shivammathur/setup-php@v2
         with:
           php-version: ${{ matrix.php-versions }}
-          extensions: curl, fileinfo, gd, intl, mbstring, openssl, pdo, pdo_mysql, tokenizer, zip
+          extensions: >-
+            curl, fileinfo, gd, intl, mbstring, openssl, pdo, pdo_mysql,
+            tokenizer, zip
           ini-values: error_reporting=E_ALL
           tools: composer:v2
 
@@ -276,15 +320,16 @@ jobs:
         run: |
           cp .env.example .env
           sed -i "s|^\(DB_HOST=\s*\).*$|\1127.0.0.1|" .env
-          sed -i "s|^\(DB_PORT=\s*\).*$|\1${{ job.services.mysql.ports['3306'] }}|" .env
+          sed -i "s|^\(DB_PORT=\s*\).*$|\1$MYSQL_PORT|" .env
           sed -i "s|^\(DB_DATABASE=\s*\).*$|\1krayin|" .env
           sed -i "s|^\(DB_USERNAME=\s*\).*$|\1root|" .env
           sed -i "s|^\(DB_PASSWORD=\s*\).*$|\1root|" .env
           sed -i "s|^\(APP_DEBUG=\s*\).*$|\1true|" .env
           sed -i "s|^\(APP_URL=\s*\).*$|\1http://127.0.0.1:8000|" .env
 
-          # The debug bar renders its own controls into every page, and its folder
-          # switcher is a second combobox that makes the forms' own selects ambiguous.
+          # The debug bar renders its own controls into every page, and its
+          # folder switcher is a second combobox that makes the forms' own
+          # selects ambiguous.
           echo "DEBUGBAR_ENABLED=false" >> .env
           cat .env
 
@@ -292,7 +337,9 @@ jobs:
         run: composer install
 
       - name: Running Krayin Installer
-        run: php artisan krayin-crm:install --skip-env-check --skip-admin-creation
+        run: >-
+          php artisan krayin-crm:install --skip-env-check
+          --skip-admin-creation
 
       - name: Clear Laravel Caches
         run: php artisan optimize:clear
@@ -302,39 +349,40 @@ jobs:
           php artisan tinker --execute="
           // 1) Laravel container binding (needed by repositories)
           if (! app()->bound(Webkul\\Activity\\Contracts\\Activity::class)) {
-              throw new RuntimeException('Activity contract is NOT bound in Laravel container');
+              throw new RuntimeException('Activity contract not bound');
           }
 
-          // 2) Concord model-proxy registry (needed by ActivityProxy::modelClass())
+          // 2) Concord model-proxy registry (ActivityProxy::modelClass())
           \$concord = app('concord');
-          if (! \$concord->model(Webkul\\Activity\\Contracts\\Activity::class)) {
-              throw new RuntimeException('Activity contract is NOT registered in Concord model registry');
+          \$contract = Webkul\\Activity\\Contracts\\Activity::class;
+          if (! \$concord->model(\$contract)) {
+              throw new RuntimeException('Activity not in Concord registry');
           }
 
           dump(app()->make(Webkul\\Activity\\Contracts\\Activity::class)::class);
           dump(\$concord->model(Webkul\\Activity\\Contracts\\Activity::class));
           "
 
-      # - name: Seed Product Table
-      #   run: php artisan db:seed --class="Webkul\\Installer\\Database\\Seeders\\ProductTableSeeder"
-
       - name: Start Laravel server
         run: |
           php artisan serve --host=0.0.0.0 --port=8000 > server.log 2>&1 &
           echo "Waiting for server to start..."
-          timeout 30 bash -c 'until curl -s http://127.0.0.1:8000 > /dev/null; do sleep 1; done'
+          url='http://127.0.0.1:8000'
+          timeout 30 bash -c "until curl -sf $url >/dev/null; do sleep 1; done"
 
       - name: Run All Playwright Tests
         env:
           BASE_URL: 'http://127.0.0.1:8000'
         run: |
-          npx playwright test --reporter=list --config=tests/e2e-pw/playwright.config.ts --shard=${{ matrix.shard-index }}/${{ matrix.shard-total }}
+          npx playwright test --reporter=list \
+            --config=tests/e2e-pw/playwright.config.ts \
+            --shard=${{ matrix.shard-index }}/${{ matrix.shard-total }}
         working-directory: packages/Webkul/Admin
 
       - name: Upload Test Results
         uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: test-results-${{ matrix.shard-index }}-${{ github.run_id }}-${{ github.run_number }}
+          name: results-${{ matrix.shard-index }}-${{ github.run_id }}
           path: packages/Webkul/Admin/tests/e2e-pw/test-results
           retention-days: 1
