@@ -44,6 +44,8 @@ class CoreServiceProvider extends ServiceProvider
      */
     public function register()
     {
+        $this->mergeConfigFrom(dirname(__DIR__).'/Config/uploads.php', 'uploads');
+
         $this->registerCommands();
 
         $this->registerFacades();

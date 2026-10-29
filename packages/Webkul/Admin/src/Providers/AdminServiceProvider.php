@@ -12,6 +12,7 @@ use Illuminate\Support\ServiceProvider;
 use Webkul\Admin\Bouncer;
 use Webkul\Admin\Exceptions\Handler;
 use Webkul\Admin\Http\Middleware\Bouncer as BouncerMiddleware;
+use Webkul\Admin\Http\Middleware\ForcePdfContentType;
 use Webkul\Admin\Http\Middleware\Locale;
 use Webkul\Admin\Http\Middleware\SanitizeUrl;
 use Webkul\Admin\Http\Middleware\VerifyInboundEmailToken;
@@ -36,6 +37,15 @@ class AdminServiceProvider extends ServiceProvider
         $router->aliasMiddleware('sanitize_url', SanitizeUrl::class);
 
         $router->aliasMiddleware('inbound_email_token', VerifyInboundEmailToken::class);
+
+        /**
+         * A PDF download must say it is a PDF. The mPDF branch of `Webkul\Core\Traits\PDFHandler`
+         * streams its bytes without a MIME type, so the response keeps the framework default
+         * `text/html`. Both files that would be the natural place to fix that are upstream Krayin
+         * code this fork may not edit, so the header is corrected once, here, for every response
+         * that is already a `.pdf` attachment (see the middleware for why that condition is safe).
+         */
+        $router->pushMiddlewareToGroup('web', ForcePdfContentType::class);
 
         include __DIR__.'/../Http/helpers.php';
 

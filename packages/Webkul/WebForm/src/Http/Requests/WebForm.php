@@ -92,7 +92,7 @@ class WebForm extends FormRequest
                         'mimes:'.($attribute->type === 'image'
                             ? 'bmp,gif,jpeg,jpg,png,svg,webp'
                             : 'bmp,gif,jpeg,jpg,png,svg,webp,pdf,doc,docx,xls,xlsx,csv,txt'),
-                        'max:2048',
+                        'max:'.config('uploads.web_form_max_size_kb'),
                     ];
                 } else {
                     $validations[$attribute->code] = [$attribute->is_required ? 'required' : 'nullable'];

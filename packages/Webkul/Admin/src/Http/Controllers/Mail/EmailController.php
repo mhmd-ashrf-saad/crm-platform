@@ -162,7 +162,7 @@ class EmailController extends Controller
             'reply_to.*' => 'email',
             'reply' => 'required',
             'attachments' => 'sometimes|array',
-            'attachments.*' => 'file|max:20480',
+            'attachments.*' => 'file|max:'.config('uploads.mail_attachment_max_kb'),
         ]);
 
         Event::dispatch('email.create.before');
