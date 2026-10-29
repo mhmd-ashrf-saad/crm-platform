@@ -208,6 +208,17 @@ volume. `deploy/deploy.sh` keeps rolling back onto containers whose names it
 hardcodes (`sijilna-db`, `sijilna-app`, `sijilna-web`), so those defaults are
 load-bearing in more than one place.
 
+That contract is enforced rather than merely documented. A run of
+`/opt/sijilna/deploy.sh` **refuses to do anything** when any `SIJILNA_*` key
+appears in `/opt/sijilna/app/.env` — or when one of those seven is exported into
+its own environment — naming the keys and the file before it fetches, dumps,
+builds or restarts anything, and alerting once on Telegram. Every compose call it
+makes is run as `docker compose -p sijilna …`, so an exported
+`COMPOSE_PROJECT_NAME` (which outranks the file's `name:`) cannot move the
+stack either. Commenting the keys out is the fix; there is no flag that skips the
+check, deliberately — the check is the margin between one stray key and an
+`up -d` that brings the project up on an empty volume next to the live one.
+
 ### Provision it
 
 ```bash
@@ -480,6 +491,10 @@ sudo docker compose -f deploy/docker-compose.yml exec app \
   env MAIL_TO=you@example.com php scripts/mail-test.php
 ```
 
+A mail `.env` edit is invisible to both commands until the app container is
+**recreated** — `restart app` reuses the old environment and `config:clear` does
+not touch it. See "A `.env` edit does nothing until the app container is
+recreated" under Update before you conclude that the provider is refusing you.
 `scripts/mail-test.php` sends through the configured transport, not a fake. It
 prints the resolved host, port, encryption and From address, then the SMTP
 conversation with the credential lines stripped (verified: the script counts
@@ -649,17 +664,24 @@ thing being debugged:
 cd /opt/sijilna/app
 git fetch --tags
 git checkout --detach deploy-49995a8        # a tag, never a branch
-sudo docker compose -f deploy/docker-compose.yml up -d --build
+sudo docker compose -p sijilna -f deploy/docker-compose.yml up -d --build
 ```
 
 Migrations run automatically at container start (`migrate --force`), and the
 installer never runs again because `storage/installed` survives in the
-bind-mounted `storage/`. Configuration is deliberately **not** cached, so a
-`.env` edit takes effect with a restart:
+bind-mounted `storage/`. Configuration is deliberately **not** cached, but a
+`.env` edit still needs the app container **recreated**, not restarted:
 
 ```bash
-sudo docker compose -f deploy/docker-compose.yml restart app
+cd /opt/sijilna/app
+sudo docker compose -p sijilna -f deploy/docker-compose.yml \
+  up -d --force-recreate --no-deps app
 ```
+
+`restart app` reuses the environment the container was *created* with and
+silently ignores the edit -- the single most confusing thing about this stack,
+and the subject of "A `.env` edit does nothing until the app container is
+recreated" below.
 
 **Restarting the stack is safe and idempotent.** Every step in `entrypoint.sh`
 checks before it acts: it re-applies `storage/` and `bootstrap/cache/`
@@ -670,7 +692,69 @@ rows idempotently (`sijilna:brand` rewrites the footer credit and creates every
 other row only when it is absent). `restart`, `stop && start`, `up -d` and
 `up -d --build` therefore all land in the same state; none of them re-runs
 `migrate:fresh`. Rebuilding is only needed when the **image** changes (code,
-`composer.lock`, `deploy/docker/*`) — a `.env` edit never needs a rebuild.
+`composer.lock`, `deploy/docker/*`) — a `.env` edit never needs a rebuild, only
+an app-container recreate.
+
+### A `.env` edit does nothing until the app container is recreated
+
+`deploy/docker-compose.yml` gives the `app` service `env_file: .env`. Compose
+reads that file **once, at container creation**, and copies every key into the
+container's process environment. Process environment outranks the `.env` file
+Laravel reads, so the running process keeps the values it was created with:
+
+- `restart app` / `docker compose start app` reuse the environment captured at
+  creation. The edit is not seen, and nothing warns you.
+- `php artisan config:clear` does not help. There is no config cache to clear
+  (this stack deliberately runs uncached), and no artisan command can rewrite a
+  process environment. It is not a fix, it is a red herring.
+- Only **recreating** the container re-reads the file.
+- `deploy.sh` recreates `app` only when the **image** changes, so a stale value
+  survives restarts, and every later deploy, for as long as the image does not
+  move — while the site answers 200 the whole time.
+
+Measured on this host: `.env` said `MAIL_MAILER=smtp` while the running container
+still carried `MAIL_MAILER=log` from its creation minutes earlier;
+`config:clear` changed nothing and only a recreate fixed it.
+
+**The rule.** After any edit to `/opt/sijilna/app/.env`, recreate `app` with the
+project pinned:
+
+```bash
+cd /opt/sijilna/app
+sudo docker compose -p sijilna -f deploy/docker-compose.yml \
+  up -d --force-recreate --no-deps app
+```
+
+`--no-deps` is deliberate: the database and nginx stay untouched, so the cost is
+the ~3.6 s of 502 measured for an app recreate, not a stack bounce. `-p` is not
+decoration either — see the note on project resolution under "Second instance".
+
+**Prove the running container actually has the new value.** Never trust the
+file, and never quote the unfiltered environment: it also carries `APP_KEY` and
+the database passwords.
+
+```bash
+# 1. what compose injected at creation -- grep the keys you changed, never dump
+#    the whole list into a ticket or a chat
+sudo docker inspect sijilna-app \
+  --format '{{range .Config.Env}}{{println .}}{{end}}' \
+  | grep -E '^(MAIL_MAILER|MAIL_HOST)='
+
+# 2. what the framework resolves in the live container, as the FPM user
+sudo docker compose -p sijilna -f deploy/docker-compose.yml exec -T app \
+  setpriv --reuid=www-data --regid=www-data --clear-groups \
+  php artisan tinker --execute="echo config('mail.default'), PHP_EOL;"
+
+# 3. the file itself, for the components that read it directly
+sudo docker compose -p sijilna -f deploy/docker-compose.yml exec -T app \
+  setpriv --reuid=www-data --regid=www-data --clear-groups \
+  php -r 'echo preg_match("/^MAIL_MAILER=(.*)$/m", file_get_contents("/var/www/html/.env"), $m) ? trim($m[1]) : "missing", PHP_EOL;'
+```
+
+Step 1 is what the container was created with, step 2 is what the application
+sees. If 1 and 2 disagree, the container was not recreated. A repo-side edit to
+`deploy/.env.deploy.example` reaches no running instance at all: it is the
+template a *new* instance's `.env` is written from, never a live config file.
 
 ## The deploy pipeline (green `main` -> tag -> timer)
 
@@ -777,9 +861,22 @@ cost that much network work to produce the same bytes.
 
 The classification is conservative by design: paths matching
 `NON_IMAGE_GLOBS` in the script (mirroring `.dockerignore`, plus every `*.md`)
-are "not an image input", and **everything else counts as changed**. A false
-"changed" costs a cached rebuild; a false "unchanged" would leave the old code
-running. `FORCE_BUILD=1` overrides it either way.
+are "not an image input", and **everything else counts as changed** (or was built
+the same way before). A false "changed" costs a cached rebuild; a false
+"unchanged" would leave the old code running. `FORCE_BUILD=1` overrides it
+either way.
+
+The two lists are kept in step, and both carry the deploy-only files under
+`deploy/`: `deploy/deploy.sh`, `deploy/docker-compose.yml`,
+`deploy/provision-instance.sh`, `deploy/README.md` and every other `*.md`.
+Nothing in the image reads them — `php.Dockerfile` runs `COPY . .`, but no PHP
+code opens a compose file, the runner or a provision script — so an ops-only
+commit (a compose comment, a provisioner tweak, a docs fix) deploys in seconds
+instead of costing a `composer install`. `deploy/docker/*` stays an image input
+on purpose: the Dockerfile copies `php.ini`, `php-fpm.conf` and `entrypoint.sh`
+into the image, and `docker-compose.yml` bind-mounts `nginx.conf` into `web`.
+When you move a path between the two lists, move it in **both** the script and
+`.dockerignore`; one without the other is worse than neither.
 
 ### Rollback, and why it is not a rebuild
 
@@ -961,10 +1058,12 @@ exactly as carefully as `down -v`, and stop the stack before touching `storage/`
 | **500 on PDF export while the UI is in Arabic** (dashboard report, quote PDF) | mPDF serves the RTL locales and mkdirs `mpdf/` and `mpdf/ttfontdata` under its default `tempDir` `vendor/mpdf/mpdf/tmp`, which `composer install` leaves as `root:root` while FPM runs as uid 33 | The image now creates and chowns it; for a container built before that fix the stopgap is `docker exec -u root sijilna-app sh -lc 'mkdir -p /var/www/html/vendor/mpdf/mpdf/tmp && chown -R 33:33 /var/www/html/vendor/mpdf/mpdf/tmp'`, which is lost on the next recreate. The English branch uses dompdf and is unaffected. |
 | **500 on every page** | Empty `APP_KEY`, unwritable `storage/`, or a database error | `docker compose logs app \| head -40`, then `storage/logs/laravel.log` on the host. The entrypoint refuses to boot with an empty `APP_KEY` and says so; permission errors are `chown -R 33:33 storage bootstrap/cache`. |
 | **`app` restart-loops, log says `.env: Failed to open stream: Permission denied`** | `.env` is unreadable by uid 33 — the installer reads it with `file()` while Laravel boots from the container environment | `sudo chown mohamed:www-data /opt/sijilna/app/.env; sudo chmod 640` — the container reads it through group `www-data`. See "The .env must belong to the deploy user AND to uid 33". |
+| **A `.env` edit "took" but the app still uses the old value** (`MAIL_MAILER` still `log`, `APP_URL` still old, a new credential still rejected) | `env_file: .env` is read at container **creation** and becomes process environment, which outranks the `.env` file Laravel reads; `restart` reuses the old environment and `config:clear` cannot fix process env | Recreate the container: `sudo docker compose -p sijilna -f deploy/docker-compose.yml up -d --force-recreate --no-deps app`, then confirm with `docker inspect sijilna-app --format '{{range .Config.Env}}{{println .}}{{end}}' \| grep ^MAIL_MAILER=`. See "A `.env` edit does nothing until the app container is recreated". |
+| **Deploy log says `instance-identity key(s) present in the live deployment, refusing to deploy: SIJILNA_… in /opt/sijilna/app/.env`** | A second-instance `.env` (or a stray `SIJILNA_*` key) reached the live environment. Those keys re-resolve the project, containers, image, volume and port, so `up -d` would stand up an empty stack beside the real one | Comment out / delete the named keys — the live instance is defined by their absence — then `/opt/sijilna/deploy.sh --redeploy`. The refused run changed nothing: it refuses before the fetch, the dump and the checkout. See "Second instance". |
 | **Deploy fails with `open /opt/sijilna/app/deploy/.env: permission denied`** | `.env` is `www-data:www-data 0600`, so `docker compose` cannot interpolate it as `mohamed` | `sudo chown mohamed:www-data /opt/sijilna/app/.env; sudo chmod 640`, then `/opt/sijilna/deploy.sh --redeploy` |
 | **A deploy "succeeds" but the old code is still running** | `docker compose up -d` did not recreate the container after a rebuild (containerd image store) | `deploy.sh` handles it with an explicit `--force-recreate app`; if you see it after a manual `up -d`, compare `docker inspect -f '{{.Image}}' sijilna-app` with `docker image inspect -f '{{.Id}}' sijilna-app:latest` |
-| **Mixed content / forms post to `http://`** | `APP_FORCE_HTTPS` missing | The tunnel forwards plain HTTP, so Laravel must be told. Set `APP_FORCE_HTTPS=true` in `.env`, `docker compose restart app`. |
-| **Login works on `127.0.0.1:3102`, not through the tunnel** | Cookies/URLs bound to the wrong host | `APP_URL=https://crm.mohamedlabs.com`, `SESSION_COOKIE=sijilna_session`, and `APP_FORCE_HTTPS=true`; then restart `app`. |
+| **Mixed content / forms post to `http://`** | `APP_FORCE_HTTPS` missing | The tunnel forwards plain HTTP, so Laravel must be told. Set `APP_FORCE_HTTPS=true` in `.env`, then **recreate** `app` (`up -d --force-recreate --no-deps app`, see "A `.env` edit does nothing until the app container is recreated") — a `restart` keeps the old value. |
+| **Login works on `127.0.0.1:3102`, not through the tunnel** | Cookies/URLs bound to the wrong host | `APP_URL=https://crm.mohamedlabs.com`, `SESSION_COOKIE=sijilna_session`, and `APP_FORCE_HTTPS=true`; then recreate `app`, not merely restart it. |
 | **`db` container healthy, app loops "no TCP connection"** | `DB_HOST` is not `db` (a leftover `127.0.0.1` from a dev `.env`) or the password changed after MySQL first initialised | `DB_HOST=db`, `DB_PORT=3306`. `MYSQL_PASSWORD`/`MYSQL_ROOT_PASSWORD` are only applied when the data directory is empty — changing them later needs the reset above. |
 | **`/var/www/html/.env` is a directory** | `up` ran before `../.env` existed; Docker created a directory as the mount target | `docker compose down`, `sudo rm -rf .env` (only if it is the empty directory Docker made), recreate the file, `up -d`. |
 | **403/404 on `/storage/...`** | Uploaded file not visible to nginx | `nginx.conf` maps `/storage/` to `/var/www/html/storage/app/public/`; confirm the upload landed there with `ls storage/app/public`. |

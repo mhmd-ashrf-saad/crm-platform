@@ -52,16 +52,26 @@ playwright
 storage
 
 # --- Not needed at run time --------------------------------------------------
-# The deploy runner and its documentation. They sit inside the build context
-# because they describe and operate this stack, but nothing in the image reads
-# them -- and excluding them is what lets deploy/deploy.sh skip a rebuild for a
-# docs-only commit instead of re-running composer install for the same bytes.
-# The markdown changelog and documentation follow the same rule: nothing in the
-# image reads them, and excluding them keeps a mixed code-and-changelog commit
-# from re-running composer install.
+# The deploy runner, the compose file it drives, the second-instance provisioner
+# and their documentation. All of them sit inside the build context because they
+# describe and operate this stack on the HOST, but nothing in the image reads
+# them: `COPY . .` in php.Dockerfile would copy them in, and no runtime code
+# opens a compose file, a runner or a provision script. Excluding them is what
+# lets deploy/deploy.sh skip a rebuild for an ops-only commit instead of
+# re-running composer install for the same bytes -- it keeps its
+# NON_IMAGE_GLOBS list in step with this section, so add a path to BOTH lists or
+# to neither (see "Rebuilding: only when it can possibly matter" in
+# deploy/README.md). The markdown changelog and documentation follow the same
+# rule.
+#
+# deploy/docker/* must NOT be added here: php.Dockerfile copies php.ini,
+# php-fpm.conf and entrypoint.sh into the image, and docker-compose.yml
+# bind-mounts nginx.conf into the `web` container.
 deploy/README.md
-CHANGELOG.md
 deploy/deploy.sh
+deploy/docker-compose.yml
+deploy/provision-instance.sh
+CHANGELOG.md
 tests
 bin
 brand

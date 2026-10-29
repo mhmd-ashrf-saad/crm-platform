@@ -43,10 +43,13 @@
 #
 # `name:` below is NOT authoritative: an exported COMPOSE_PROJECT_NAME outranks
 # it, so every command that matters is run as `docker compose -p <project> ...`
-# (deploy/provision-instance.sh's compose() does exactly that). Do not drop the
-# -p and rely on this line -- a stack that silently resolves to `sijilna` joins
-# the live instance's `sijilna_default` network, where the `db` alias points at
-# the live database.
+# (deploy/provision-instance.sh's compose() does exactly that, and so does
+# deploy/deploy.sh's, which hardcodes `-p sijilna` for this instance and refuses
+# to run at all if a SIJILNA_* key appears in the live .env -- those keys are
+# what a second instance sets, and on this one they would re-resolve the project
+# and the volume). Do not drop the -p and rely on this line -- a stack that
+# silently resolves elsewhere joins another `*_default` network, where the `db`
+# alias points at a different database.
 name: ${SIJILNA_PROJECT:-sijilna}
 
 services:

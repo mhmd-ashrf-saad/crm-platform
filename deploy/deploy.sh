@@ -38,6 +38,17 @@
 #   * put a credential in argv, in the log, or in the journal. See `mask`.
 #   * discard local changes. A dirty checkout is a hard stop.
 #
+# WHAT IT REFUSES BEFORE IT CHANGES ANYTHING
+#   * A `SIJILNA_*` key in the live .env, or one of the seven instance-identity
+#     keys exported into its own environment. Those keys are how a SECOND
+#     instance names its stack; on the live one they re-resolve the project,
+#     the containers, the volume and the port, so `up -d` would stand up an
+#     empty stack beside the real one. Nothing is fetched, dumped, built or
+#     restarted first, and there is no flag that skips the check -- on purpose.
+#   * An unpinned compose project: every compose invocation below carries
+#     `-p sijilna`, so neither COMPOSE_PROJECT_NAME nor the file's `name:` can
+#     move the stack somewhere else.
+#
 # MANUAL USE
 #   /opt/sijilna/deploy.sh                            # what the timer runs
 #   /opt/sijilna/deploy.sh --redeploy                 # deploy the newest tag again
@@ -66,6 +77,25 @@ LOG_FILE="${SIJILNA_LOG_FILE:-/var/log/sijilna-deploy.log}"
 ALERT_ENV="${SIJILNA_ALERT_ENV:-/opt/homelab/backup.env}"
 
 COMPOSE_FILE="$APP_DIR/deploy/docker-compose.yml"
+# The compose project the live instance IS. Every compose call is run as
+# `docker compose -p "$INSTANCE_PROJECT" ...`, because project resolution is
+# ordered -p, COMPOSE_PROJECT_NAME, the file's `name:`, the directory name: an
+# exported COMPOSE_PROJECT_NAME would otherwise win and act on a different
+# project, whose `<project>_default` network has a `db` alias pointing at a
+# different database.
+INSTANCE_PROJECT="sijilna"
+# The seven keys deploy/docker-compose.yml interpolates every name a second
+# instance would collide on. Their ABSENCE is what selects the live values, so
+# their presence in the live .env is the outage this script guards against.
+INSTANCE_IDENTITY_KEYS=(
+    SIJILNA_PROJECT
+    SIJILNA_DB_CONTAINER
+    SIJILNA_APP_CONTAINER
+    SIJILNA_WEB_CONTAINER
+    SIJILNA_IMAGE
+    SIJILNA_DB_VOLUME
+    SIJILNA_WEB_PORT
+)
 MAIN_REF="refs/remotes/origin/main"
 TAG_PREFIX="deploy-"
 
@@ -122,6 +152,10 @@ environment overrides: HEALTH_URL, HEALTH_ATTEMPTS, HEALTH_INTERVAL,
 USAGE
 }
 
+# There is deliberately no flag that skips the instance-identity guard in
+# preflight(). That check is the whole margin between one stray SIJILNA_* key
+# and a deploy that brings the stack up against an empty volume, so it must not
+# grow an off switch. An argument that turns it off must not be added here.
 while (($# > 0)); do
     case "$1" in
         --redeploy) REDEPLOY=1 ;;
@@ -358,9 +392,108 @@ checkout_ref() {
     return 0
 }
 
+# ----------------------------------------------------- instance identity guard
+#
+# THE OUTAGE THIS PREVENTS. deploy/docker-compose.yml derives every name a
+# second instance would collide on -- the compose project, the three container
+# names, the image name, the data volume and the published port -- from the
+# seven SIJILNA_* keys listed in INSTANCE_IDENTITY_KEYS, each with a default
+# that is EXACTLY the live instance's value. On this instance the correct state
+# is that none of them is set.
+#
+# One stray SIJILNA_PROJECT or SIJILNA_WEB_PORT in /opt/sijilna/app/.env -- an
+# operator pasting a second-instance file, or "filling the table in for
+# clarity" -- makes the next `up -d` resolve a different project, different
+# container names, `sijilna-<project>_sijilna-db-data` as a BRAND NEW EMPTY
+# volume, and a second loopback port. Nothing is deleted (the real volume stays
+# where it is), but the containers being deployed to are no longer the ones
+# serving the site and the deploy health gate can pass against an empty
+# database. That is an outage plus a silent data-fork.
+#
+# Two independent layers stop it, and neither is a substitute for the other:
+#   1. this refusal, run at the top of preflight() -- before a fetch, a
+#      checkout, a dump or a container -- and again inside compose(), which is
+#      the only path from this script to the stack;
+#   2. `compose()` pins `-p "$INSTANCE_PROJECT"`, so even an .env that resolves
+#      cleanly cannot have its project moved by an exported
+#      COMPOSE_PROJECT_NAME.
+#
+# A bypass flag must not be added: see the note above the argument parser.
+
+# The .env files this script's own compose calls read, as absolute paths.
+# On the live host deploy/.env is a symlink to ../.env, so resolve first and
+# dedupe -- a message that names the same file twice reads like two problems.
+env_files_under_guard() {
+    local f real
+    local -a seen=()
+    for f in "$APP_DIR/deploy/.env" "$APP_DIR/.env"; do
+        [[ -f "$f" ]] || continue
+        real="$(readlink -f -- "$f" 2>/dev/null || true)"
+        [[ -n "$real" ]] || real="$f"
+        case " ${seen[*]-} " in *" $real "*) continue ;; esac
+        seen+=("$real")
+        printf '%s\n' "$real"
+    done
+}
+
+# Key NAMES only, never values. This runs before anything has been read into
+# SECRET_VALUES, and the same file holds APP_KEY and the database passwords, so
+# its output goes to the log, the journal and Telegram as keys alone. A
+# commented-out key is not a match: compose ignores it, so it cannot re-resolve
+# the stack either.
+instance_keys_in() {
+    local file="$1"
+    sed -n \
+        -e 's/^[[:space:]]*SIJILNA_\([A-Za-z0-9_]*\)[[:space:]]*=.*/SIJILNA_\1/p' \
+        -e 's/^[[:space:]]*export[[:space:]]\{1,\}SIJILNA_\([A-Za-z0-9_]*\)[[:space:]]*=.*/SIJILNA_\1/p' \
+        -- "$file" 2>/dev/null || true
+}
+
+refuse_instance_identity_keys() {
+    local file key report=""
+
+    while IFS= read -r file; do
+        while IFS= read -r key; do
+            [[ -n "$key" ]] || continue
+            report+="${report:+, }$key in $file"
+        done < <(instance_keys_in "$file")
+    done < <(env_files_under_guard)
+
+    # An exported identity key outranks the env file in compose interpolation,
+    # so it is the same outage from a different source. Only the seven are
+    # checked: SIJILNA_APP_DIR, SIJILNA_STATE_DIR, SIJILNA_RUNNER,
+    # SIJILNA_LOG_FILE and SIJILNA_ALERT_ENV are this script's own overrides and
+    # are meant to be set (the systemd unit and the drills do exactly that).
+    for key in "${INSTANCE_IDENTITY_KEYS[@]}"; do
+        if [[ -n "$(printenv "$key" 2>/dev/null || true)" ]]; then
+            report+="${report:+, }$key exported into this run's environment"
+        fi
+    done
+
+    [[ -n "$report" ]] || return 0
+
+    die "$(printf '%s\n    %s\n    %s\n    %s' \
+        "instance-identity key(s) present in the live deployment, refusing to deploy: $report" \
+        "Those keys re-resolve the compose project, container names, image, data volume and published port in deploy/docker-compose.yml. The live instance is defined by their ABSENCE (project sijilna, containers sijilna-db/sijilna-app/sijilna-web, image sijilna-app, volume sijilna-db-data, port 3102); with them set, 'up -d' would create a second stack on a new EMPTY volume beside the real one." \
+        "NOTHING was fetched, checked out, built, dumped or restarted. Comment out or delete the keys named above, then run again. A second instance keeps its own SIJILNA_* keys in its OWN checkout (deploy/provision-instance.sh); they must never reach /opt/sijilna/app/.env." \
+        "There is no flag that skips this check, and none should be added -- see deploy/README.md, 'Second instance'.")"
+}
+
 # ------------------------------------------------------------- docker helpers
 compose() {
-    docker compose -f "$COMPOSE_FILE" "$@"
+    # The guard runs here as well as in preflight(), on purpose: this function
+    # is the ONLY path from this script to the stack, so a future call site (or
+    # a future flag that skips preflight) still cannot reach compose with a
+    # polluted .env. It reads a few hundred bytes of .env; it never calls the
+    # daemon.
+    refuse_instance_identity_keys
+    # `-p "$INSTANCE_PROJECT"` on EVERY invocation -- build, up, stop, restart,
+    # inspect. Without it the project comes from COMPOSE_PROJECT_NAME or the
+    # file's `name:`, and a stray export moves every container, the network and
+    # therefore the `db` alias with it. Do not drop it because the compose file
+    # already carries `name: sijilna`: that line is the last fallback, not the
+    # authority.
+    docker compose -p "$INSTANCE_PROJECT" -f "$COMPOSE_FILE" "$@"
 }
 
 db_root_password() {
@@ -466,16 +599,29 @@ restore_database() {
 # ------------------------------------------------------- change classification
 #
 # Paths that can change without changing the image. Kept in sync with
-# .dockerignore (which is the actual filter) plus the two files under deploy/
-# that are excluded there. Everything else is an image input: a false "changed"
-# costs at most a cached rebuild, a false "unchanged" ships stale code.
+# .dockerignore, which is the actual filter -- a path listed here but not there
+# is still copied into the build context, and one listed there but not here
+# forces a pointless rebuild. Everything else is an image input: a false
+# "changed" costs at most a cached rebuild, a false "unchanged" ships stale
+# code, so when the two lists disagree the safe direction is to rebuild.
+#
+# The deploy-only files under deploy/ are here because NOTHING at run time
+# reads them. php.Dockerfile does `COPY . .`, so they would otherwise sit in the
+# image, but no PHP code opens a compose file, the runner or a provision script:
+# they are host-side operators' files. Leaving them classified as image inputs
+# cost a full `composer install` (366 s and 500 s in two measured runs) for a
+# one-line change to, say, the compose file.
+#
+# deploy/docker/* is deliberately NOT here: php.Dockerfile COPYs php.ini,
+# php-fpm.conf and entrypoint.sh into the image, and nginx.conf is bind-mounted
+# into the `web` container. All four are real inputs.
 NON_IMAGE_GLOBS=(
     'docs/*' '.github/*' '.agents/*' '.ai/*' '.claude/*' '.codex/*'
     '.cursor/*' '.kilocode/*' '.beads/*' 'tests/*' 'bin/*' 'brand/*'
     'ignorables/*' 'data/*' 'docker-compose-collection/*' 'playwright/*'
     'node_modules/*' 'vendor/*' 'storage/*' '*.md' '*.hot' '.editorconfig'
     '.styleci.yml' '.gitignore' '.gitattributes' 'deploy/README.md'
-    'deploy/deploy.sh'
+    'deploy/deploy.sh' 'deploy/docker-compose.yml' 'deploy/provision-instance.sh'
 )
 
 image_inputs_changed() {
@@ -723,6 +869,10 @@ write_state() {
 # ------------------------------------------------------------------ preflight
 preflight() {
     local bin missing=()
+    # FIRST, before a single binary is looked for and long before anything is
+    # fetched, checked out, dumped or restarted: the live instance must not be
+    # re-resolved. See refuse_instance_identity_keys above.
+    refuse_instance_identity_keys
     for bin in git docker curl flock; do
         command -v "$bin" >/dev/null 2>&1 || missing+=("$bin")
     done
@@ -735,6 +885,9 @@ preflight() {
     if [[ ! -f "$COMPOSE_FILE" ]]; then
         die "$COMPOSE_FILE is missing from the checkout"
     fi
+    # Not a stack invocation, so no -p: `docker compose version` resolves no
+    # project, reads no compose file and no .env. It only proves the v2 plugin
+    # is on PATH -- every call that touches the stack goes through compose().
     if ! docker compose version >/dev/null 2>&1; then
         die "docker compose is not available to $(id -un)"
     fi
