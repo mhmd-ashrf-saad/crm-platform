@@ -154,6 +154,18 @@ curl -s -o /dev/null -w '%{redirect_url}\n' https://crm.mohamedlabs.com/        
 curl -s https://crm.mohamedlabs.com/admin/login | grep -c 'http://'          # 0
 curl -s https://crm.mohamedlabs.com/admin/login | grep -c 'https://'         # non-zero
 
+# 3b. Security headers and the Secure session cookie. Neither can be proven by a
+#     PHP test: one is an nginx directive, the other a cookie attribute decided at
+#     runtime. Only a response proves them.
+curl -sI https://crm.mohamedlabs.com/admin/login | grep -iE \
+  '^(strict-transport-security|x-frame-options|x-content-type-options|referrer-policy|permissions-policy):'
+#     five lines; Strict-Transport-Security: max-age=15552000
+curl -sI https://crm.mohamedlabs.com/admin/login | grep -ci '^content-security-policy:'   # 0 -- deferred on purpose, read the comment in deploy/docker/nginx.conf
+curl -sI https://crm.mohamedlabs.com/admin/login | grep -i '^set-cookie:' | grep -ci '; secure'   # 1; 0 means SESSION_SECURE_COOKIE is not true in .env
+#     The /build/ and /storage/ locations declare their own add_header, which makes
+#     nginx drop the inherited set -- this line is what catches that regression.
+curl -sI https://crm.mohamedlabs.com/build/manifest.json | grep -ci '^x-content-type-options:'   # 1
+
 # 4. Containers, including the database healthcheck
 sudo docker compose -f deploy/docker-compose.yml ps          # all three Up; db (healthy)
 
