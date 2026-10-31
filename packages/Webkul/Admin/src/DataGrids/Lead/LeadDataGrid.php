@@ -368,12 +368,14 @@ class LeadDataGrid extends DataGrid
      */
     public function prepareMassActions(): void
     {
-        $this->addMassAction([
-            'icon' => 'icon-delete',
-            'title' => trans('admin::app.leads.index.datagrid.mass-delete'),
-            'method' => 'POST',
-            'url' => route('admin.leads.mass_delete'),
-        ]);
+        if (bouncer()->hasPermission('leads.delete')) {
+            $this->addMassAction([
+                'icon' => 'icon-delete',
+                'title' => trans('admin::app.leads.index.datagrid.mass-delete'),
+                'method' => 'POST',
+                'url' => route('admin.leads.mass_delete'),
+            ]);
+        }
 
         $this->addMassAction([
             'title' => trans('admin::app.leads.index.datagrid.mass-update'),

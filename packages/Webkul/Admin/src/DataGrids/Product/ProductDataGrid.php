@@ -164,11 +164,13 @@ class ProductDataGrid extends DataGrid
      */
     public function prepareMassActions(): void
     {
-        $this->addMassAction([
-            'icon' => 'icon-delete',
-            'title' => trans('admin::app.products.index.datagrid.delete'),
-            'method' => 'POST',
-            'url' => route('admin.products.mass_delete'),
-        ]);
+        if (bouncer()->hasPermission('products.delete')) {
+            $this->addMassAction([
+                'icon' => 'icon-delete',
+                'title' => trans('admin::app.products.index.datagrid.delete'),
+                'method' => 'POST',
+                'url' => route('admin.products.mass_delete'),
+            ]);
+        }
     }
 }
