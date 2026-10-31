@@ -110,11 +110,13 @@ class OrganizationDataGrid extends DataGrid
      */
     public function prepareMassActions(): void
     {
-        $this->addMassAction([
-            'icon' => 'icon-delete',
-            'title' => trans('admin::app.contacts.organizations.index.datagrid.delete'),
-            'method' => 'PUT',
-            'url' => route('admin.contacts.organizations.mass_delete'),
-        ]);
+        if (bouncer()->hasPermission('contacts.organizations.delete')) {
+            $this->addMassAction([
+                'icon' => 'icon-delete',
+                'title' => trans('admin::app.contacts.organizations.index.datagrid.delete'),
+                'method' => 'PUT',
+                'url' => route('admin.contacts.organizations.mass_delete'),
+            ]);
+        }
     }
 }

@@ -211,13 +211,14 @@ class ActivityDataGrid extends DataGrid
      */
     public function prepareMassActions(): void
     {
-
-        $this->addMassAction([
-            'icon' => 'icon-delete',
-            'title' => trans('admin::app.activities.index.datagrid.mass-delete'),
-            'method' => 'POST',
-            'url' => route('admin.activities.mass_delete'),
-        ]);
+        if (bouncer()->hasPermission('activities.delete')) {
+            $this->addMassAction([
+                'icon' => 'icon-delete',
+                'title' => trans('admin::app.activities.index.datagrid.mass-delete'),
+                'method' => 'POST',
+                'url' => route('admin.activities.mass_delete'),
+            ]);
+        }
 
         $this->addMassAction([
             'title' => trans('admin::app.activities.index.datagrid.mass-update'),
