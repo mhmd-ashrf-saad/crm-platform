@@ -354,19 +354,17 @@ retired):
    destroying it early is irreversible.
 
 > **Reconciliation with [incident-response.md](incident-response.md) §9.** That
-> section says rotation "is documented in
-> `.agents/context/operations/provisioning.md`". What that file actually contains
-> is the *warning* — "the installer rotates `APP_KEY`", "never run the installer
-> against a client instance with data" — not a procedure. **This section is the
-> procedure.** The two do not disagree; the pointer was to a boundary, not a
-> recipe.
+> section used to point at `.agents/context/operations/provisioning.md`, which
+> contains the *warning* — "the installer rotates `APP_KEY`", "never run the
+> installer against a client instance with data" — and not a procedure. It now
+> points at this section, which is the procedure.
 
 **DECISION** — whether `APP_KEY` is rotated at all on a client instance, and under
 what trigger (leak only, or a scheduled interval). This repository records rotation
 as destructive and gives no safe procedure; if a periodic policy is wanted, it needs
 a re-encryption step that does not exist yet, so the honest choice today is
-**leak-only**. Nothing in [decisions-to-confirm.md](decisions-to-confirm.md) covers
-this; the row needs to be added there.
+**leak-only**. Nothing in [decisions-to-confirm.md](decisions-to-confirm.md) covered
+this; the row is now D28 there.
 
 ### 3d. `DB_PASSWORD` and `DB_ROOT_PASSWORD`
 

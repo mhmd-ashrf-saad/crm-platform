@@ -12,6 +12,7 @@ be shared with a client — and only after its `DECISION` blocks are filled in
 | [`support-sla.md`](support-sla.md) | The support channel, hours, severity table with response and resolution targets, in/out of scope, the report template the client fills, the per-client handover sheet | **Yes**, once D5–D9 are closed |
 | [`incident-response.md`](incident-response.md) | What happens in the first five minutes, who is told in what order, the known total-loss vectors, the restore procedure with its verification, the restore rehearsal, the deletion-on-termination procedure, the after-action review | **Partly** — §2 (who is told, within what time) is quotable; the rest is ours |
 | [`security-review.md`](security-review.md) | Source review plus `composer audit --locked` results: 16 advisories across 9 packages (1 critical, 6 high, 7 medium, 2 low), the config and authorisation findings, and the fix list with exact commands | **Yes, in summary** — a security questionnaire is answered from §2 and §3. Do not hand over the full file without a fix date |
+| [`secrets-handling.md`](secrets-handling.md) | Every secret the product holds, per-instance provisioning, per-secret rotation with its blast radius, access control, leak response, the operator checklist | **No** — it names every key and what rotating it breaks |
 | [`decisions-to-confirm.md`](decisions-to-confirm.md) | The one checklist of commitments the owner has not made, with what closing each unlocks | No |
 | [`ci-workflows.md`](ci-workflows.md) | The CI workflow reference | No |
 

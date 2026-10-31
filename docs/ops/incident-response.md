@@ -212,7 +212,7 @@ credential.
 A suspected compromise has its own first step: **preserve, do not clean.** Rotate
 `APP_KEY` only after a database and file copy exists, because rotation makes the
 encrypted columns unreadable without the old key. Rotating `APP_KEY` is documented
-in `.agents/context/operations/provisioning.md`; the dependency side of a
+in [secrets-handling.md](secrets-handling.md) §3c; the dependency side of a
 compromise starts at [security-review.md](security-review.md) §4. The
 personal-data notification clock in [../legal/dpa.md](../legal/dpa.md) §7.1 — 72
 hours — starts when the vendor becomes aware, not when the cause is known.
