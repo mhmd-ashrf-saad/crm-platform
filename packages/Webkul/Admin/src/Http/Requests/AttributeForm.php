@@ -10,6 +10,23 @@ use Webkul\Core\Contracts\Validations\Decimal;
 class AttributeForm extends FormRequest
 {
     /**
+     * Extensions a `file` attribute accepts.
+     *
+     * A file attribute is a document field -- signed contracts, scanned invoices, spreadsheets --
+     * and it is written to the public disk, which the web server hands back verbatim. The list is
+     * therefore an allowlist rather than a blocklist: anything the browser would render or execute
+     * (html, svg, js) and anything the PHP handler would accept (php, phtml) is absent by
+     * construction, and a format that nobody thought to ban cannot slip through. SVG is excluded
+     * on purpose even though sanitizeSvg() would clean it -- a document has no need for it.
+     *
+     * The extension is what is checked, and Laravel resolves it from the file's own content, so
+     * renaming a payload does not get past the rule.
+     */
+    public const FILE_EXTENSIONS = [
+        'csv', 'doc', 'docx', 'ods', 'odt', 'pdf', 'ppt', 'pptx', 'rtf', 'txt', 'xls', 'xlsx', 'zip',
+    ];
+
+    /**
      * @var array
      */
     protected $rules = [];
@@ -98,6 +115,14 @@ class AttributeForm extends FormRequest
 
                 if ($attribute->type == 'image' && ! request($attribute->code.'.delete')) {
                     array_push($validations[$attribute->code], 'mimes:bmp,jpeg,jpg,png,webp');
+                }
+
+                /**
+                 * A `file` attribute used to reach the else branch above and collect no rule at
+                 * all, so any upload at all was accepted and stored on the public disk.
+                 */
+                if ($attribute->type == 'file' && ! request($attribute->code.'.delete')) {
+                    array_push($validations[$attribute->code], 'mimes:'.implode(',', self::FILE_EXTENSIONS));
                 }
             }
 

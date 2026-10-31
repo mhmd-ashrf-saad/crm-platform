@@ -16,6 +16,25 @@ class AttributeValueRepository extends Repository
     use Sanitizer;
 
     /**
+     * Extensions that are never stored as an attribute value, whatever the upload claimed to be.
+     *
+     * Attribute values are written to the public disk and handed back by the web server, so a file
+     * kept here is same-origin content: a stored `.html` renders the markup it carries, and a stored
+     * `.php` is offered to the PHP handler. The form requests are the first gate, but not every
+     * request that reaches this repository passes through one -- the lead forms carry no rule at
+     * all for file and image attributes -- so the check is repeated where the file is actually
+     * written instead of being trusted to the caller.
+     *
+     * `svg` is deliberately absent from this list: it is rendered as an image rather than executed,
+     * so it is cleaned in place by sanitizeSvg() and kept.
+     */
+    public const EXECUTABLE_EXTENSIONS = [
+        'asp', 'aspx', 'bat', 'cgi', 'cjs', 'cmd', 'com', 'exe', 'htaccess', 'htm', 'html', 'htx',
+        'jar', 'js', 'jsp', 'jspx', 'mjs', 'phar', 'php', 'php3', 'php4', 'php5', 'php7', 'php8',
+        'pht', 'phtml', 'pl', 'ps1', 'py', 'rb', 'sh', 'shtml', 'vbs', 'war', 'xhtm', 'xhtml',
+    ];
+
+    /**
      * Create a new repository instance.
      *
      * @return void
@@ -92,7 +111,7 @@ class AttributeValueRepository extends Repository
                     : null;
 
                 if ($file && $data[$attribute->code]) {
-                    $this->sanitizeSvg($data[$attribute->code], $file);
+                    $data[$attribute->code] = $this->keepInertUpload($data[$attribute->code], $file);
                 }
             }
 
@@ -121,6 +140,27 @@ class AttributeValueRepository extends Repository
                 }
             }
         }
+    }
+
+    /**
+     * Keep a stored upload only when the browser and the web server will treat it as data.
+     *
+     * Returns the stored path, or null after deleting an upload that would have been served as
+     * active content -- the attribute then holds no value at all rather than a URL to a payload.
+     */
+    protected function keepInertUpload(string $path, UploadedFile $file): ?string
+    {
+        $extension = strtolower((string) pathinfo($path, PATHINFO_EXTENSION));
+
+        if (in_array($extension, self::EXECUTABLE_EXTENSIONS, true)) {
+            Storage::delete($path);
+
+            return null;
+        }
+
+        $this->sanitizeSvg($path, $file);
+
+        return $path;
     }
 
     /**

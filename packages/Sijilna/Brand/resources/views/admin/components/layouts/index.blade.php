@@ -169,14 +169,35 @@
 
     <script>
         /**
-         * Load event, the purpose of using the event is to mount the application
-         * after all of our `Vue` components which is present in blade file have
-         * been registered in the app. No matter what `app.mount()` should be
-         * called in the last.
+         * The application is mounted as soon as the document has been parsed, not on the `load`
+         * event.
+         *
+         * Mounting last is still the rule -- every page pushes its app.component() calls into the
+         * scripts stack above, and a component registered after mount() never renders -- but `load`
+         * is not the event that guarantees it. `load` waits for every subresource (the Google Fonts
+         * stylesheet, images, the preloaded logo) and the server-rendered Blade fields are
+         * interactive the whole time. They are bound with `v-bind="field"`, so a value typed in
+         * that window is written into a DOM node that the mount then re-renders from Vue's own
+         * state: the value is silently discarded and the form reports the field as empty.
+         *
+         * `DOMContentLoaded` is both late enough and earlier. Deferred module scripts -- which is
+         * what `app.js` (the `window.app` global) and every pushed scripts block compile to -- are
+         * guaranteed to have run before it fires, and it fires without waiting for a single
+         * subresource. See bead crm-b73.
+         *
+         * The `readyState` branch covers a document that reaches this point with parsing already
+         * finished (a bfcache restore, for instance): waiting for an event that has already fired
+         * would leave the page inert, so it mounts immediately instead.
          */
-        window.addEventListener("load", function(event) {
-            app.mount("#app");
-        });
+        (function () {
+            const mountApp = () => window.app.mount("#app");
+
+            if (document.readyState === "loading") {
+                document.addEventListener("DOMContentLoaded", mountApp, { once: true });
+            } else {
+                mountApp();
+            }
+        })();
     </script>
 
     {!! view_render_event('admin.layout.vue-app-mount.after') !!}

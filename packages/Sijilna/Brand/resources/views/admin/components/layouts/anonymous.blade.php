@@ -104,14 +104,26 @@
 
     <script>
         /**
-         * Load event, the purpose of using the event is to mount the application
-         * after all of our `Vue` components which is present in blade file have
-         * been registered in the app. No matter what `app.mount()` should be
-         * called in the last.
+         * Mounted on `DOMContentLoaded` rather than on `load`, for the same reason as the admin
+         * layout (`index.blade.php` in this directory): `load` waits for the Google Fonts
+         * stylesheet and every image, while the server-rendered fields are already interactive and
+         * bound with `v-bind`, so anything typed before the mount is discarded when Vue re-renders
+         * the node. On this page that is the login form's own email and password fields.
+         *
+         * Deferred module scripts -- the `app.js` bundle that creates `window.app`, and every
+         * component block a page pushes below -- have all run by the time `DOMContentLoaded`
+         * fires, so mounting there is as late as it needs to be and earlier than `load`. See bead
+         * crm-b73.
          */
-        window.addEventListener("load", function(event) {
-            app.mount("#app");
-        });
+        (function () {
+            const mountApp = () => window.app.mount("#app");
+
+            if (document.readyState === "loading") {
+                document.addEventListener("DOMContentLoaded", mountApp, { once: true });
+            } else {
+                mountApp();
+            }
+        })();
     </script>
 
     {!! view_render_event('admin.layout.vue-app-mount.after') !!}
