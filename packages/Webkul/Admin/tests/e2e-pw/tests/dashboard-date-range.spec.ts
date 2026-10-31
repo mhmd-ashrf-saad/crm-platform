@@ -45,21 +45,65 @@ test.describe("dashboard date range filter", () => {
         await expect(adminPage.locator(".flatpickr-month")).toHaveCount(2);
     });
 
+    /**
+     * "Last Month" rather than "This Month", and the expectation is the range itself rather than
+     * "different from whatever was there".
+     *
+     * `This Month` can be the range the dashboard already shows, and on some days it is: the
+     * default start is `now()->subMonth()` (`AbstractReporting::getDefaultStartDate()`), and PHP
+     * overflows a month subtraction that lands on a day the target month does not have --
+     * 2026-10-31 minus one month is `2026-10-01`, not `2026-09-30` -- so on the 31st of a month
+     * that follows a 30-day one the dashboard opens on exactly this month's range. Choosing the
+     * preset then correctly changes nothing, and the old "must not equal the previous label"
+     * assertion failed on a control that was working. That is what reddened CI on 2026-10-31.
+     *
+     * `Last Month` cannot coincide with the default: the default end is always today
+     * (`AbstractReporting::setEndDate()`) and this preset always ends on the last day of the
+     * previous month. Its range also does not depend on today's day number, so the expectation
+     * holds on every date, and comparing against that exact range is a stronger claim than
+     * "something changed": the control has to report the preset, not merely a different string.
+     */
     test("choosing a preset updates the range", async ({ adminPage }) => {
         const before = await control(adminPage).textContent();
 
         await control(adminPage).click();
 
-        await preset(adminPage, "This Month").click();
+        await preset(adminPage, "Last Month").click();
+
+        /**
+         * Built in the page, with the formatter the control itself uses: the range is the
+         * browser's month, and `toLocaleDateString` renders it in the browser's locale.
+         */
+        const expected = await adminPage.evaluate(() => {
+            const today = new Date();
+
+            const start = new Date(today.getFullYear(), today.getMonth() - 1, 1);
+
+            const end = new Date(today.getFullYear(), today.getMonth(), 0);
+
+            const format = (date: Date) =>
+                date.toLocaleDateString(undefined, {
+                    year: "numeric",
+                    month: "short",
+                    day: "numeric",
+                });
+
+            return `${format(start)} – ${format(end)}`;
+        });
+
+        expect(before, "the preset has to move the range, or nothing is proved").not.toBe(
+            expected
+        );
 
         await expect
             .poll(() => control(adminPage).textContent(), {
                 message: "the control should report the preset's range",
             })
-            .not.toBe(before);
+            .toBe(expected);
 
         /**
-         * "This Month" runs from the first of the month to today, so the start must be a 1st.
+         * "Last Month" runs from the first of the previous month to its last day, so the start
+         * must be a 1st.
          */
         await expect(control(adminPage)).toHaveText(/\w+ 1, \d{4}\s*–/);
     });
