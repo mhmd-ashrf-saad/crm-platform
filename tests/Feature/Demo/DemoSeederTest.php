@@ -8,6 +8,7 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Str;
+use Webkul\Installer\Database\Seeders\DatabaseSeeder as InstallerSeeder;
 use Webkul\User\Models\User;
 
 uses(DatabaseTransactions::class);
@@ -20,6 +21,12 @@ uses(DatabaseTransactions::class);
  * The seeder is run through `Artisan::call('db:seed')` on purpose: that is exactly how the
  * operator runs it, including the `Model::unguarded()` wrapper the seed command installs, which
  * the seeder has to restore for the entity models to behave as they do behind a controller.
+ *
+ * The tests provision the installer's reference data themselves (see `seedInstallerReferenceData()`)
+ * rather than assuming the database they run against was seeded for them. The demo seeder reads
+ * roles, pipelines, stages, sources, types and attributes, and refuses to run without them; that
+ * guard is product behaviour. A database that was only migrated has none of that reference data, and
+ * CI runs the suite in parallel, where every worker database is migrated but never seeded.
  */
 
 /**
@@ -33,6 +40,53 @@ function demoCredentialsPath(): string
     static $path;
 
     return $path ??= storage_path('framework/testing/demo-credentials-'.Str::random(12).'.txt');
+}
+
+/**
+ * Provision the reference data a real installation already has.
+ *
+ * The demo seeder deliberately creates none of it: roles, pipelines, stages, sources, types,
+ * attributes, email templates, workflows and the installer's own admin row belong to the installer,
+ * and the seeder reads them and fails loudly when they are missing. So a test of the seeder needs
+ * an installation to exist first, and this test has to build it rather than borrow it.
+ *
+ * Borrowing is what used to happen: `make test` seeds `krayin_test`, so locally the rows were
+ * already there, while CI runs `vendor/bin/pest --parallel`, and Laravel's parallel runner gives
+ * each worker its own database that it creates and only `migrate`s (never seeds). Every demo test
+ * therefore ran against a migrated-but-empty installation and failed on the missing role.
+ *
+ * The installer's own `DatabaseSeeder` is used on purpose, so the shapes are the ones the product
+ * ships instead of hand-written approximations: it is the same class `php artisan db:seed` (and
+ * `scripts/prepare-test-db.sh`) runs.
+ *
+ * The locale is forced to English because the demo seeder matches the *names* of the installed lead
+ * sources and types as English literals (`Email`, `Web Form`, `New Business`, ...). Those names are
+ * translations, so seeding them in the deployment's `APP_LOCALE` would make this test depend on an
+ * environment setting that has nothing to do with what it is testing.
+ */
+function seedInstallerReferenceData(): void
+{
+    config(['app.locale' => 'en']);
+
+    $exitCode = Artisan::call('db:seed', [
+        '--class' => InstallerSeeder::class,
+        '--force' => true,
+    ]);
+
+    expect($exitCode)->toBe(0, 'The installer reference-data seeder failed: '.Artisan::output());
+
+    /**
+     * The rows below are the ones the demo seeder reads and refuses to invent. Checking for them by
+     * name rather than by count keeps this test from breaking when the installer adds a source, a
+     * type or a stage.
+     */
+    expect(DB::table('roles')->where('permission_type', 'all')->exists())->toBeTrue()
+        ->and(DB::table('lead_pipeline_stages')->pluck('code')->sort()->values()->all())
+        ->toBe(['follow-up', 'lost', 'negotiation', 'new', 'prospect', 'won'])
+        ->and(DB::table('lead_sources')->pluck('name')->all())
+        ->toBe(['Email', 'Web', 'Web Form', 'Phone', 'Direct'])
+        ->and(DB::table('lead_types')->pluck('name')->all())
+        ->toBe(['New Business', 'Existing Business']);
 }
 
 /**
@@ -77,6 +131,8 @@ function demoLeadTitles(): array
 beforeEach(function () {
     $_ENV['DEMO_SEED_CREDENTIALS_PATH'] = demoCredentialsPath();
     $_SERVER['DEMO_SEED_CREDENTIALS_PATH'] = demoCredentialsPath();
+
+    seedInstallerReferenceData();
 });
 
 afterEach(function () {
@@ -306,6 +362,56 @@ it('fills every module it claims to fill', function () {
     expect(DB::table('lead_tags')->count())->toBeGreaterThan(5)
         ->and(DB::table('person_tags')->count())->toBeGreaterThan(0)
         ->and(DB::table('product_tags')->count())->toBeGreaterThan(0);
+});
+
+it('refuses to seed an installation with no role and rolls the partial wipe back', function () {
+    seedDemoDataset();
+
+    /**
+     * A role is what is missing, so that is what this removes. The foreign key on `users.role_id`
+     * cascades, so the users go with it -- which is exactly the state a run against a half-installed
+     * database starts from: reference data missing, demo rows from an earlier run still in place.
+     */
+    DB::table('roles')->delete();
+
+    /**
+     * The role's removal cascades into the users; the demo's contacts, products and leads survive
+     * it (their foreign keys do not cascade), and those are the rows the run's wipe deletes before
+     * it reaches the missing role. They are the rows a rollback therefore has to restore.
+     */
+    $before = demoTableCounts();
+
+    expect(DB::table('roles')->count())->toBe(0)
+        ->and($before['persons'])->toBeGreaterThan(10)
+        ->and($before['products'])->toBeGreaterThan(10);
+
+    /**
+     * The successful run wrote the credentials file. Remove it, so the assertion at the end of this
+     * test is about the failing run and not about the file that was already there.
+     */
+    unlink(demoCredentialsPath());
+
+    /**
+     * The seeder cannot know what role the demo users should hold, so it must refuse -- not invent
+     * a role, and not leave the wipe it already performed committed.
+     */
+    expect(fn () => seedDemoDataset())->toThrow(
+        RuntimeException::class,
+        'No role exists in this installation; run the installer before the demo seeder.'
+    );
+
+    /**
+     * The wipe ran before the failure, inside the seeder's transaction: identical counts afterwards
+     * are the proof it was rolled back instead of committed.
+     */
+    expect(demoTableCounts())->toBe($before)
+        ->and(DB::table('users')->where('email', 'like', DemoSeeder::RESERVED_EMAIL_PATTERN)->count())->toBe(0)
+        ->and(DB::table('roles')->count())->toBe(0);
+
+    /**
+     * Nothing the seeder owes the operator is written on a failed run either.
+     */
+    expect(file_exists(demoCredentialsPath()))->toBeFalse();
 });
 
 it('leaves installed reference data exactly as the installer seeded it', function () {
