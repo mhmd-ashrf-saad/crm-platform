@@ -192,9 +192,26 @@
                                 <!-- Card Content -->
                                 <div class="grid gap-2">
                                     <template v-for="column in available.columns">
-                                        <div class="flex flex-wrap items-baseline gap-x-2">
+                                        <!--
+                                            The status column is a raw `1`/`0`, not markup, so the card
+                                            showed a bare number where the table view shows a pill.
+                                        -->
+                                        <div
+                                            class="flex flex-wrap items-baseline gap-x-2"
+                                            v-if="column.index === 'status'"
+                                        >
                                             <span class="text-slate-600 dark:text-gray-300" v-html="column.label + ':'"></span>
-                                            <span class="break-words font-medium text-slate-900 dark:text-white" v-html="record[column.index]"></span>
+                                            <span :class="record.status == 1 ? 'label-active' : 'label-inactive'">
+                                                @{{ record.status == 1 ? '@lang('admin::app.settings.marketing.campaigns.index.datagrid.active')' : '@lang('admin::app.settings.marketing.campaigns.index.datagrid.inactive')' }}
+                                            </span>
+                                        </div>
+
+                                        <div
+                                            class="flex flex-wrap items-baseline gap-x-2"
+                                            v-else
+                                        >
+                                            <span class="text-slate-600 dark:text-gray-300" v-html="column.label + ':'"></span>
+                                            <span class="break-words font-medium text-slate-900 dark:text-white" v-html="formatDatagridCell(record[column.index], column)"></span>
                                         </div>
                                     </template>
                                 </div>

@@ -349,7 +349,7 @@
                                                 'font-semibold': ! record.is_read
                                             }"
                                             class="break-words text-slate-900 dark:text-white" 
-                                            v-html="record[column.index]"
+                                            v-html="formatDatagridCell(record[column.index], column)"
                                         ></span>
                                     </div>
                                 </template>

@@ -197,9 +197,38 @@
                             <!-- Card Content -->
                             <div class="grid gap-2">
                                 <template v-for="column in available.columns">
-                                    <div class="flex flex-wrap items-baseline gap-x-2">
+                                    <!--
+                                        The name and status columns are not strings: the grid sends the
+                                        name as `{image, name}` and the status as `1`/`0`, so the generic
+                                        card rendering printed `[object Object]` and a bare number. They
+                                        are rendered here the same way the table view renders them.
+                                    -->
+                                    <div
+                                        class="flex flex-wrap items-baseline gap-x-2"
+                                        v-if="column.index === 'name'"
+                                    >
                                         <span class="text-slate-600 dark:text-gray-300" v-html="column.label + ':'"></span>
-                                        <span class="break-words font-medium text-slate-900 dark:text-white" v-html="record[column.index]"></span>
+                                        <span class="break-words font-medium text-slate-900 dark:text-white">
+                                            @{{ record.name?.name ?? record.name }}
+                                        </span>
+                                    </div>
+
+                                    <div
+                                        class="flex flex-wrap items-baseline gap-x-2"
+                                        v-else-if="column.index === 'status'"
+                                    >
+                                        <span class="text-slate-600 dark:text-gray-300" v-html="column.label + ':'"></span>
+                                        <span :class="record.status == 1 ? 'label-active' : 'label-inactive'">
+                                            @{{ record.status == 1 ? '@lang('admin::app.settings.users.index.active')' : '@lang('admin::app.settings.users.index.inactive')' }}
+                                        </span>
+                                    </div>
+
+                                    <div
+                                        class="flex flex-wrap items-baseline gap-x-2"
+                                        v-else
+                                    >
+                                        <span class="text-slate-600 dark:text-gray-300" v-html="column.label + ':'"></span>
+                                        <span class="break-words font-medium text-slate-900 dark:text-white" v-html="formatDatagridCell(record[column.index], column)"></span>
                                     </div>
                                 </template>
                             </div>

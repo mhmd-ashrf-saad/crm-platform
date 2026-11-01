@@ -198,7 +198,7 @@
                                 <template v-for="column in available.columns">
                                     <p
                                         class="break-words"
-                                        v-html="record[column.index]"
+                                        v-html="formatDatagridCell(record[column.index], column)"
                                         v-if="column.visibility"
                                     >
                                     </p>
@@ -266,7 +266,7 @@
                                     <template v-for="column in available.columns">
                                         <div class="flex flex-wrap items-baseline gap-x-2">
                                             <span class="text-slate-600 dark:text-gray-300" v-html="column.label + ':'"></span>
-                                            <span class="break-words font-medium text-slate-900 dark:text-white" v-html="record[column.index]"></span>
+                                            <span class="break-words font-medium text-slate-900 dark:text-white" v-html="formatDatagridCell(record[column.index], column)"></span>
                                         </div>
                                     </template>
                                 </div>
@@ -287,6 +287,82 @@
     </script>
 
     <script type="module">
+        /**
+         * Cell formatter for the datagrid rows.
+         *
+         * The table layout renders `record[column.index]` with `v-html` because most columns are
+         * pre-rendered HTML: links, avatars and status pills built by a column closure. The card
+         * layout reused the same expression, which silently stringified every column that is *not*
+         * HTML — a user's name arrives as `{image, name}` and printed as `[object Object]`, a tag
+         * list arrives as an array, a boolean status arrives as `1`. On a phone that made the four
+         * users indistinguishable, so it is data loss rather than cosmetics.
+         *
+         * Rules, in order:
+         *
+         * 1. A string that carries markup is returned untouched. It is already HTML built by a
+         *    column closure, and the table view renders the same value, so rewriting it here would
+         *    change the desktop rendering. A plain string is only isolated, never rewritten.
+         * 2. An array is joined from its members (mail tags).
+         * 3. An object yields its own label — `name`, then `label`, then `title` — escaped, because
+         *    this is the first point where a scalar becomes markup.
+         * 4. A number or boolean is stringified by its column type: a `boolean` column reads as the
+         *    same yes/no label the boolean filter uses, anything else as itself.
+         * 5. `null` and `undefined` render as nothing.
+         *
+         * Everything except (1) goes through `isolateCell`, which wraps an LTR-only value in
+         * `<bdi dir="ltr">`. A phone number, an email or an ISO date is a run of digits and
+         * neutrals that a right-to-left paragraph reorders — `+20 106 555 1203` printed as
+         * `1203 555 106 20+` — so the value needs bidi isolation, not a different value. Anything
+         * containing Arabic is left exactly as it is.
+         */
+        const DATAGRID_BOOLEAN_LABELS = {
+            1: "@lang('admin::app.components.datagrid.filters.boolean-options.true')",
+            0: "@lang('admin::app.components.datagrid.filters.boolean-options.false')",
+        };
+
+        const DATAGRID_ARABIC = /[\u0600-\u06FF\u0750-\u077F\u08A0-\u08FF\uFB50-\uFDFF\uFE70-\uFEFF]/;
+
+        const DATAGRID_MARKUP = /<[a-z!/]/i;
+
+        const escapeCellText = (value) => String(value)
+            .replace(/&/g, "&amp;")
+            .replace(/</g, "&lt;")
+            .replace(/>/g, "&gt;")
+            .replace(/"/g, "&quot;");
+
+        const isolateCell = (text) => (DATAGRID_ARABIC.test(text) ? text : `<bdi dir="ltr">${ text }</bdi>`);
+
+        const formatDatagridCell = (value, column) => {
+            if (typeof value === "string") {
+                return DATAGRID_MARKUP.test(value) ? value : isolateCell(value);
+            }
+
+            if (value === null || value === undefined) {
+                return "";
+            }
+
+            if (Array.isArray(value)) {
+                return value
+                    .map((entry) => formatDatagridCell(entry, column))
+                    .filter((entry) => entry !== "")
+                    .join("\u060C ");
+            }
+
+            if (typeof value === "object") {
+                const label = value.name ?? value.label ?? value.title ?? value.code ?? "";
+
+                return label === "" || label === null ? "" : isolateCell(escapeCellText(label));
+            }
+
+            if (column && column.type === "boolean") {
+                return escapeCellText(DATAGRID_BOOLEAN_LABELS[value ? 1 : 0] ?? value);
+            }
+
+            return isolateCell(escapeCellText(value));
+        };
+
+        app.config.globalProperties.formatDatagridCell = formatDatagridCell;
+
         app.component('v-datagrid-table', {
             template: '#v-datagrid-table-template',
 
