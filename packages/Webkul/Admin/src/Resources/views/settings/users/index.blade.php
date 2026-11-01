@@ -114,7 +114,13 @@
                             </div>
 
                             <!-- Users Email -->
-                            <p class="truncate">@{{ record.email }}</p>
+                            <!-- An address is one left-to-right run; inside the right-to-left paragraph
+                                 it was truncated from its logical start, keeping the domain and
+                                 discarding the local part. -->
+                            <p
+                                class="truncate text-right"
+                                dir="ltr"
+                            >@{{ record.email }}</p>
 
                             <!-- Associated Group -->
                             <p class="truncate">@{{ record.group_name }}</p>

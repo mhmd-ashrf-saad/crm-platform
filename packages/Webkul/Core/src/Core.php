@@ -169,11 +169,17 @@ class Core
     /**
      * Format date
      *
+     * The format string is Carbon's, so `M`/`MMM`/`MMMM` and `A` are month names and the
+     * meridiem. `format()` prints those in English whatever the active locale is, which put
+     * "26 Aug 2026 12:00AM" inside an Arabic interface; `translatedFormat()` renders the same
+     * format with the active locale's month and meridiem names, and leaves every locale that has
+     * no translation of its own (including `en`) byte-identical to what `format()` produced.
+     *
      * @return string
      */
     public function formatDate($date, $format = 'd M Y h:iA')
     {
-        return Carbon::parse($date)->format($format);
+        return Carbon::parse($date)->locale(app()->getLocale())->translatedFormat($format);
     }
 
     /**

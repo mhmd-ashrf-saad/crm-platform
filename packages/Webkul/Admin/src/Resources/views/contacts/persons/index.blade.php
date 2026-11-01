@@ -246,12 +246,26 @@
                             </div>
 
                             <!-- Emails -->
-                            <p class="truncate dark:text-gray-300">
+                            <!--
+                                An address is a single left-to-right run: rendered in the right-to-left
+                                paragraph it is truncated from its logical start, so the column kept the
+                                domain and dropped the local part. `dir="ltr"` moves the ellipsis to the
+                                end of the address and keeps the cell's own alignment right-aligned.
+                            -->
+                            <p
+                                class="truncate text-right dark:text-gray-300"
+                                dir="ltr"
+                            >
                                 @{{ record.emails }}
                             </p>
 
                             <!-- Contact Numbers -->
-                            <p class="truncate dark:text-gray-300">
+                            <!-- Same as the email column: digits and neutrals in a right-to-left
+                                 paragraph reorder, and truncate from the wrong end. -->
+                            <p
+                                class="truncate text-right dark:text-gray-300"
+                                dir="ltr"
+                            >
                                 @{{ record.contact_numbers }}
                             </p>
 

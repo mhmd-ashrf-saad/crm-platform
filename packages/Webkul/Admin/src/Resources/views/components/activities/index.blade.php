@@ -155,7 +155,12 @@
                                                 >
                                                     @lang('admin::app.components.activities.index.scheduled-on'):
 
-                                                    @{{ $admin.formatDate(activity.schedule_from, 'd MMM yyyy, h:mm A', timezone) + ' - ' + $admin.formatDate(activity.schedule_to, 'd MMM yyyy, h:mm A', timezone) }}
+                                                    <!--
+                                                        Both ends are isolated together: a date is a run of
+                                                        digits and neutrals, so in an Arabic paragraph the
+                                                        range reversed and the time split from its date.
+                                                    -->
+                                                    <bdi>@{{ formatActivityDate(activity.schedule_from) }} - @{{ formatActivityDate(activity.schedule_to) }}</bdi>
                                                 </p>
 
                                                 <!-- Activity Participants -->
@@ -225,7 +230,7 @@
 
                                         <!-- Activity Time and User -->
                                         <div class="text-gray-500 dark:text-gray-300">
-                                            @{{ $admin.formatDate(activity.created_at, 'd MMM yyyy, h:mm A', timezone) }},
+                                            <bdi>@{{ formatActivityDate(activity.created_at) }}</bdi>,
 
                                             @{{ "@lang('admin::app.components.activities.index.by-user', ['user' => 'replace'])".replace('replace', activity.user?.name ?? '@lang('admin::app.components.activities.index.system')') }}
                                         </div>
@@ -566,6 +571,42 @@
             },
 
             methods: {
+                /**
+                 * Format an activity timestamp for display.
+                 *
+                 * `$admin.formatDate` is pinned to `en-US`, so an Arabic interface printed
+                 * "26 Aug 2026, 1:57 AM": an English month name in the middle of an Arabic
+                 * sentence, whose own neutral characters then let the bidi algorithm scatter the
+                 * date around the user name next to it. The locale comes from the document, which
+                 * is the interface locale, with Latin digits so the numbers match the rest of the
+                 * admin; the time zone is the one the page already renders in.
+                 *
+                 * The result still needs `<bdi>` isolation where it is used, because an Arabic
+                 * date followed by ", <name>" is exactly the mixed run that reorders.
+                 */
+                formatActivityDate(value) {
+                    if (! value) {
+                        return "";
+                    }
+
+                    const date = new Date(value);
+
+                    if (Number.isNaN(date.getTime())) {
+                        return "";
+                    }
+
+                    const locale = document.documentElement.lang || "en";
+
+                    return new Intl.DateTimeFormat(`${ locale }-u-nu-latn`, {
+                        timeZone: this.timezone || undefined,
+                        day: "numeric",
+                        month: "long",
+                        year: "numeric",
+                        hour: "numeric",
+                        minute: "2-digit",
+                    }).format(date);
+                },
+
                 onTabChange(tabName) {
                     this.selectedType = tabName;
 
