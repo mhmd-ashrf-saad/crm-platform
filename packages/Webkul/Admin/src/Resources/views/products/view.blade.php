@@ -83,7 +83,7 @@
         {!! view_render_event('admin.products.view.right.before', ['product' => $product]) !!}
         
         <!-- Right Panel -->
-        <div class="flex w-full flex-col gap-4 rounded-lg">
+        <div class="flex w-full min-w-0 flex-col gap-4 rounded-lg">
             {!! view_render_event('admin.products.view.right.activities.before', ['product' => $product]) !!}
 
             <!-- Activity Navigation -->
