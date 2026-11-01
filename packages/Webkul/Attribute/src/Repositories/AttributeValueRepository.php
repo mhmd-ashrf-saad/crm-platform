@@ -16,6 +16,18 @@ class AttributeValueRepository extends Repository
     use Sanitizer;
 
     /**
+     * The model this repository works on.
+     *
+     * Declared here because this repository reaches the attribute value model's static
+     * `$attributeTypeFields` map through the instance (`$this->model::$attributeTypeFields`, which
+     * PHP resolves against the instance's class). Without a type, a static analyser reads that
+     * lookup as an undefined property on an unknown class.
+     *
+     * @var \Webkul\Attribute\Models\AttributeValue
+     */
+    protected $model;
+
+    /**
      * Extensions that are never stored as an attribute value, whatever the upload claimed to be.
      *
      * Attribute values are written to the public disk and handed back by the web server, so a file
