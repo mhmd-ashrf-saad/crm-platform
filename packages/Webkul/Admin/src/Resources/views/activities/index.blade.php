@@ -460,7 +460,17 @@
                             </div>
 
                             <div class="vuecal__event-time text-sm">
-                                @{{ formatTime(event.start) }} - @{{ formatTime(event.end) }}
+                                {{-- Two forms: a phone-width column is too narrow for a range, so it
+                                     shows the start time and the range comes back above 767px. --}}
+                                <bdi
+                                    class="vuecal__event-time-start"
+                                    dir="ltr"
+                                >@{{ formatTime(event.start) }}</bdi>
+
+                                <bdi
+                                    class="vuecal__event-time-range"
+                                    dir="ltr"
+                                >@{{ formatTime(event.start) }} - @{{ formatTime(event.end) }}</bdi>
                             </div>
                         </div>
 
@@ -1155,6 +1165,74 @@
                 box-shadow: 0 6px 18px rgba(0, 0, 0, 0.25);
                 border: 1px solid rgba(255, 255, 255, 0.2);
                 line-height: 1.3;
+            }
+
+            /*
+             * Week view on a phone.
+             *
+             * Seven columns share the width minus the hour column, which leaves about 40px per
+             * day at 360. vue-cal answers that by swapping the weekday label down to its
+             * one-letter form, so the heading row read as fragments (`ا`, `حدث`) instead of day
+             * names, and an event cell had room for nothing but an ellipsis.
+             *
+             * 1. Keep the full weekday name and shrink it until it fits 40px. The rules below are
+             *    `!important` because vue-cal hides `.full` from a viewport-width media query at
+             *    550px and 450px, deeper in the cascade than an equal-specificity rule.
+             * 2. An event cell that narrow cannot carry a title, so it carries its start time — the
+             *    part of the label that identifies the slot. The title is still in the tooltip and
+             *    in the list view.
+             * 3. The day runs past the box: `.vuecal__bg` already scrolls, but its scrollbar is
+             *    invisible until touched, so it is made thin and always visible.
+             */
+            @media (max-width: 1024px) {
+                .vuecal .vuecal__heading {
+                    font-size: 10px;
+                    line-height: 1.15;
+                }
+
+                .vuecal .vuecal__heading .full {
+                    display: block !important;
+                    white-space: nowrap;
+                }
+
+                .vuecal .vuecal__heading .small,
+                .vuecal .vuecal__heading .xsmall {
+                    display: none !important;
+                }
+            }
+
+            /* One form of the event time is shown at a time; see the comment in the template. */
+            .vuecal .vuecal__event-time-start {
+                display: none;
+            }
+
+            @media (max-width: 767px) {
+                .vuecal .vuecal__event-title {
+                    display: none;
+                }
+
+                .vuecal .vuecal__event-time {
+                    font-size: 10px;
+                    opacity: 1;
+                }
+
+                .vuecal .vuecal__event-time-start {
+                    display: inline;
+                }
+
+                .vuecal .vuecal__event-time-range {
+                    display: none;
+                }
+
+                .vuecal .vuecal__event-content {
+                    inset: 2px;
+                    padding: 0;
+                    gap: 0;
+                }
+            }
+
+            .vuecal .vuecal__bg {
+                scrollbar-width: thin;
             }
         </style>
     @endPushOnce
