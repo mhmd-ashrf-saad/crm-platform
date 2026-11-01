@@ -34,7 +34,11 @@
             </div>
         </div>
 
-        <v-users-settings ref="userSettings">
+        <v-users-settings
+            ref="userSettings"
+            :roles='@json($roles)'
+            :groups='@json($groups)'
+        >
             <!-- DataGrid Shimmer -->
             <x-admin::shimmer.datagrid />
         </v-users-settings>
@@ -514,13 +518,11 @@
             app.component('v-users-settings', {
                 template: '#users-settings-template',
 
+                props: ['roles', 'groups'],
+
                 data() {
                     return {
                         isProcessing: false,
-
-                        roles: @json($roles),
-
-                        groups:  @json($groups),
 
                         user: {
                             view_permission: 'global',
@@ -549,9 +551,14 @@
                 },
 
                 mounted() {
-                    @if(request('action') === 'create')
+                    /**
+                     * `?action=create` opens the create modal on load. This is a query-string flag
+                     * on a page that only ever loads by GET, so it is read here instead of inlining
+                     * a Blade conditional into the component body.
+                     */
+                    if (new URL(window.location).searchParams.get('action') === 'create') {
                         this.openModal();
-                    @endif
+                    }
                 },
 
                 methods: {
