@@ -91,6 +91,28 @@ export type CellMetrics = {
         worst: { selector: string; overlapHeightPx: number; rect: Rect }[];
     };
     debugbar: { nodes: number; visibleNodes: number; styleTagPresent: boolean };
+    /**
+     * The `x-admin::table` component's wrappers, found by its `data-e2e-shared-table` marker rather
+     * than by `querySelector('table')`: several audited routes render this component's wrapper with
+     * no rows, and "the table is on the page" and "the table has content" are different answers.
+     */
+    sharedTable: {
+        wrappers: number;
+        visible: number;
+        rendered: boolean;
+        entries: {
+            visible: boolean;
+            wrapperWidth: number;
+            wrapperClientWidth: number;
+            tableWidth: number;
+            internalScrollPx: number;
+            overflowX: string;
+            layout: string | null;
+            minWidth: string | null;
+            columns: number;
+            rows: number;
+        }[];
+    };
 };
 
 export type AuditCell = {
@@ -107,6 +129,14 @@ export type AuditCell = {
     screenshot: string | null;
     error: string | null;
     metrics: CellMetrics | null;
+    /**
+     * Uncaught exceptions raised while this cell was loading. Recorded because a Vue failure leaves
+     * the server-rendered shell in place: the page then measures as a clean zero overflow while
+     * rendering nothing usable.
+     */
+    pageErrors: string[];
+    /** Console messages of type `error` raised while this cell was loading. */
+    consoleErrors: string[];
     verdict: "PASS" | "FAIL" | "ERROR";
     failReasons: string[];
 };
@@ -244,7 +274,7 @@ export function renderMarkdown(matrix: AuditMatrix, probes: ProbeResult[] = []):
     lines.push(`- Cells attempted: ${ attempted } of ${ matrix.expectedCells } expected`);
     lines.push(`- **PASS ${ passed } / FAIL ${ failed } / ERROR ${ errored }**`);
     lines.push("");
-    lines.push("Cell verdict rule: **FAIL** when the route did not answer 2xx, or the session was bounced to `/admin/login`, or `documentElement.scrollWidth - innerWidth > 1` px. Everything else (touch targets, font sizes, overlay height, internal scroll) is recorded in `matrix.json` and ranked below, but does not change the verdict — internal scroll in particular is informational, not a defect.");
+    lines.push("Cell verdict rule: **FAIL** when the route did not answer 2xx, or the session was bounced to `/admin/login`, or `documentElement.scrollWidth - innerWidth > 1` px, or the page never settled (Vue never mounted / the network never went idle), or the page threw an uncaught error. Everything else (touch targets, font sizes, overlay height, internal scroll, console errors) is recorded in `matrix.json` and ranked below, but does not change the verdict — internal scroll in particular is informational, not a defect.");
     lines.push("");
 
     lines.push("## Pass/fail matrix");
@@ -371,6 +401,61 @@ export function renderMarkdown(matrix: AuditMatrix, probes: ProbeResult[] = []):
             for (const item of cell.metrics!.internalScroll.slice(0, 2)) {
                 lines.push(`| ${ escapeCell(cell.variantLabel) } | ${ cell.width } | ${ item.kind } | ${ item.deltaPx } | ${ escapeCell(item.selector) } |`);
             }
+        }
+    }
+
+    lines.push("");
+    lines.push("### Runtime errors (uncaught exceptions fail the cell; console errors are recorded)");
+    lines.push("");
+    lines.push("A page that throws still renders the server-side shell, so it measures as zero overflow. These listeners are what makes a dead page visible instead of clean: `pageerror` is an uncaught exception and fails the cell, `console` errors are collected because a failing XHR or a render-loop warning is worth seeing even when the page survives it.");
+    lines.push("");
+
+    const withPageErrors = cells.filter((cell) => (cell.pageErrors?.length ?? 0) > 0);
+    const withConsoleErrors = cells.filter((cell) => (cell.consoleErrors?.length ?? 0) > 0);
+
+    lines.push(`- Cells with an uncaught page error: ${ withPageErrors.length }.`);
+    lines.push(`- Cells with at least one console error: ${ withConsoleErrors.length }.`);
+
+    if (withPageErrors.length) {
+        lines.push("");
+        lines.push("| Variant | Width | Error |");
+        lines.push("|---|---|---|");
+
+        for (const cell of top(withPageErrors, 20)) {
+            lines.push(`| ${ escapeCell(cell.variantLabel) } | ${ cell.width } | ${ escapeCell(cell.pageErrors[0]) } |`);
+        }
+    }
+
+    if (withConsoleErrors.length) {
+        lines.push("");
+        lines.push("| Variant | Width | Console errors | First |");
+        lines.push("|---|---|---|---|");
+
+        for (const cell of top(withConsoleErrors, 20)) {
+            lines.push(`| ${ escapeCell(cell.variantLabel) } | ${ cell.width } | ${ cell.consoleErrors.length } | ${ escapeCell(cell.consoleErrors[0]) } |`);
+        }
+    }
+
+    lines.push("");
+    lines.push("### Shared `x-admin::table` callers (the blast radius of the table component)");
+    lines.push("");
+    lines.push("The table component marks its wrapper with `data-e2e-shared-table`, so `rendered` below means the component itself is on the page — not merely that some `<table>` is. A route can be complete and still render the wrapper with zero rows, and that is recorded rather than scored.");
+    lines.push("");
+
+    const tableCells = cells.filter((cell) => cell.metrics && cell.metrics.sharedTable.wrappers > 0);
+
+    if (! tableCells.length) {
+        lines.push("No cell rendered the shared table.");
+    } else {
+        lines.push("| Variant | Width | Wrappers | Rows | Table px | Wrapper px | Internal scroll px | Layout | Min-width |");
+        lines.push("|---|---|---|---|---|---|---|---|---|");
+
+        for (const cell of tableCells) {
+            const entry = cell.metrics!.sharedTable.entries.find((item) => item.visible) ?? cell.metrics!.sharedTable.entries[0];
+
+            lines.push(
+                `| ${ escapeCell(cell.variantLabel) } | ${ cell.width } | ${ cell.metrics!.sharedTable.visible } | ${ entry ? entry.rows : 0 } | ${ entry ? entry.tableWidth : 0 } | ${ entry ? entry.wrapperClientWidth : 0 } | ${ entry ? entry.internalScrollPx : 0 } | ${ entry && entry.layout ? entry.layout : "—" } | ${ entry && entry.minWidth ? entry.minWidth : "—" } |`
+            );
         }
     }
 

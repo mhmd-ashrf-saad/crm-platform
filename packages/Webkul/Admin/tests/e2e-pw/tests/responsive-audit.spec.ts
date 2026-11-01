@@ -16,7 +16,7 @@ import { renderMarkdown, type AuditCell, type AuditMatrix, type CellMetrics, typ
  * - the normal suite must not depend on the demo dataset (it uses `admin@example.com`, the demo
  *   instance uses `manager@sijilna.demo`), and the audit needs 27 leads, 19 persons and 486
  *   activities to be interesting;
- * - 133 cells x screenshots is minutes of work, which does not belong in a CI run;
+ * - 210 cells x screenshots is minutes of work, which does not belong in a CI run;
  * - the audit writes artifacts to a scratch directory that only exists on this machine.
  *
  * Everything it needs is environment-supplied, because the demo credentials must never be
@@ -88,7 +88,21 @@ const NAV_TIMEOUT = 45_000;
 
 const SETTLE_TIMEOUT = 20_000;
 
-type Ids = { leadId: string | null; personId: string | null };
+/**
+ * Every id a variant can depend on. All of them are resolved from the live datagrid JSON at run
+ * time (see `resolveIds`); none is ever hardcoded, because a hardcoded id measures a record that
+ * may not exist in the instance the audit is pointed at.
+ */
+type Ids = {
+    leadId: string | null;
+    personId: string | null;
+    attributeId: string | null;
+    workflowId: string | null;
+    webFormId: string | null;
+    warehouseId: string | null;
+    productId: string | null;
+    quoteId: string | null;
+};
 
 type Variant = {
     slug: string;
@@ -98,20 +112,98 @@ type Variant = {
     anonymous?: boolean;
     /** Dependant id this variant needs before it can be audited. */
     needs?: keyof Ids;
+    /**
+     * Optional interaction that has to happen before the page is worth measuring, returning a
+     * description of what was clicked (recorded per cell) or `null` when the trigger was missing.
+     *
+     * The warehouse locations table needs one: `v-locations` does not fetch until its tab is
+     * activated, so loading the route and measuring straight away records a page whose table has not
+     * been rendered yet — a clean-looking zero that says nothing.
+     */
+    prepare?: (page: Page) => Promise<string | null>;
+    /**
+     * Marks the routes that exist in this sweep because they render the shared `x-admin::table`.
+     * Their cells are checked for the component's own marker, so "this route was audited" cannot be
+     * satisfied by a page that rendered everything except the table the route is listed for.
+     */
+    usesSharedTable?: boolean;
 };
 
 /**
- * The 19 route variants. Detail routes use the shapes the router actually defines
- * (`/admin/leads/view/{id}`, `/admin/contacts/persons/view/{id}`); the bare `/{id}` form that the
- * task brief assumed is probed separately and its real status recorded in the notes, so the
- * difference is measured rather than papered over.
+ * Click the last tab in a `v-activities` tab strip.
+ *
+ * Structural rather than text-based on purpose: the admin renders Arabic, so "click the tab called
+ * Location" would be a locale-dependent locator. Every view that passes extra types to the activities
+ * component puts them after the built-in ones, so the extra type is the last tab in the strip.
+ */
+async function openLastActivityTab(page: Page): Promise<string | null> {
+    const tabs = page.locator("div.cursor-pointer.px-3");
+
+    const count = await tabs.count();
+
+    if (count === 0) {
+        return null;
+    }
+
+    const tab = tabs.nth(count - 1);
+
+    const label = (await tab.innerText().catch(() => "")).trim().replace(/\s+/g, " ").slice(0, 30);
+
+    await tab.click({ timeout: 10_000 });
+
+    /**
+     * Wait for the table itself, not just the XHR: the tab's Vue component renders its rows after the
+     * fetch resolves, so a `networkidle`-only wait measured the previous tab and reported a visible
+     * table with zero rows. Bounded, so a tab that legitimately has no table still returns.
+     */
+    await page.locator("[data-e2e-shared-table]").first().waitFor({ state: "visible", timeout: SETTLE_TIMEOUT }).catch(() => {});
+
+    /**
+     * Then wait for its first row, bounded. `waitFor` above resolves as soon as the wrapper is
+     * displayed, which is before the Vue component that owns the rows has re-rendered after its fetch:
+     * the wrapper measured `rows: 0` while the screenshot taken a moment later showed four. A table
+     * that is legitimately empty just spends this timeout and reports zero rows.
+     */
+    await page
+        .waitForFunction(() => Boolean(document.querySelector("[data-e2e-shared-table] tbody tr")), undefined, { timeout: 5_000 })
+        .catch(() => {});
+
+    await page.waitForLoadState("networkidle", { timeout: SETTLE_TIMEOUT }).catch(() => {});
+
+    return `clicked the last activity tab${ label ? ` ("${ label }")` : "" } of ${ count } and waited for its XHR and its table`;
+}
+
+/**
+ * The 30 route variants. Detail routes use the shapes the router actually defines
+ * (`/admin/leads/view/{id}`, `/admin/contacts/persons/view/{id}`, `/admin/settings/attributes/edit/{id}`);
+ * the shapes the task brief assumed are probed separately and their real status recorded in the
+ * notes, so the difference is measured rather than papered over.
+ *
+ * The last eleven exist because the shared table had never been measured outside `leads/create` and
+ * `quotes/create`. Two different blast radii, and the difference matters: `<x-admin::table>` (the
+ * component whose wrapper carries the width floor) has **9** callers, while `<x-admin::table.th>` and
+ * `<x-admin::table.td>` (whose nowrap moved behind `xl`) are composed by **13** views. These variants
+ * cover all 13:
+ *
+ * | Caller | Variant | Wrapper caller? |
+ * |---|---|---|
+ * | `leads/common/products` | `leads-create` (already measured) | yes |
+ * | `leads/view/products` | `lead-view-products` (`?tab=products`) | yes |
+ * | `leads/view/quotes` | `lead-view-quotes` (`?tab=quotes`) | yes |
+ * | `products/view/inventory` | `product-view` (+ tab click) | yes |
+ * | `quotes/create` | `quotes-create` (already measured) | yes |
+ * | `quotes/edit` | `quotes-edit` | yes |
+ * | `settings/attributes/{create,edit}` | `settings-attributes-create`, `settings-attributes-edit` | yes |
+ * | `settings/warehouses/view/locations` | `settings-warehouse-view` (+ tab click) | yes |
+ * | `settings/web-forms/{create,edit}` | `settings-web-forms-create`, `settings-web-forms-edit` | no — th/td only |
+ * | `settings/workflows/{create,edit}` | `settings-workflows-create`, `settings-workflows-edit` | no — th/td only |
  */
 const VARIANTS: Variant[] = [
     { slug: "login", label: "/admin/login (anonymous)", path: "/admin/login", anonymous: true },
     { slug: "dashboard", label: "/admin/dashboard", path: "/admin/dashboard" },
     { slug: "leads-kanban", label: "/admin/leads (kanban default)", path: "/admin/leads" },
     { slug: "leads-table", label: "/admin/leads?view_type=table", path: "/admin/leads?view_type=table" },
-    { slug: "leads-create", label: "/admin/leads/create", path: "/admin/leads/create" },
+    { slug: "leads-create", label: "/admin/leads/create", path: "/admin/leads/create", usesSharedTable: true },
     { slug: "lead-view", label: "/admin/leads/view/{firstLeadId}", path: (ids) => `/admin/leads/view/${ ids.leadId }`, needs: "leadId" },
     { slug: "persons", label: "/admin/contacts/persons", path: "/admin/contacts/persons" },
     { slug: "person-view", label: "/admin/contacts/persons/view/{firstPersonId}", path: (ids) => `/admin/contacts/persons/view/${ ids.personId }`, needs: "personId" },
@@ -119,13 +211,26 @@ const VARIANTS: Variant[] = [
     { slug: "organizations-create", label: "/admin/contacts/organizations/create", path: "/admin/contacts/organizations/create" },
     { slug: "products", label: "/admin/products", path: "/admin/products" },
     { slug: "quotes", label: "/admin/quotes", path: "/admin/quotes" },
-    { slug: "quotes-create", label: "/admin/quotes/create", path: "/admin/quotes/create" },
+    { slug: "quotes-create", label: "/admin/quotes/create", path: "/admin/quotes/create", usesSharedTable: true },
     { slug: "activities", label: "/admin/activities (table default)", path: "/admin/activities" },
     { slug: "activities-calendar", label: "/admin/activities?view-type=calendar", path: "/admin/activities?view-type=calendar" },
     { slug: "mail", label: "/admin/mail", path: "/admin/mail" },
     { slug: "settings-users", label: "/admin/settings/users", path: "/admin/settings/users" },
     { slug: "settings-attributes", label: "/admin/settings/attributes", path: "/admin/settings/attributes" },
     { slug: "account", label: "/admin/account", path: "/admin/account" },
+
+    /* The shared table's remaining callers. */
+    { slug: "lead-view-products", label: "/admin/leads/view/{firstLeadId}?tab=products (shared table)", path: (ids) => `/admin/leads/view/${ ids.leadId }?tab=products`, needs: "leadId", usesSharedTable: true },
+    { slug: "lead-view-quotes", label: "/admin/leads/view/{firstLeadId}?tab=quotes (shared table)", path: (ids) => `/admin/leads/view/${ ids.leadId }?tab=quotes`, needs: "leadId", usesSharedTable: true, prepare: openLastActivityTab },
+    { slug: "product-view", label: "/admin/products/view/{firstProductId} (inventory table)", path: (ids) => `/admin/products/view/${ ids.productId }`, needs: "productId", usesSharedTable: true, prepare: openLastActivityTab },
+    { slug: "quotes-edit", label: "/admin/quotes/edit/{firstQuoteId} (shared table)", path: (ids) => `/admin/quotes/edit/${ ids.quoteId }`, needs: "quoteId", usesSharedTable: true },
+    { slug: "settings-attributes-create", label: "/admin/settings/attributes/create (shared table)", path: "/admin/settings/attributes/create", usesSharedTable: true },
+    { slug: "settings-attributes-edit", label: "/admin/settings/attributes/edit/{firstAttributeId} (shared table)", path: (ids) => `/admin/settings/attributes/edit/${ ids.attributeId }`, needs: "attributeId", usesSharedTable: true },
+    { slug: "settings-workflows-create", label: "/admin/settings/workflows/create (shared table)", path: "/admin/settings/workflows/create" },
+    { slug: "settings-workflows-edit", label: "/admin/settings/workflows/edit/{firstWorkflowId} (shared table)", path: (ids) => `/admin/settings/workflows/edit/${ ids.workflowId }`, needs: "workflowId" },
+    { slug: "settings-web-forms-create", label: "/admin/settings/web-forms/create (shared table)", path: "/admin/settings/web-forms/create" },
+    { slug: "settings-web-forms-edit", label: "/admin/settings/web-forms/edit/{firstWebFormId} (shared table)", path: (ids) => `/admin/settings/web-forms/edit/${ ids.webFormId }`, needs: "webFormId" },
+    { slug: "settings-warehouse-view", label: "/admin/settings/warehouses/view/{firstWarehouseId} (locations table)", path: (ids) => `/admin/settings/warehouses/view/${ ids.warehouseId }`, needs: "warehouseId", usesSharedTable: true, prepare: openLastActivityTab },
 ];
 
 /* -------------------------------------------------------------------------------------------- */
@@ -284,8 +389,9 @@ async function signIn(page: Page): Promise<void> {
  * network has gone quiet (the datagrids and the kanban fetch their rows over XHR, so a page captured
  * too early measures a shimmer skeleton).
  *
- * Both waits are bounded and their outcome is recorded per cell, so a slow cell is visible as
- * `settled: false` rather than silently producing a small number.
+ * Both waits are bounded and their outcome is recorded per cell. A cell that did not settle is a
+ * FAIL, not a quiet zero: a Vue app that threw leaves the server-rendered shell in place, where
+ * `scrollWidth` equals `innerWidth` and the overflow measure is a satisfied zero on a broken page.
  */
 async function settle(page: Page): Promise<boolean> {
     const mounted = await page
@@ -299,6 +405,57 @@ async function settle(page: Page): Promise<boolean> {
         .catch(() => false);
 
     return mounted && idle;
+}
+
+/**
+ * Runtime-error recorder.
+ *
+ * Without it the matrix can report PASS on a page whose Vue app threw: an uncaught exception leaves
+ * the server-rendered shell in place, so `documentElement.scrollWidth - innerWidth` is zero and the
+ * one FAIL condition the audit had is satisfied by a dead page. "No console errors" was therefore
+ * necessarily a claim made from outside the harness. These listeners put it inside.
+ *
+ * Playwright attaches `page.on` handlers to the page, not to a navigation, so each page gets one
+ * recorder at construction and every cell drains it first — a cell then reports only the errors it
+ * caused, rather than the 400 cells before it. The lists are capped because a page stuck in a
+ * failing render loop can emit thousands of identical lines and bury the first, most useful one.
+ */
+type RuntimeErrors = { pageErrors: string[]; consoleErrors: string[] };
+
+function attachErrorRecorder(page: Page): () => RuntimeErrors {
+    let pageErrors: string[] = [];
+
+    let consoleErrors: string[] = [];
+
+    const push = (bucket: string[], value: string): void => {
+        if (bucket.length < 20) {
+            bucket.push(value.replace(/\s+/g, " ").slice(0, 300));
+        }
+    };
+
+    page.on("pageerror", (error: Error) => push(pageErrors, `${ error.name }: ${ error.message.split("\n")[0] }`));
+
+    page.on("console", (message) => {
+        if (message.type() !== "error") {
+            return;
+        }
+
+        const location = message.location();
+
+        const where = location.url ? ` @ ${ location.url.split("/").slice(-2).join("/") }:${ location.lineNumber }` : "";
+
+        push(consoleErrors, `${ message.text() }${ where }`);
+    });
+
+    return () => {
+        const drained = { pageErrors, consoleErrors };
+
+        pageErrors = [];
+
+        consoleErrors = [];
+
+        return drained;
+    };
 }
 
 /* -------------------------------------------------------------------------------------------- */
@@ -674,6 +831,42 @@ function measurePage(): CellMetrics {
         headerCollision.worst = colliding.slice(0, 3);
     }
 
+    /* Shared table ------------------------------------------------------------------------------ */
+
+    /**
+     * The `x-admin::table` component marks its wrapper with `data-e2e-shared-table`, so "this page
+     * rendered the shared table" is a fact rather than a guess from `document.querySelector('table')`
+     * — plenty of pages render some other table, and several shared-table callers render the wrapper
+     * with zero rows while the surrounding page still looks finished. That distinction is the whole
+     * point of auditing these routes.
+     */
+    const sharedWrappers = Array.from(document.querySelectorAll("[data-e2e-shared-table]"));
+
+    const sharedTable = sharedWrappers.map((wrapper) => {
+        const table = wrapper.querySelector("table");
+
+        const wrapperRect = box(wrapper);
+
+        const tableRect = table ? box(table) : null;
+
+        const style = table ? window.getComputedStyle(table) : null;
+
+        return {
+            visible: isVisible(wrapper) && Boolean(tableRect && tableRect.width > 0),
+            wrapperWidth: Math.round(wrapperRect.width),
+            wrapperClientWidth: (wrapper as HTMLElement).clientWidth,
+            tableWidth: tableRect ? Math.round(tableRect.width) : 0,
+            internalScrollPx: Math.max(0, (wrapper as HTMLElement).scrollWidth - (wrapper as HTMLElement).clientWidth),
+            overflowX: window.getComputedStyle(wrapper).overflowX,
+            layout: style ? style.tableLayout : null,
+            minWidth: style ? style.minWidth : null,
+            columns: table ? table.querySelectorAll("thead th").length : 0,
+            rows: table ? table.querySelectorAll("tbody tr").length : 0,
+        };
+    });
+
+    const visibleShared = sharedTable.filter((entry) => entry.visible);
+
     /* Debugbar proof --------------------------------------------------------------------------- */
 
     const debugbarNodes = Array.from(document.querySelectorAll(DEBUGBAR));
@@ -712,6 +905,13 @@ function measurePage(): CellMetrics {
         smallFontInputs: { count: smallFontCandidates.length, worst: smallFontCandidates.slice(0, 5) },
         overlayRisk: { count: overlayCandidates.length, worst: overlayCandidates.slice(0, 5) },
         headerCollision,
+        sharedTable: {
+            /** How many `x-admin::table` wrappers the page contains (`clipped` ones are not counted). */
+            wrappers: sharedTable.length,
+            visible: visibleShared.length,
+            rendered: visibleShared.some((entry) => entry.rows > 0),
+            entries: sharedTable.slice(0, 4),
+        },
         debugbar: {
             nodes: debugbarNodes.length,
             visibleNodes: debugbarVisibleNodes,
@@ -793,9 +993,27 @@ async function resolveIds(page: Page, notes: string[]): Promise<Ids> {
 
     const personId = await firstId("admin/contacts/persons");
 
-    notes.push(`id resolution: first lead id ${ leadId ?? "unresolved" }, first person id ${ personId ?? "unresolved" } (from the datagrid JSON, not hardcoded)`);
+    const productId = await firstId("admin/products");
 
-    return { leadId, personId };
+    const quoteId = await firstId("admin/quotes");
+
+    const attributeId = await firstId("admin/settings/attributes");
+
+    const workflowId = await firstId("admin/settings/workflows");
+
+    const webFormId = await firstId("admin/settings/web-forms");
+
+    const warehouseId = await firstId("admin/settings/warehouses");
+
+    const resolved: Ids = { leadId, personId, attributeId, workflowId, webFormId, warehouseId, productId, quoteId };
+
+    notes.push(
+        `id resolution (from each list's own datagrid JSON, never hardcoded): ${ Object.entries(resolved)
+            .map(([key, value]) => `${ key }=${ value ?? "unresolved" }`)
+            .join(", ") }`
+    );
+
+    return resolved;
 }
 
 /**
@@ -809,6 +1027,26 @@ async function probeAssumedRouteShapes(page: Page, ids: Ids, notes: string[]): P
         ["/admin/leads/view/{id} (routed shape)", ids.leadId ? `/admin/leads/view/${ ids.leadId }` : null],
         ["/admin/contacts/persons/{id} (assumed shape)", ids.personId ? `/admin/contacts/persons/${ ids.personId }` : null],
         ["/admin/contacts/persons/view/{id} (routed shape)", ids.personId ? `/admin/contacts/persons/view/${ ids.personId }` : null],
+
+        /**
+         * The three shapes the wave-3 brief guessed for the per-module edit and detail screens.
+         * Recorded whether or not they resolve, because "the brief said `/attributes/{id}/edit`" is
+         * exactly the kind of assumption that later reads as "the page was measured".
+         */
+        ["/admin/settings/attributes/{id}/edit (assumed shape)", ids.attributeId ? `/admin/settings/attributes/${ ids.attributeId }/edit` : null],
+        ["/admin/settings/attributes/edit/{id} (routed shape)", ids.attributeId ? `/admin/settings/attributes/edit/${ ids.attributeId }` : null],
+        ["/admin/settings/workflows/{id}/edit (assumed shape)", ids.workflowId ? `/admin/settings/workflows/${ ids.workflowId }/edit` : null],
+        ["/admin/settings/workflows/edit/{id} (routed shape)", ids.workflowId ? `/admin/settings/workflows/edit/${ ids.workflowId }` : null],
+        ["/admin/settings/web-forms/{id}/edit (assumed shape)", ids.webFormId ? `/admin/settings/web-forms/${ ids.webFormId }/edit` : null],
+        ["/admin/settings/web-forms/edit/{id} (routed shape)", ids.webFormId ? `/admin/settings/web-forms/edit/${ ids.webFormId }` : null],
+        ["/admin/settings/warehouses/{id}/locations (assumed shape)", ids.warehouseId ? `/admin/settings/warehouses/${ ids.warehouseId }/locations` : null],
+        ["/admin/settings/warehouses/view/{id} (routed shape)", ids.warehouseId ? `/admin/settings/warehouses/view/${ ids.warehouseId }` : null],
+        ["/admin/products/{id}/inventory (assumed shape)", ids.productId ? `/admin/products/${ ids.productId }/inventory` : null],
+        ["/admin/products/view/{id} (routed shape)", ids.productId ? `/admin/products/view/${ ids.productId }` : null],
+        ["/admin/quotes/{id}/edit (assumed shape)", ids.quoteId ? `/admin/quotes/${ ids.quoteId }/edit` : null],
+        ["/admin/quotes/edit/{id} (routed shape)", ids.quoteId ? `/admin/quotes/edit/${ ids.quoteId }` : null],
+        ["/admin/leads/view/{id}?tab=products", ids.leadId ? `/admin/leads/view/${ ids.leadId }?tab=products` : null],
+        ["/admin/leads/view/{id}?tab=quotes", ids.leadId ? `/admin/leads/view/${ ids.leadId }?tab=quotes` : null],
     ];
 
     for (const [label, url] of checks) {
@@ -1234,13 +1472,13 @@ test.describe("responsive audit", () => {
     test.skip(! ENABLED, "responsive audit is opt-in: set RESPONSIVE_AUDIT=1 and point RESPONSIVE_AUDIT_STATE at a real admin session");
 
     /**
-     * The matrix is one test, not 133. Each cell costs a navigation and a full-page screenshot, and a
+     * The matrix is one test, not 210. Each cell costs a navigation and a full-page screenshot, and a
      * single sequential body keeps the write-to-disk-after-every-cell discipline simple. The budget is
-     * sized for 133 cells at ~4s each with room for a slow datagrid.
+     * sized for 210 cells at ~4s each with room for a slow datagrid.
      */
-    test.setTimeout(45 * 60 * 1000);
+    test.setTimeout(60 * 60 * 1000);
 
-    test("matrix: 19 route variants x 7 widths", async ({ browser }) => {
+    test("matrix: 30 route variants x 7 widths", async ({ browser }) => {
         ensureOutDir();
 
         if (! fs.existsSync(STATE_PATH) && ! resolveCredentials()) {
@@ -1263,7 +1501,7 @@ test.describe("responsive audit", () => {
                 "`/admin/leads` really is kanban by default (`request()->view_type ?? \"kanban\"` in the leads index view) and `/admin/leads?view_type=table` really is the datagrid, so variants 3 and 4 measure two different layouts.",
                 "`/admin/activities` is **table by default**, not calendar: the view sets `viewType: \"{{ request('view-type') }}\" || 'table'`. The calendar is reached with the hyphenated `?view-type=calendar` (underscore `view_type` is ignored and leaves the table), which is the parameter used for the calendar variant; it fires its own `XHR /admin/activities/get?view_type=calendar&startDate=...&endDate=...` and renders a week grid, so the two activity variants are distinct pages.",
                 "`/admin/mail` redirects to `/admin/mail/inbox`; the cell records the final URL rather than the requested one.",
-                "All 19 variants answered 200; none 404'd and none bounced to the login page.",
+                "Every cell records uncaught `pageerror`s and console errors raised while it was loading (see the runtime-error section of this report). A cell that never settles — Vue never mounted, or the network never went idle — is a FAIL rather than a quiet zero, because a dead page has no overflow to measure.",
             ],
             cells: [],
         };
@@ -1281,6 +1519,15 @@ test.describe("responsive audit", () => {
         const anonymousPage = await anonymousContext.newPage();
 
         const page = await authenticatedContext.newPage();
+
+        /**
+         * Attached before the first navigation so nothing during start-up is missed, and drained at
+         * the head of every cell so each cell reports only its own runtime errors.
+         */
+        const recorders = new Map<Page, () => RuntimeErrors>([
+            [anonymousPage, attachErrorRecorder(anonymousPage)],
+            [page, attachErrorRecorder(page)],
+        ]);
 
         /**
          * Resolve ids from a settled authenticated page, and record what the assumed detail-route
@@ -1316,6 +1563,10 @@ test.describe("responsive audit", () => {
 
                 const target = variant.anonymous ? anonymousPage : page;
 
+                const drainRuntimeErrors = recorders.get(target) ?? (() => ({ pageErrors: [], consoleErrors: [] }));
+
+                drainRuntimeErrors();
+
                 await target.setViewportSize({ width, height: HEIGHT });
 
                 const resolvedPath = typeof variant.path === "function" ? variant.path(ids) : variant.path;
@@ -1334,6 +1585,8 @@ test.describe("responsive audit", () => {
                     screenshot: null,
                     error: null,
                     metrics: null,
+                    pageErrors: [],
+                    consoleErrors: [],
                     verdict: "PASS",
                     failReasons: [],
                 };
@@ -1373,6 +1626,23 @@ test.describe("responsive audit", () => {
 
                     cell.redirectedToLogin = cell.url.includes("/admin/login");
 
+                    if (variant.prepare) {
+                        const prepared = await variant.prepare(target);
+
+                        const prepareNote = `${ variant.slug }: ${ prepared } before measuring (the table is rendered by a tab that fetches on activation, not on page load).`;
+
+                        if (prepared) {
+                            if (! matrix.notes.includes(prepareNote)) {
+                                matrix.notes.push(prepareNote);
+                            }
+
+                            /** The interaction may mount components and fire XHRs of its own. */
+                            cell.settled = (await settle(target)) && cell.settled;
+                        } else {
+                            cell.failReasons.push(`interaction required before measuring (\`${ variant.slug }\`) but no trigger was found`);
+                        }
+                    }
+
                     cell.metrics = await target.evaluate(measurePage);
 
                     const shot = path.join(SHOTS_DIR, `${ variant.slug }-${ width }.png`);
@@ -1397,6 +1667,20 @@ test.describe("responsive audit", () => {
                         cell.failReasons.push(`page overflow ${ cell.metrics.overflowPx }px`);
                     }
 
+                    const runtime = drainRuntimeErrors();
+
+                    cell.pageErrors = runtime.pageErrors;
+
+                    cell.consoleErrors = runtime.consoleErrors;
+
+                    if (! cell.settled) {
+                        cell.failReasons.push("did not settle: Vue never mounted or the network never went idle");
+                    }
+
+                    if (cell.pageErrors.length) {
+                        cell.failReasons.push(`${ cell.pageErrors.length } uncaught page error(s)`);
+                    }
+
                     cell.verdict = cell.failReasons.length ? "FAIL" : "PASS";
                 } catch (error) {
                     cell.verdict = "ERROR";
@@ -1409,6 +1693,44 @@ test.describe("responsive audit", () => {
 
                 persist(matrix);
             }
+        }
+
+        /**
+         * Say out loud which shared-table callers did not actually measure a table. A cell whose page
+         * is complete but whose table is absent, hidden behind an inactive tab, or empty still
+         * measures as a clean zero overflow, and silence there reads as "that route is fine" when it
+         * means "that route's table was never exercised".
+         */
+        const tableGaps: string[] = [];
+
+        for (const variant of variants.filter((entry) => entry.usesSharedTable)) {
+            const variantCells = matrix.cells.filter((cell) => cell.variantSlug === variant.slug && cell.metrics);
+
+            if (! variantCells.length) {
+                continue;
+            }
+
+            const withoutWrapper = variantCells.filter((cell) => cell.metrics!.sharedTable.wrappers === 0).map((cell) => cell.width);
+
+            const hidden = variantCells.filter((cell) => cell.metrics!.sharedTable.wrappers > 0 && cell.metrics!.sharedTable.visible === 0).map((cell) => cell.width);
+
+            const empty = variantCells.filter((cell) => cell.metrics!.sharedTable.visible > 0 && ! cell.metrics!.sharedTable.rendered).map((cell) => cell.width);
+
+            if (withoutWrapper.length) {
+                tableGaps.push(`\`${ variant.slug }\` rendered **no** \`x-admin::table\` wrapper at ${ withoutWrapper.join(", ") }px — the route's table is created by an interaction this sweep does not drive, so those cells measure the surrounding page only.`);
+            }
+
+            if (hidden.length) {
+                tableGaps.push(`\`${ variant.slug }\` carried the shared table but never made it visible at ${ hidden.join(", ") }px (its tab stayed inactive, or the content it needs is missing), so a \`display:none\` table is not what those cells measured.`);
+            }
+
+            if (empty.length) {
+                tableGaps.push(`\`${ variant.slug }\` made the shared table visible with **zero rows** at ${ empty.join(", ") }px: the wrapper and its columns were measured, the body was empty.`);
+            }
+        }
+
+        if (tableGaps.length) {
+            matrix.notes.push(`Shared-table coverage gaps (not failures — an absent, hidden or empty table cannot overflow): ${ tableGaps.join(" ") }`);
         }
 
         await anonymousContext.close();
