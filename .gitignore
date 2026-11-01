@@ -15,7 +15,9 @@ Homestead.yaml
 /ignorables/*
 /node_modules
 npm-debug.log
-package-lock.json
+# Lockfiles are tracked on purpose: the admin bundles committed under
+# public/admin/build are only reproducible when the dependency graph is pinned.
+# Rebuild with `npm ci`, never `npm install`.
 /docs/*
 !/docs/client-guide/
 !/docs/sales/
