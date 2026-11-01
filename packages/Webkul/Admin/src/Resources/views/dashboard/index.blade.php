@@ -22,7 +22,7 @@
 
         <v-dashboard-filters>
             <!-- Shimmer -->
-            <div class="flex gap-1.5">
+            <div class="flex flex-wrap gap-1.5">
                 @if ($pipelines->count() > 1)
                     <div class="light-shimmer-bg dark:shimmer h-[39px] w-[160px] rounded-md"></div>
                 @endif
@@ -105,7 +105,7 @@
         >
             {!! view_render_event('admin.dashboard.index.date_filters.before') !!}
 
-            <div class="flex gap-1.5">
+            <div class="flex flex-wrap gap-1.5">
                 @if ($pipelines->count() > 1)
                     <!-- Pipeline Selector -->
                     <select
