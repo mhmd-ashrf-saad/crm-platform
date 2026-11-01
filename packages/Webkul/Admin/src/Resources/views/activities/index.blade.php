@@ -93,7 +93,7 @@
                                 </template>
 
                                 <template v-else>
-                                    <div class="row grid grid-cols-[.3fr_.1fr_.3fr_.5fr] grid-rows-1 items-center gap-x-2.5 border-b px-4 py-2.5 dark:border-gray-800 max-lg:hidden">
+                                    <div class="row grid grid-cols-[.3fr_.1fr_.3fr_.5fr] grid-rows-1 items-center gap-x-2.5 border-b px-4 py-2.5 dark:border-gray-800 max-xl:hidden">
                                         <div
                                             class="flex min-w-0 select-none items-center gap-2.5"
                                             v-for="(columnGroup, index) in [['id', 'title', 'created_by_id'], ['is_done'], ['comment', 'lead_title', 'type'], ['schedule_from', 'schedule_to', 'created_at']]"
@@ -151,7 +151,7 @@
                                     </div>
 
                                     <!-- Mobile Sort/Filter Header -->
-                                    <div class="hidden border-b bg-gray-50 px-4 py-3 text-black dark:border-gray-800 dark:bg-gray-900 dark:text-gray-300 max-lg:block">
+                                    <div class="hidden border-b bg-gray-50 px-4 py-3 text-black dark:border-gray-800 dark:bg-gray-900 dark:text-gray-300 max-xl:block">
                                         <div class="flex items-center justify-between">
                                             <!-- Mass Actions for Mobile -->
                                             <div v-if="available.massActions.length">
@@ -234,7 +234,7 @@
 
                                 <template v-else>
                                     <div
-                                        class="row grid grid-cols-[.3fr_.1fr_.3fr_.5fr] grid-rows-1 gap-x-2.5 border-b px-4 py-2.5 transition-all hover:bg-gray-50 dark:border-gray-800 dark:hover:bg-gray-950 max-lg:hidden"
+                                        class="row grid grid-cols-[.3fr_.1fr_.3fr_.5fr] grid-rows-1 gap-x-2.5 border-b px-4 py-2.5 transition-all hover:bg-gray-50 dark:border-gray-800 dark:hover:bg-gray-950 max-xl:hidden"
                                         v-for="record in available.records"
                                     >
                                         <!-- Mass Actions, Title and Created By -->
@@ -334,7 +334,7 @@
 
                                     <!-- Mobile Card View -->
                                     <div
-                                        class="hidden border-b px-4 py-4 text-black dark:border-gray-800 dark:text-gray-300 max-lg:block"
+                                        class="hidden border-b px-4 py-4 text-black dark:border-gray-800 dark:text-gray-300 max-xl:block"
                                         v-for="record in available.records"
                                     >
                                         <div class="mb-2 flex items-center justify-between">
