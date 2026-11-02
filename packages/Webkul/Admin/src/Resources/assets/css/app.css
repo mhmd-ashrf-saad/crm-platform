@@ -638,13 +638,24 @@
         @apply content-['*'];
     }
 
+    /**
+     * The page header bar bleeds 1rem past its column on each side once the page is scrolling
+     * downward, so it reads as a full-width band instead of a floating card.
+     *
+     * The bleed has to be written with logical properties. In an RTL document a block box is
+     * over-constrained once `width` exceeds the containing block, and CSS 2.1 resolves that by
+     * ignoring the *`margin-left`* used value (it ignores `margin-right` in LTR). A physical
+     * `margin-left: -1rem` therefore did nothing here: the box kept its right edge on the column
+     * and grew the whole extra 2rem leftward, pushing it 16px past the viewport and giving every
+     * page a horizontal scrollbar the moment the user scrolled down. `margin-inline` mirrors with
+     * the writing direction, so each side gets exactly its own 1rem.
+     */
     body.is-scrolling-down .scroll-reactive-sticky {
         width: calc(100% + 2rem);
-        margin-left: -1rem;
+        margin-inline: -1rem;
         border-radius: 0px;
-        padding-left: 2rem;
-        padding-right: 2rem;
-        border-right: none !important;
+        padding-inline: 2rem;
+        border-inline-end: none !important;
     }
 }
 
