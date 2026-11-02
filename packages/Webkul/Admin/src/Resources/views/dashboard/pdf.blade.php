@@ -158,7 +158,7 @@
                 </div>
 
                 <div class="report-subtitle">
-                    @lang('admin::app.dashboard.index.pdf.filtered-date'): {{ $startDate->format('d M Y') }} - {{ $endDate->format('d M Y') }}
+                    @lang('admin::app.dashboard.index.pdf.filtered-date'): {{ core()->formatDate($startDate, 'd M Y') }} - {{ core()->formatDate($endDate, 'd M Y') }}
                 </div>
             </div>
 
