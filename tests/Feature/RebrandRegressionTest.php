@@ -606,10 +606,9 @@ function rebrandScanValues(array $tree, string $label): array
  * Scan only the VALUES of a locale file: the keys are internal identifiers, the
  * translated strings are what a user reads.
  *
- * These core files are the recorded exception to the never-modify-core rule —
- * the rebrand edits them in place because `array_replace_recursive()` can only
- * replace a key, never delete one — so they must keep being scanned as core
- * files, on disk, and values-only.
+ * These core files are the recorded core edits the rebrand makes in place —
+ * because `array_replace_recursive()` can only replace a key, never delete one —
+ * so they must keep being scanned as core files, on disk, and values-only.
  *
  * @return list<string>
  */

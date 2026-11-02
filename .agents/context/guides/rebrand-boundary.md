@@ -1,4 +1,4 @@
-<!-- Context: guides/rebrand-boundary.md | Priority: high | Version: 1.6 | Updated: 2026-10-17 -->
+<!-- Context: guides/rebrand-boundary.md | Priority: high | Version: 1.7 | Updated: 2026-11-02 -->
 
 # Rebrand Boundary
 
@@ -40,17 +40,17 @@ The operator's decided scope, in substance:
 - `config/krayin-vite.php`, unless an override path exists.
 - The `vendor/` tree.
 
-## The invariant
+## The boundary
 
-Branding is applied through an override or configuration surface, never by
-editing a core Krayin file. That is this checkout's existing never-modify-core
-rule applied to naming; the rule and its upgrade-safety reasoning live in
-`AGENTS.md` (fork-specific project section) and are not restated here.
+Branding goes through an override or configuration surface — a whole-file view
+under `packages/Sijilna/Brand/resources/views/**` prepended by
+`BrandingServiceProvider`'s view namespace. That is a preference now, not a
+prohibition: never-modify-core was retired on 2026-11-01, because this fork is
+separating from Krayin and `2.2` merge debt no longer constrains design — `AGENTS.md` records it.
 
-## Recorded exceptions — core files the rebrand did change
+## Recorded core edits
 
-The invariant above is the rule; these are the exceptions the tree now carries.
-Each is a core Krayin file changed on purpose, and merge debt on every `2.2` merge.
+Every core Krayin file this tree changes on purpose is listed here; merge debt is no longer a reason to refuse one, recording it still is.
 
 | File | Change | Why it could not be an override |
 | ---- | ------ | ------------------------------- |
@@ -64,15 +64,18 @@ Each is a core Krayin file changed on purpose, and merge debt on every `2.2` mer
 | `composer.lock` | One line, `content-hash` (`92387f91…` → `6133d5a2…`) | Must be regenerated with Composer's own algorithm if any hashed key in `composer.json` changes again; `composer update --lock` cannot resolve offline here. |
 | `packages/Webkul/Automation/src/Helpers/Entity/Activity.php` | One line, 318: the iCal `PRODID`, `PRODID:-//Krayincrm//Krayincrm//EN` → `PRODID:-//Sijilna//Sijilna//EN` | The string is hardcoded in a helper with no config key, view or lang surface, and calendar clients render it. |
 | `tests/Feature/Security/HtmlSanitizationTest.php` | The sanitisation fixture's URL and text swapped to the brand domain (`krayincrm.com`/`Krayin` → `sijilna.com`/`Sijilna`) | A test fixture has no view or config surface to override; the file sits at an upstream path a `2.2` merge also owns. |
-| `AGENTS.md` | Fork identity in the header (3 lines) plus a 17-line "Rebrand boundary" subsection, on a file the fork had already expanded from upstream's 70 lines to 274 at `HEAD` (+204 lines, commit `b9d80f3a`); 288 lines in the working tree | Agent instructions are read directly; nothing loads them as an overridable surface. A merge collides on the whole fork project section, rebrand or not. |
+| `AGENTS.md` | Fork identity in the header (3 lines) plus a 17-line "Rebrand boundary" subsection, on a file the fork had already expanded from upstream's 70 lines to 274 at `HEAD` (+204 lines, commit `b9d80f3a`); 297 lines in the working tree | Agent instructions are read directly; nothing loads them as an overridable surface. A merge collides on the whole fork project section, rebrand or not. |
 
 A `2.2` merge sees more than this table: `git diff --name-only upstream/2.2`
 also lists pre-existing fork work the rebrand did not touch — `.agents/context/**`,
 `Makefile`, `scripts/**`, the Playwright e2e suite, `phpunit.xml`, `CHANGELOG.md`,
 both CI workflows and `.gitignore` — reconciled separately.
 
-Re-verified 2026-10-17: `git status --porcelain -- packages/Webkul` still lists
-exactly these 21 files, and `-- public/` is empty.
+## Core edits outside the rebrand — the responsive pass (crm-0b9)
+
+`Core/src/Core.php` (locale-aware `formatDate`), `Attribute/src/Repositories/AttributeValueRepository.php` (date labels),
+`Admin/src/DataGrids/Mail/EmailDataGrid.php` (mail dates), `Admin/src/Helpers/Reporting/Lead.php` (chart labels),
+plus the 25 Admin views, `assets/css/app.css` and `assets/js/plugins/vee-validate.js` — each in `CHANGELOG.md`.
 
 ### Why the locale values are edited in place
 
@@ -111,13 +114,10 @@ test failure instead of a silent regression.
 exists (`packages/Sijilna/Brand` plus the provider) and per-client branding is
 configuration, so these 21 core Webkul edits are unavoidable, not an oversight.
 
-## Decided — `CHANGELOG.md` stays untouched
+## Overtaken — `CHANGELOG.md` is edited
 
-The operator decided the fork does not edit `CHANGELOG.md`, despite the
-convention in `AGENTS.md`'s fork section requiring an entry for every change.
-Upstream owns the file and rewrites it wholesale on each release, so an entry
-buys a conflict on every future `2.2` merge. Deliberate, considered: do not
-re-open it as an oversight or add the missing entry.
+Recorded untouched on 2026-10-17; it is not. Every change gets an entry under the
+topmost unreleased heading, which is where the edits above are described.
 
 ## Accepted residuals — do not re-file these as bugs
 
@@ -151,8 +151,8 @@ surface. **The list is exactly five.** The installer's outbound vendor POST is
    `border-left: 8px solid` plus its `icon:` and `stroke:`. It is a generic alert
    severity, not a brand mark: `/admin/login` returns `200` with
    `--brand-color: #0B3C5D`. No config key reaches it, and removing it needs a
-   core edit or a copy of an unrelated ~60-line component — both
-   disproportionate under the never-modify-core rule.
+   core edit or a copy of an unrelated ~60-line component — neither worth it for
+   a generic alert severity.
 
 ## Fixed, not accepted — the installer's outbound vendor call
 
@@ -194,6 +194,6 @@ official, endorsed or sponsored by Webkul Software.
 
 ## Related
 
-- Never-modify-core rule → `AGENTS.md` (fork-specific project section)
+- Core-edit rule, retired 2026-11-01 → `AGENTS.md` (fork-specific project section)
 - Attribution and dependency licences → `THIRD-PARTY-NOTICES.md`
 - Branch model and upstream merges → [../operations/environment-and-deployment.md](../operations/environment-and-deployment.md)

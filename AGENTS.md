@@ -37,8 +37,12 @@ skill content here — keep details in the skills.
 
 ## Critical Conventions (Never Deviate)
 
-- **Never modify core Krayin files** unless explicitly required. Extend behavior
-  through a package under `packages/Webkul/`.
+- **Core Krayin files may be edited — deliberately, and on the record.** The
+  never-modify rule was retired on 2026-11-01: this fork will separate from
+  Krayin, so `2.2` merge debt no longer constrains design. Branding still prefers
+  an override under `packages/Sijilna/`; a targeted edit under `packages/Webkul/`
+  is allowed when it is deliberate and recorded in
+  `.agents/context/guides/rebrand-boundary.md`.
 - **All schema changes go through migrations** — never edit the database directly.
 - **Follow the existing module layout** (Providers, Models, Contracts,
   Repositories, Http/Controllers, Routes, Database/Migrations, Resources/views,
@@ -220,9 +224,14 @@ one. See `scripts/README.md` for the full runbook.
   `.env` says `local` is still wiped. That is exactly why an agent testing the
   guard must never run `db-reset` against `krayin` — test it against a scratch
   database.
-- **Never modify core Krayin files.** Extend through a package under
-  `packages/Webkul/`. A core edit collides on every `2.2` merge and cannot be
-  upgraded safely; package code rarely touches upstream paths.
+- **Never edit a core Krayin file by accident.** The never-modify rule was
+  retired on 2026-11-01 by operator decision: the product will be separated from
+  Krayin entirely, so the `2.2` merge debt the rule guarded against is no longer
+  a design constraint. A targeted edit under `packages/Webkul/**` is permitted
+  when it is deliberate; branding still prefers a whole-file view override in
+  `packages/Sijilna/Brand/resources/views/**` prepended by
+  `BrandingServiceProvider`'s view namespace, and every core edit goes on the
+  record in `.agents/context/guides/rebrand-boundary.md`.
 - **Never commit `.env` or any credential.** `.env` is gitignored; a hardcoded
   credential in a committable script was already found and removed once. If a
   default is convenient, that is the reason it is forbidden.

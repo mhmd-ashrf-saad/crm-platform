@@ -1,4 +1,4 @@
-<!-- Context: guides/agent-workflow-rules.md | Priority: critical | Version: 1.0 | Updated: 2026-10-16 -->
+<!-- Context: guides/agent-workflow-rules.md | Priority: critical | Version: 1.1 | Updated: 2026-11-02 -->
 
 # Agent Workflow Rules
 
@@ -52,7 +52,11 @@ Use `bd` for durable project work, not markdown TODO files. Do not use
   not make it refuse — an instance whose `.env` says `local` is still wiped.
   Test against a scratch database (`krayin_scratch_*`).
 - **Never** run `docker volume prune` or `docker system prune`.
-- **Never** modify core Krayin files; extend through `packages/Webkul/`.
+- **Never** edit a core Krayin file by accident. The never-modify rule was
+  retired on 2026-11-01 — this fork is separating from Krayin, so `2.2` merge
+  debt no longer constrains design — so a deliberate edit under
+  `packages/Webkul/**` is allowed: prefer overrides for branding, and record the
+  edit in [rebrand-boundary.md](rebrand-boundary.md).
 - **Never** commit `.env` or any credential. A credential has already been
   hardcoded in a committable script once.
 - **Never** use `pkill -f 'php artisan serve'`; it is unanchored and killed the
