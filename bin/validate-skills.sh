@@ -41,8 +41,8 @@ echo "[skills] checking for SKILL.md outside canonical source"
 mapfile -t outside_skills < <(
     find . \
         -path './.git' -prune -o \
-        -path './vendor' -prune -o \
-        -path './node_modules' -prune -o \
+        -name node_modules -prune -o \
+        -name vendor -prune -o \
         -type f -name SKILL.md -print \
     | grep -v '^./.github/skills/' || true
 )
