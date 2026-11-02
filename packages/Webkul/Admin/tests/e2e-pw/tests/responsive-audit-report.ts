@@ -66,6 +66,49 @@ export type OverlayRisk = {
     viewportFraction: number;
 };
 
+/**
+ * One element measured past the viewport edge *while the page was scrolled*.
+ *
+ * Kept separate from `Overshoot` because the scrolled pass does not need the rest of the cell
+ * metrics and should not pretend to produce them: it answers one question — what overflows once the
+ * scroll-direction state is live.
+ */
+export type ScrolledCulprit = {
+    selector: string;
+    tag: string;
+    classes: string[];
+    position: string;
+    rect: Rect;
+    overshootPx: number;
+    side: "left" | "right";
+};
+
+/**
+ * The page measured a second time, after scrolling to the bottom.
+ *
+ * The audit used to measure each route only at scroll position 0, which is the one state in which a
+ * `body.is-scrolling-down` rule cannot be seen at all. That blind spot is exactly where a 16px
+ * horizontal scrollbar lived on every page with a `scroll-reactive-sticky` header bar.
+ */
+export type ScrolledOverflow = {
+    /** Whether `document.body` carried `is-scrolling-down` at the moment of measurement. */
+    applied: boolean;
+    scrollY: number;
+    /** How far the document could scroll at all; `0` means there was no scroll state to engage. */
+    maxScrollY: number;
+    /** `documentElement.scrollWidth - clientWidth`; anything above 1 fails the cell. */
+    overflowPxScrolled: number;
+    bodyOverflowPxScrolled: number;
+    innerWidth: number;
+    clientWidth: number;
+    /**
+     * Geometry of the reactive header bar, when the page has one. Recorded so "the bar bleeds past
+     * its column" can be told apart from "the bar was removed", which measure the same overflow.
+     */
+    stickyBar: { left: number; right: number; width: number; marginInlineStart: string; marginInlineEnd: string } | null;
+    culprits: ScrolledCulprit[];
+};
+
 export type CellMetrics = {
     dir: string | null;
     lang: string | null;
@@ -137,6 +180,11 @@ export type AuditCell = {
     pageErrors: string[];
     /** Console messages of type `error` raised while this cell was loading. */
     consoleErrors: string[];
+    /**
+     * The same page measured again at the bottom of the scroll, where the scroll-direction rules
+     * apply. `null` only when the measurement itself could not be taken.
+     */
+    scrolledOverflow: ScrolledOverflow | null;
     verdict: "PASS" | "FAIL" | "ERROR";
     failReasons: string[];
 };
@@ -210,6 +258,11 @@ const rankOverflow = (cells: AuditCell[]): AuditCell[] =>
         .filter((cell) => cell.metrics && cell.metrics.overflowPx > 1)
         .sort((a, b) => (b.metrics!.overflowPx - a.metrics!.overflowPx));
 
+const rankScrolled = (cells: AuditCell[]): AuditCell[] =>
+    cells
+        .filter((cell) => cell.scrolledOverflow !== null && cell.scrolledOverflow.overflowPxScrolled > 1)
+        .sort((a, b) => b.scrolledOverflow!.overflowPxScrolled - a.scrolledOverflow!.overflowPxScrolled);
+
 const rankTouch = (cells: AuditCell[]): AuditCell[] =>
     cells
         .filter((cell) => cell.metrics && cell.metrics.touchTargets.count > 0)
@@ -274,7 +327,7 @@ export function renderMarkdown(matrix: AuditMatrix, probes: ProbeResult[] = []):
     lines.push(`- Cells attempted: ${ attempted } of ${ matrix.expectedCells } expected`);
     lines.push(`- **PASS ${ passed } / FAIL ${ failed } / ERROR ${ errored }**`);
     lines.push("");
-    lines.push("Cell verdict rule: **FAIL** when the route did not answer 2xx, or the session was bounced to `/admin/login`, or `documentElement.scrollWidth - innerWidth > 1` px, or the page never settled (Vue never mounted / the network never went idle), or the page threw an uncaught error. Everything else (touch targets, font sizes, overlay height, internal scroll, console errors) is recorded in `matrix.json` and ranked below, but does not change the verdict — internal scroll in particular is informational, not a defect.");
+    lines.push("Cell verdict rule: **FAIL** when the route did not answer 2xx, or the session was bounced to `/admin/login`, or `documentElement.scrollWidth - innerWidth > 1` px at rest, or `documentElement.scrollWidth - clientWidth > 1` px after scrolling to the bottom (where the `body.is-scrolling-down` rules apply), or the page never settled (Vue never mounted / the network never went idle), or the page threw an uncaught error. Everything else (touch targets, font sizes, overlay height, internal scroll, console errors) is recorded in `matrix.json` and ranked below, but does not change the verdict — internal scroll in particular is informational, not a defect.");
     lines.push("");
 
     lines.push("## Pass/fail matrix");
@@ -323,6 +376,40 @@ export function renderMarkdown(matrix: AuditMatrix, probes: ProbeResult[] = []):
             const culprit = cell.metrics!.culprits.find((item) => item.insideScroller === null) ?? cell.metrics!.culprits[0];
 
             lines.push(`| ${ index + 1 } | ${ escapeCell(cell.variantLabel) } | ${ cell.width } | ${ cell.metrics!.overflowPx } | ${ cell.metrics!.bodyOverflowPx } | ${ culprit ? escapeCell(`${ culprit.selector } (${ culprit.overshootPx } px past the ${ culprit.side } edge${ culprit.insideScroller ? `, inside scroller ${ culprit.insideScroller }` : "" })`) : "—" } |`);
+        });
+    }
+
+    lines.push("");
+    lines.push("### Scrolled-state overflow (FAIL condition)");
+    lines.push("");
+    lines.push("Every cell is measured twice: at rest, and again after scrolling to the bottom of the document with `body.is-scrolling-down` engaged. The second pass exists because a rule that only applies *while scrolling* is invisible to a measurement taken at scroll position 0 — which is how a 16px horizontal scrollbar on every page with a reactive header bar survived the first 210-cell sweep. `stickyBar` records the bar's geometry so a fix reads differently from a removal: both measure zero overflow.");
+    lines.push("");
+
+    const scrolled = cells.filter((cell) => cell.scrolledOverflow !== null);
+    const engaged = scrolled.filter((cell) => cell.scrolledOverflow!.applied);
+    const unscrollable = scrolled.filter((cell) => cell.scrolledOverflow!.maxScrollY === 0);
+    const unengaged = scrolled.filter((cell) => cell.scrolledOverflow!.maxScrollY > 0 && ! cell.scrolledOverflow!.applied);
+
+    lines.push(`- Cells measured while scrolled (\`is-scrolling-down\` present): ${ engaged.length } of ${ scrolled.length }.`);
+    lines.push(`- Cells that could not scroll at all (the document fits the viewport, so there is no scroll state to engage): ${ unscrollable.length }${ unscrollable.length ? ` — ${ top(unscrollable, 8).map((cell) => `${ cell.variantSlug }@${ cell.width }`).join(", ") }${ unscrollable.length > 8 ? ", …" : "" }` : "" }.`);
+    lines.push(`- Cells that could scroll but never engaged \`is-scrolling-down\`: ${ unengaged.length }${ unengaged.length ? ` — ${ unengaged.map((cell) => `${ cell.variantSlug }@${ cell.width }`).join(", ") }` : "" }.`);
+    lines.push("");
+
+    const scrolledOverflow = rankScrolled(cells);
+
+    if (! scrolledOverflow.length) {
+        lines.push("No cell overflows the page horizontally while scrolled.");
+    } else {
+        lines.push("| Rank | Variant | Width | Scrolled overflow px | At-rest overflow px | Bar geometry | Worst culprit |");
+        lines.push("|---|---|---|---|---|---|---|");
+
+        top(scrolledOverflow, 20).forEach((cell, index) => {
+            const bar = cell.scrolledOverflow!.stickyBar;
+            const culprit = cell.scrolledOverflow!.culprits[0];
+
+            lines.push(
+                `| ${ index + 1 } | ${ escapeCell(cell.variantLabel) } | ${ cell.width } | ${ cell.scrolledOverflow!.overflowPxScrolled } | ${ cell.metrics ? cell.metrics.overflowPx : "n/a" } | ${ bar ? escapeCell(`${ bar.left }..${ bar.right } (${ bar.width }px)`) : "—" } | ${ culprit ? escapeCell(`${ culprit.tag }.${ culprit.classes.slice(0, 2).join(".") } ${ culprit.position } at x=${ culprit.rect.x } y=${ culprit.rect.y } ${ culprit.rect.width }x${ culprit.rect.height } — ${ culprit.overshootPx } px past the ${ culprit.side } edge`) : "—" } |`
+            );
         });
     }
 

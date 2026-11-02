@@ -2,7 +2,7 @@ import { test, type Browser, type BrowserContext, type Page } from "@playwright/
 import fs from "node:fs";
 import path from "node:path";
 
-import { renderMarkdown, type AuditCell, type AuditMatrix, type CellMetrics, type ProbeResult } from "./responsive-audit-report";
+import { renderMarkdown, type AuditCell, type AuditMatrix, type CellMetrics, type ProbeResult, type ScrolledOverflow } from "./responsive-audit-report";
 
 /**
  * Responsive audit harness — a measuring instrument, not a test.
@@ -87,6 +87,14 @@ const WIDTHS = WIDTH_FILTER.length ? ALL_WIDTHS.filter((width) => WIDTH_FILTER.i
 const NAV_TIMEOUT = 45_000;
 
 const SETTLE_TIMEOUT = 20_000;
+
+/**
+ * How long a cell waits for `body.is-scrolling-down` after being scrolled to the bottom.
+ *
+ * The class is added by a Vue `scroll` listener that ignores deltas under 2px, so a jump to the
+ * bottom lands well inside one frame; the budget only has to cover that frame plus a slow tab.
+ */
+const SCROLLED_TIMEOUT = 5_000;
 
 /**
  * Every id a variant can depend on. All of them are resolved from the live datagrid JSON at run
@@ -461,6 +469,139 @@ function attachErrorRecorder(page: Page): () => RuntimeErrors {
 /* -------------------------------------------------------------------------------------------- */
 /* Measurement                                                                                   */
 /* -------------------------------------------------------------------------------------------- */
+
+/**
+ * Scroll the document to its bottom and wait for the scroll-direction state to be live.
+ *
+ * The admin adds `body.is-scrolling-down` from a `scroll` listener and removes it again at scroll
+ * position 0, so a rule written under that class is invisible to any measurement taken at rest.
+ * Scrolling programmatically fires the same listener; the two-argument `scrollTo` is used because it
+ * is instant by definition, so the measurement never races a smooth-scroll animation.
+ *
+ * Nothing here fails on its own: a document shorter than the viewport has no scroll state to engage,
+ * and that is recorded (`maxScrollY: 0`, `applied: false`) rather than treated as a defect. What the
+ * cell is judged on is the overflow measured once the state *is* live.
+ */
+async function scrolledState(page: Page): Promise<ScrolledOverflow> {
+    const maxScrollY = await page.evaluate(() => {
+        const root = document.documentElement;
+
+        const max = Math.max(0, root.scrollHeight - root.clientHeight);
+
+        window.scrollTo(0, max);
+
+        return max;
+    });
+
+    if (maxScrollY > 0) {
+        await page
+            .waitForFunction(() => document.body.classList.contains("is-scrolling-down"), undefined, { timeout: SCROLLED_TIMEOUT })
+            .catch(() => {});
+    }
+
+    const measured = await page.evaluate(measureScrolledOverflow);
+
+    return { ...measured, maxScrollY };
+}
+
+/**
+ * The scrolled-state measurement, in the page's own coordinates.
+ *
+ * Deliberately narrower than `measurePage`: the rest-state metrics (touch targets, font sizes,
+ * overlay risk) describe the page as it first renders and must not be re-derived from a scrolled
+ * layout. This answers one question — with the scroll-direction rules live, does the document still
+ * fit the viewport — and names the elements that say otherwise, with the tag, classes, position and
+ * rect a fix would need.
+ */
+function measureScrolledOverflow(): Omit<ScrolledOverflow, "maxScrollY"> {
+    const DEBUGBAR = "#phpdebugbar,[class*=\"phpdebugbar\"]";
+
+    const round = (value: number): number => Math.round(value * 10) / 10;
+
+    const root = document.documentElement;
+
+    const innerWidth = window.innerWidth;
+
+    const clientWidth = root.clientWidth;
+
+    const offences = Array.from(document.querySelectorAll("body *"))
+        .filter((element) => ! element.closest(DEBUGBAR))
+        .map((element) => {
+            const rect = element.getBoundingClientRect();
+
+            if (rect.width <= 0 || rect.height <= 0) {
+                return null;
+            }
+
+            /** Both edges: an RTL document overflows past the left edge, not the right. */
+            const pastRight = rect.right - clientWidth;
+
+            const pastLeft = -rect.left;
+
+            if (pastRight <= 1 && pastLeft <= 1) {
+                return null;
+            }
+
+            return { element, rect, pastRight, pastLeft };
+        })
+        .filter((entry): entry is { element: Element; rect: DOMRect; pastRight: number; pastLeft: number } => entry !== null);
+
+    /** Leaf-most only: a wrapper and the child that overflows it are one defect, not two. */
+    const leaves = offences.filter(
+        (candidate) => ! offences.some((other) => other.element !== candidate.element && candidate.element.contains(other.element))
+    );
+
+    const culprits = leaves
+        .sort((a, b) => Math.max(b.pastRight, b.pastLeft) - Math.max(a.pastRight, a.pastLeft))
+        .slice(0, 5)
+        .map(({ element, rect, pastRight, pastLeft }) => {
+            const style = window.getComputedStyle(element);
+
+            return {
+                selector: `${ element.tagName.toLowerCase() }${ Array.from(element.classList)
+                    .filter((name) => name.length < 40 && ! /[[\]:/@%!()]/.test(name))
+                    .slice(0, 3)
+                    .map((name) => `.${ name }`)
+                    .join("") }`,
+                tag: element.tagName.toLowerCase(),
+                classes: Array.from(element.classList).slice(0, 4),
+                position: style.position,
+                rect: { x: round(rect.x), y: round(rect.y), width: round(rect.width), height: round(rect.height) },
+                overshootPx: round(Math.max(pastRight, pastLeft)),
+                side: (pastRight >= pastLeft ? "right" : "left") as "left" | "right",
+            };
+        });
+
+    /**
+     * The reactive header bar's own box. Without it, "the bleed was fixed" and "the bar was deleted"
+     * are indistinguishable: both report zero overflow.
+     */
+    const bar = document.querySelector(".scroll-reactive-sticky");
+
+    const barRect = bar ? bar.getBoundingClientRect() : null;
+
+    const barStyle = bar ? window.getComputedStyle(bar) : null;
+
+    return {
+        applied: document.body.classList.contains("is-scrolling-down"),
+        scrollY: Math.round(window.scrollY),
+        overflowPxScrolled: round(root.scrollWidth - clientWidth),
+        bodyOverflowPxScrolled: round(document.body.scrollWidth - clientWidth),
+        innerWidth,
+        clientWidth,
+        stickyBar:
+            barRect && barStyle
+                ? {
+                      left: round(barRect.left),
+                      right: round(barRect.right),
+                      width: round(barRect.width),
+                      marginInlineStart: barStyle.marginInlineStart,
+                      marginInlineEnd: barStyle.marginInlineEnd,
+                  }
+                : null,
+        culprits,
+    };
+}
 
 /**
  * Everything measured in one `page.evaluate`, in the page's own coordinates.
@@ -1502,6 +1643,7 @@ test.describe("responsive audit", () => {
                 "`/admin/activities` is **table by default**, not calendar: the view sets `viewType: \"{{ request('view-type') }}\" || 'table'`. The calendar is reached with the hyphenated `?view-type=calendar` (underscore `view_type` is ignored and leaves the table), which is the parameter used for the calendar variant; it fires its own `XHR /admin/activities/get?view_type=calendar&startDate=...&endDate=...` and renders a week grid, so the two activity variants are distinct pages.",
                 "`/admin/mail` redirects to `/admin/mail/inbox`; the cell records the final URL rather than the requested one.",
                 "Every cell records uncaught `pageerror`s and console errors raised while it was loading (see the runtime-error section of this report). A cell that never settles — Vue never mounted, or the network never went idle — is a FAIL rather than a quiet zero, because a dead page has no overflow to measure.",
+                "Every cell is measured twice: at rest and again after scrolling to the bottom with `body.is-scrolling-down` engaged. Rules written under that class cannot be seen at scroll position 0, which is how a 16px horizontal scrollbar on every page with a `scroll-reactive-sticky` header bar survived the first sweep. A scrolled overflow above 1px fails the cell, and the offending elements are recorded in `scrolledOverflow.culprits` with tag, classes, position and rect.",
             ],
             cells: [],
         };
@@ -1585,6 +1727,7 @@ test.describe("responsive audit", () => {
                     screenshot: null,
                     error: null,
                     metrics: null,
+                    scrolledOverflow: null,
                     pageErrors: [],
                     consoleErrors: [],
                     verdict: "PASS",
@@ -1653,6 +1796,20 @@ test.describe("responsive audit", () => {
 
                     cell.screenshot = shot;
 
+                    /**
+                     * Second measurement, at the bottom of the scroll.
+                     *
+                     * Taken after the screenshot so the rest-state artifacts stay as they were, and
+                     * before the verdict is decided so the scrolled overflow can fail the cell. A
+                     * throw here is a harness failure, not a quiet zero: a cell whose scrolled state
+                     * was never measured must not read as one that passed it.
+                     */
+                    try {
+                        cell.scrolledOverflow = await scrolledState(target);
+                    } catch (error) {
+                        cell.failReasons.push(`scrolled measurement failed: ${ (error as Error).message.split("\n")[0] }`);
+                    }
+
                     const statusNumber = typeof cell.status === "number" ? cell.status : Number.parseInt(String(cell.status), 10);
 
                     if (! Number.isFinite(statusNumber) || statusNumber < 200 || statusNumber >= 300) {
@@ -1665,6 +1822,16 @@ test.describe("responsive audit", () => {
 
                     if (cell.metrics.overflowPx > 1) {
                         cell.failReasons.push(`page overflow ${ cell.metrics.overflowPx }px`);
+                    }
+
+                    if (cell.scrolledOverflow && cell.scrolledOverflow.overflowPxScrolled > 1) {
+                        cell.failReasons.push(
+                            `page overflow ${ cell.scrolledOverflow.overflowPxScrolled }px while scrolled` +
+                                ` (${ cell.scrolledOverflow.applied ? "body.is-scrolling-down engaged" : "scroll state not engaged" })` +
+                                (cell.scrolledOverflow.culprits[0]
+                                    ? `, worst \`${ cell.scrolledOverflow.culprits[0].selector }\` ${ cell.scrolledOverflow.culprits[0].position } ${ cell.scrolledOverflow.culprits[0].overshootPx }px past the ${ cell.scrolledOverflow.culprits[0].side } edge`
+                                    : "")
+                        );
                     }
 
                     const runtime = drainRuntimeErrors();
