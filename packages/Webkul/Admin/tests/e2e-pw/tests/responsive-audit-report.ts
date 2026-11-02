@@ -392,7 +392,15 @@ export function renderMarkdown(matrix: AuditMatrix, probes: ProbeResult[] = []):
 
     lines.push(`- Cells measured while scrolled (\`is-scrolling-down\` present): ${ engaged.length } of ${ scrolled.length }.`);
     lines.push(`- Cells that could not scroll at all (the document fits the viewport, so there is no scroll state to engage): ${ unscrollable.length }${ unscrollable.length ? ` — ${ top(unscrollable, 8).map((cell) => `${ cell.variantSlug }@${ cell.width }`).join(", ") }${ unscrollable.length > 8 ? ", …" : "" }` : "" }.`);
-    lines.push(`- Cells that could scroll but never engaged \`is-scrolling-down\`: ${ unengaged.length }${ unengaged.length ? ` — ${ unengaged.map((cell) => `${ cell.variantSlug }@${ cell.width }`).join(", ") }` : "" }.`);
+    const unengagedDetail = unengaged
+        .map((cell) => `${ cell.variantSlug }@${ cell.width } (maxScrollY ${ cell.scrolledOverflow!.maxScrollY })`)
+        .join(", ");
+
+    const unengagedNote = unengaged.length
+        ? ` — ${ unengagedDetail }. The admin adds the class from a \`scroll\` listener that ignores deltas under 2px, so a document with a 1px scroll range never reaches it; those cells are still measured, just in the rest state, which is reported here rather than claimed as a scrolled pass`
+        : "";
+
+    lines.push(`- Cells that could scroll but never engaged \`is-scrolling-down\`: ${ unengaged.length }${ unengagedNote }.`);
     lines.push("");
 
     const scrolledOverflow = rankScrolled(cells);
