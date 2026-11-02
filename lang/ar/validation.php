@@ -67,6 +67,8 @@ return [
     'in_array' => 'قيمة :attribute غير موجودة في :other.',
     'integer' => 'يجب أن يكون :attribute رقمًا صحيحًا.',
     'ip' => 'يجب أن يكون :attribute عنوان IP صحيحًا.',
+    'ipv4' => 'يجب أن يكون :attribute عنوان IPv4 صحيحًا.',
+    'ipv6' => 'يجب أن يكون :attribute عنوان IPv6 صحيحًا.',
     'json' => 'يجب أن يكون :attribute نص JSON صحيحًا.',
     'lt' => [
         'numeric' => 'يجب أن تكون قيمة :attribute أصغر من :value.',
