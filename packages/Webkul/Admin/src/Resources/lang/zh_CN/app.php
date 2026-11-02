@@ -2226,6 +2226,7 @@ return [
                 'last-6-months' => '最近 6 个月',
                 'this-year' => '今年',
             ],
+            'week-label' => ':year年 第:week周',
             'start-date' => '开始日期',
             'end-date' => '结束日期',
             'export-pdf' => '导出 PDF',

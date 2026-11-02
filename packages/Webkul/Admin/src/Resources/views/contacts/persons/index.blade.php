@@ -71,7 +71,7 @@
                     </template>
 
                     <template v-else>
-                        <div class="row grid grid-cols-[.1fr_.2fr_.2fr_.2fr_.2fr_.2fr] grid-rows-1 items-center border-b px-4 py-2.5 dark:border-gray-800 max-lg:hidden">
+                        <div class="row grid grid-cols-[.1fr_.2fr_.2fr_.2fr_.2fr_.2fr] grid-rows-1 items-center border-b px-4 py-2.5 dark:border-gray-800 max-xl:hidden">
                             <div
                                 class="flex min-w-0 select-none items-center gap-2.5"
                                 v-for="(columnGroup, index) in [['id'], ['person_name'], ['emails'], ['contact_numbers'], ['organization']]"
@@ -129,7 +129,7 @@
                         </div>
 
                         <!-- Mobile Sort/Filter Header -->
-                        <div class="hidden border-b bg-gray-50 px-4 py-3 text-black dark:border-gray-800 dark:bg-gray-900 dark:text-gray-300 max-lg:block">
+                        <div class="hidden border-b bg-gray-50 px-4 py-3 text-black dark:border-gray-800 dark:bg-gray-900 dark:text-gray-300 max-xl:block">
                             <div class="flex items-center justify-between">
                                 <!-- Mass Actions for Mobile -->
                                 <div v-if="available.massActions.length">
@@ -212,7 +212,7 @@
 
                     <template v-else>
                         <div
-                            class="row grid grid-cols-[.1fr_.2fr_.2fr_.2fr_.2fr_.2fr] grid-rows-1 items-center border-b px-4 py-2.5 transition-all hover:bg-gray-50 dark:border-gray-800 dark:hover:bg-gray-950 max-lg:hidden"
+                            class="row grid grid-cols-[.1fr_.2fr_.2fr_.2fr_.2fr_.2fr] grid-rows-1 items-center border-b px-4 py-2.5 transition-all hover:bg-gray-50 dark:border-gray-800 dark:hover:bg-gray-950 max-xl:hidden"
                             v-for="record in available.records"
                         >
                             <!-- Mass Action and Person ID. -->
@@ -246,12 +246,26 @@
                             </div>
 
                             <!-- Emails -->
-                            <p class="truncate dark:text-gray-300">
+                            <!--
+                                An address is a single left-to-right run: rendered in the right-to-left
+                                paragraph it is truncated from its logical start, so the column kept the
+                                domain and dropped the local part. `dir="ltr"` moves the ellipsis to the
+                                end of the address and keeps the cell's own alignment right-aligned.
+                            -->
+                            <p
+                                class="truncate text-right dark:text-gray-300"
+                                dir="ltr"
+                            >
                                 @{{ record.emails }}
                             </p>
 
                             <!-- Contact Numbers -->
-                            <p class="truncate dark:text-gray-300">
+                            <!-- Same as the email column: digits and neutrals in a right-to-left
+                                 paragraph reorder, and truncate from the wrong end. -->
+                            <p
+                                class="truncate text-right dark:text-gray-300"
+                                dir="ltr"
+                            >
                                 @{{ record.contact_numbers }}
                             </p>
 
@@ -281,7 +295,7 @@
 
                         <!-- Mobile Card View -->
                         <div
-                            class="hidden border-b px-4 py-4 text-black dark:border-gray-800 dark:text-gray-300 max-lg:block"
+                            class="hidden border-b px-4 py-4 text-black dark:border-gray-800 dark:text-gray-300 max-xl:block"
                             v-for="record in available.records"
                         >
                             <div class="mb-2 flex items-center justify-between">
@@ -325,7 +339,7 @@
                                 <template v-for="column in available.columns">
                                     <div class="flex flex-wrap items-baseline gap-x-2">
                                         <span class="text-slate-600 dark:text-gray-300" v-html="column.label + ':'"></span>
-                                        <span class="break-words font-medium text-slate-900 dark:text-white" v-html="record[column.index]"></span>
+                                        <span class="break-words font-medium text-slate-900 dark:text-white" v-html="formatDatagridCell(record[column.index], column)"></span>
                                     </div>
                                 </template>
                             </div>

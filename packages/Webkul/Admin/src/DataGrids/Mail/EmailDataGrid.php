@@ -144,9 +144,14 @@ class EmailDataGrid extends DataGrid
             'filterable_type' => 'date_range',
             'sortable' => true,
             'closure' => function ($row) {
+                /**
+                 * `format()` prints English month names and meridiem whatever the locale is, so a
+                 * date in the Arabic interface read "Oct 30". `core()->formatDate()` translates the
+                 * format with the active locale and stays English for `en`.
+                 */
                 return Carbon::parse($row->created_at)->isToday()
-                    ? Carbon::parse($row->created_at)->format('h:i A')
-                    : Carbon::parse($row->created_at)->format('M d');
+                    ? core()->formatDate($row->created_at, 'h:i A')
+                    : core()->formatDate($row->created_at, 'd M');
             },
         ]);
     }

@@ -34,7 +34,11 @@
             </div>
         </div>
 
-        <v-users-settings ref="userSettings">
+        <v-users-settings
+            ref="userSettings"
+            :roles='@json($roles)'
+            :groups='@json($groups)'
+        >
             <!-- DataGrid Shimmer -->
             <x-admin::shimmer.datagrid />
         </v-users-settings>
@@ -67,7 +71,7 @@
                     <template v-else>
                         <div
                             v-for="record in available.records"
-                            class="row grid items-center gap-2.5 border-b px-4 py-4 text-gray-600 transition-all hover:bg-gray-50 dark:border-gray-800 dark:text-gray-300 dark:hover:bg-gray-950 max-lg:hidden"
+                            class="row grid items-center gap-2.5 border-b px-4 py-4 text-gray-600 transition-all hover:bg-gray-50 dark:border-gray-800 dark:text-gray-300 dark:hover:bg-gray-950 max-xl:hidden"
                             :style="`grid-template-columns: repeat(${gridsCount}, minmax(0, 1fr))`"
                         >
                             <!-- Mass Actions, Title and Created By -->
@@ -110,7 +114,13 @@
                             </div>
 
                             <!-- Users Email -->
-                            <p class="truncate">@{{ record.email }}</p>
+                            <!-- An address is one left-to-right run; inside the right-to-left paragraph
+                                 it was truncated from its logical start, keeping the domain and
+                                 discarding the local part. -->
+                            <p
+                                class="truncate text-right"
+                                dir="ltr"
+                            >@{{ record.email }}</p>
 
                             <!-- Associated Group -->
                             <p class="truncate">@{{ record.group_name }}</p>
@@ -147,7 +157,7 @@
 
                         <!-- Mobile Card View -->
                         <div
-                            class="hidden border-b px-4 py-4 text-black dark:border-gray-800 dark:text-gray-300 max-lg:block"
+                            class="hidden border-b px-4 py-4 text-black dark:border-gray-800 dark:text-gray-300 max-xl:block"
                             v-for="record in available.records"
                         >
                             <div class="mb-2 flex items-center justify-between">
@@ -197,9 +207,38 @@
                             <!-- Card Content -->
                             <div class="grid gap-2">
                                 <template v-for="column in available.columns">
-                                    <div class="flex flex-wrap items-baseline gap-x-2">
+                                    <!--
+                                        The name and status columns are not strings: the grid sends the
+                                        name as `{image, name}` and the status as `1`/`0`, so the generic
+                                        card rendering printed `[object Object]` and a bare number. They
+                                        are rendered here the same way the table view renders them.
+                                    -->
+                                    <div
+                                        class="flex flex-wrap items-baseline gap-x-2"
+                                        v-if="column.index === 'name'"
+                                    >
                                         <span class="text-slate-600 dark:text-gray-300" v-html="column.label + ':'"></span>
-                                        <span class="break-words font-medium text-slate-900 dark:text-white" v-html="record[column.index]"></span>
+                                        <span class="break-words font-medium text-slate-900 dark:text-white">
+                                            @{{ record.name?.name ?? record.name }}
+                                        </span>
+                                    </div>
+
+                                    <div
+                                        class="flex flex-wrap items-baseline gap-x-2"
+                                        v-else-if="column.index === 'status'"
+                                    >
+                                        <span class="text-slate-600 dark:text-gray-300" v-html="column.label + ':'"></span>
+                                        <span :class="record.status == 1 ? 'label-active' : 'label-inactive'">
+                                            @{{ record.status == 1 ? '@lang('admin::app.settings.users.index.active')' : '@lang('admin::app.settings.users.index.inactive')' }}
+                                        </span>
+                                    </div>
+
+                                    <div
+                                        class="flex flex-wrap items-baseline gap-x-2"
+                                        v-else
+                                    >
+                                        <span class="text-slate-600 dark:text-gray-300" v-html="column.label + ':'"></span>
+                                        <span class="break-words font-medium text-slate-900 dark:text-white" v-html="formatDatagridCell(record[column.index], column)"></span>
                                     </div>
                                 </template>
                             </div>
@@ -485,13 +524,11 @@
             app.component('v-users-settings', {
                 template: '#users-settings-template',
 
+                props: ['roles', 'groups'],
+
                 data() {
                     return {
                         isProcessing: false,
-
-                        roles: @json($roles),
-
-                        groups:  @json($groups),
 
                         user: {
                             view_permission: 'global',
@@ -520,9 +557,14 @@
                 },
 
                 mounted() {
-                    @if(request('action') === 'create')
+                    /**
+                     * `?action=create` opens the create modal on load. This is a query-string flag
+                     * on a page that only ever loads by GET, so it is read here instead of inlining
+                     * a Blade conditional into the component body.
+                     */
+                    if (new URL(window.location).searchParams.get('action') === 'create') {
                         this.openModal();
-                    @endif
+                    }
                 },
 
                 methods: {

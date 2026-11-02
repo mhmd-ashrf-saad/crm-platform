@@ -73,7 +73,7 @@
                         <template v-else>
                             <div
                                 v-for="record in available.records"
-                                class="row grid items-center gap-2.5 border-b px-4 py-4 text-gray-600 transition-all hover:bg-gray-50 dark:border-gray-800 dark:text-gray-300 dark:hover:bg-gray-950 max-lg:hidden"
+                                class="row grid items-center gap-2.5 border-b px-4 py-4 text-gray-600 transition-all hover:bg-gray-50 dark:border-gray-800 dark:text-gray-300 dark:hover:bg-gray-950 max-xl:hidden"
                                 :style="`grid-template-columns: repeat(${gridsCount}, minmax(0, 1fr))`"
                             >
                                 <!-- Mass Actions, Title and Created By -->
@@ -137,7 +137,7 @@
 
                             <!-- Mobile Card View -->
                             <div
-                                class="hidden border-b px-4 py-4 text-black dark:border-gray-800 dark:text-gray-300 max-lg:block"
+                                class="hidden border-b px-4 py-4 text-black dark:border-gray-800 dark:text-gray-300 max-xl:block"
                                 v-for="record in available.records"
                             >
                                 <div class="mb-2 flex items-center justify-between">
@@ -192,9 +192,26 @@
                                 <!-- Card Content -->
                                 <div class="grid gap-2">
                                     <template v-for="column in available.columns">
-                                        <div class="flex flex-wrap items-baseline gap-x-2">
+                                        <!--
+                                            The status column is a raw `1`/`0`, not markup, so the card
+                                            showed a bare number where the table view shows a pill.
+                                        -->
+                                        <div
+                                            class="flex flex-wrap items-baseline gap-x-2"
+                                            v-if="column.index === 'status'"
+                                        >
                                             <span class="text-slate-600 dark:text-gray-300" v-html="column.label + ':'"></span>
-                                            <span class="break-words font-medium text-slate-900 dark:text-white" v-html="record[column.index]"></span>
+                                            <span :class="record.status == 1 ? 'label-active' : 'label-inactive'">
+                                                @{{ record.status == 1 ? '@lang('admin::app.settings.marketing.campaigns.index.datagrid.active')' : '@lang('admin::app.settings.marketing.campaigns.index.datagrid.inactive')' }}
+                                            </span>
+                                        </div>
+
+                                        <div
+                                            class="flex flex-wrap items-baseline gap-x-2"
+                                            v-else
+                                        >
+                                            <span class="text-slate-600 dark:text-gray-300" v-html="column.label + ':'"></span>
+                                            <span class="break-words font-medium text-slate-900 dark:text-white" v-html="formatDatagridCell(record[column.index], column)"></span>
                                         </div>
                                     </template>
                                 </div>

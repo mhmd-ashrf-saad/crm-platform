@@ -2226,6 +2226,7 @@ return [
                 'last-6-months' => '6 tháng qua',
                 'this-year' => 'Năm nay',
             ],
+            'week-label' => 'Tuần :week, :year',
             'start-date' => 'Ngày bắt đầu',
             'end-date' => 'Ngày kết thúc',
             'export-pdf' => 'Xuất PDF',

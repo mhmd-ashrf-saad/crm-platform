@@ -2226,6 +2226,7 @@ return [
                 'last-6-months' => '최근 6개월',
                 'this-year' => '올해',
             ],
+            'week-label' => ':year년 :week주차',
             'start-date' => '시작일',
             'end-date' => '종료일',
             'export-pdf' => 'PDF 내보내기',

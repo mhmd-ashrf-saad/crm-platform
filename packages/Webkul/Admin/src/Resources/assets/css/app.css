@@ -673,3 +673,23 @@
 .tox.tox-silver-sink.tox-tinymce-aux {
     z-index: 99999;
 }
+/**
+ * iOS Safari zooms the whole page in when a text field it focuses renders below 16px,
+ * which makes every form on a phone jump the layout sideways and back. The admin's form
+ * controls are 14px (`text-sm`) by design, which is right for a desktop and wrong for a
+ * phone, so raise them to 16px below the `lg` breakpoint — the same breakpoint the admin
+ * layout itself switches to its mobile chrome at. Tablet and desktop typography is
+ * untouched.
+ *
+ * The selector is deliberately specific rather than element-only: `.text-sm` on the
+ * control is what sets 14px, and an element selector loses to a class selector no matter
+ * where in the stylesheet it is written. `:is()` counts its most specific argument (one
+ * element) and the two `:not([type=...])` add two attribute selectors, which beats the
+ * utility while still needing no `!important`. Checkboxes and radios carry no text and
+ * are excluded so their intrinsic sizing does not change.
+ */
+@media (max-width: 1023px) {
+    :is(input, select, textarea):not([type="checkbox"]):not([type="radio"]) {
+        font-size: 16px;
+    }
+}

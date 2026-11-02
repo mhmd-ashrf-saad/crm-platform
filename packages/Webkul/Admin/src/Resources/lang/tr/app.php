@@ -2226,6 +2226,7 @@ return [
                 'last-6-months' => 'Son 6 Ay',
                 'this-year' => 'Bu Yıl',
             ],
+            'week-label' => 'Hafta :week, :year',
             'start-date' => 'Başlangıç Tarihi',
             'end-date' => 'Bitiş Tarihi',
             'export-pdf' => 'PDF Dışa Aktar',

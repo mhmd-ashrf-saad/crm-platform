@@ -29,7 +29,13 @@
                     class="group relative !w-full pl-2.5"
                     :style="{ 'text-align': position }"
                 >
-                    <span class="cursor-pointer truncate rounded">
+                    <!-- An address or a phone number is one left-to-right run: in the
+                         right-to-left paragraph it is truncated from its logical start, which
+                         keeps the domain and drops the local part. -->
+                    <span
+                        class="cursor-pointer truncate rounded"
+                        dir="ltr"
+                    >
                         @{{ valueLabel ? valueLabel : inputValue?.map(item => `${item.value}(${item.label})`).join(', ').length > 20 ? inputValue?.map(item => `${item.value}(${item.label})`).join(', ').substring(0, 20) + '...' : inputValue?.map(item => `${item.value}(${item.label})`).join(', ') }}
                     </span>
 

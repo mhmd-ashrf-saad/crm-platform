@@ -64,11 +64,13 @@
 
                         @foreach ($lead->person->emails ?? [] as $email)
                             <div class="flex gap-1">
+                                {{-- An address is a single left-to-right run; without isolation the
+                                     right-to-left paragraph reorders it against its label. --}}
                                 <a
                                     class="text-brandColor"
                                     href="mailto:{{ $email['value'] }}"
                                 >
-                                    {{ $email['value'] }}
+                                    <bdi dir="ltr">{{ $email['value'] }}</bdi>
                                 </a>
 
                                 <span class="text-gray-500 dark:text-gray-300">
@@ -83,11 +85,14 @@
 
                         @foreach ($lead->person->contact_numbers ?? [] as $contactNumber)
                             <div class="flex gap-1">
+                                {{-- A phone number is digits and neutrals only, so a right-to-left
+                                     paragraph pushed the country code to the end with a leading
+                                     "+": `+20 106 555 1203` printed as `1203 555 106 20+`. --}}
                                 <a
                                     class="text-brandColor"
                                     href="callto:{{ $contactNumber['value'] }}"
                                 >
-                                    {{ $contactNumber['value'] }}
+                                    <bdi dir="ltr">{{ $contactNumber['value'] }}</bdi>
                                 </a>
 
                                 <span class="text-gray-500 dark:text-gray-300">

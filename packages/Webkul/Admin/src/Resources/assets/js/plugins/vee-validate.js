@@ -39,6 +39,17 @@ export default {
         window.addEventListener("load", () => setLocale(document.documentElement.attributes.lang.value));
 
         /**
+         * Set the message locale now as well as on `load`.
+         *
+         * vee-validate's own default locale is `en`, and a field can be validated before the
+         * `load` event fires: a lookup or a select that runs its first validation on mount
+         * reported "The اسم المنتج field is required" in an Arabic interface, and the message then
+         * stuck because the value never changed. This module runs after the document is parsed, so
+         * `<html lang>` is already there to read.
+         */
+        setLocale(document.documentElement.attributes.lang.value);
+
+        /**
          * Registration of all global validators.
          */
         Object.entries(all).forEach(([name, rule]) => defineRule(name, rule));

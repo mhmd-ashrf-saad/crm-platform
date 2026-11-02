@@ -74,7 +74,7 @@
                     </template>
 
                     <template v-else>
-                        <div class="row grid grid-cols-[2fr_7fr_.0.3fr] grid-rows-1 items-center border-b px-8 py-4 dark:border-gray-800 max-lg:hidden">
+                        <div class="row grid grid-cols-[2fr_7fr_.0.3fr] grid-rows-1 items-center border-b px-8 py-4 dark:border-gray-800 max-xl:hidden">
                             <div
                                 class="flex items-center gap-6"
                                 v-for="(columnGroup, index) in [['name'], ['attachments', 'tags', 'subject', 'reply'], ['created_at']]"
@@ -132,7 +132,7 @@
                         </div>
                         
                         <!-- Mobile Sort/Filter Header -->
-                        <div class="hidden border-b bg-gray-50 px-4 py-3 text-black dark:border-gray-800 dark:bg-gray-900 dark:text-gray-300 max-lg:block">
+                        <div class="hidden border-b bg-gray-50 px-4 py-3 text-black dark:border-gray-800 dark:bg-gray-900 dark:text-gray-300 max-xl:block">
                             <div class="flex items-center justify-between">
                                 <!-- Mass Actions for Mobile -->
                                 <div v-if="available.massActions.length">
@@ -215,7 +215,7 @@
                         <!-- Desktop Table View -->
                         <div
                             v-for="record in available.records"
-                            class="flex cursor-pointer items-center justify-between border-b px-8 py-4 text-gray-600 hover:bg-gray-50 dark:border-gray-800 dark:text-gray-300 dark:hover:bg-gray-950 max-lg:hidden"
+                            class="flex cursor-pointer items-center justify-between border-b px-8 py-4 text-gray-600 hover:bg-gray-50 dark:border-gray-800 dark:text-gray-300 dark:hover:bg-gray-950 max-xl:hidden"
                             @click.stop="selectedMail=true; editModal(record.actions.find(action => ['edit', 'view'].includes(action.index)))"
                         >
                             <!-- Select Box -->
@@ -301,7 +301,7 @@
                         
                         <!-- Mobile Card View -->
                         <div
-                            class="hidden border-b px-4 py-4 text-black dark:border-gray-800 dark:text-gray-300 max-lg:block"
+                            class="hidden border-b px-4 py-4 text-black dark:border-gray-800 dark:text-gray-300 max-xl:block"
                             v-for="record in available.records"
                             @click.stop="selectedMail=true; editModal(record.actions.find(action => ['edit', 'view'].includes(action.index)))"
                         >
@@ -349,7 +349,7 @@
                                                 'font-semibold': ! record.is_read
                                             }"
                                             class="break-words text-slate-900 dark:text-white" 
-                                            v-html="record[column.index]"
+                                            v-html="formatDatagridCell(record[column.index], column)"
                                         ></span>
                                     </div>
                                 </template>

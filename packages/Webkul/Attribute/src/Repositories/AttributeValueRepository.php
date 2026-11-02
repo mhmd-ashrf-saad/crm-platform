@@ -16,6 +16,18 @@ class AttributeValueRepository extends Repository
     use Sanitizer;
 
     /**
+     * The model this repository works on.
+     *
+     * Declared here because this repository reaches the attribute value model's static
+     * `$attributeTypeFields` map through the instance (`$this->model::$attributeTypeFields`, which
+     * PHP resolves against the instance's class). Without a type, a static analyser reads that
+     * lookup as an undefined property on an unknown class.
+     *
+     * @var \Webkul\Attribute\Models\AttributeValue
+     */
+    protected $model;
+
+    /**
      * Extensions that are never stored as an attribute value, whatever the upload claimed to be.
      *
      * Attribute values are written to the public disk and handed back by the web server, so a file
@@ -288,7 +300,12 @@ class AttributeValueRepository extends Repository
 
             case 'date':
                 if ($value) {
-                    $label = Carbon::parse($value)->format('D M d, Y');
+                    /**
+                     * `format()` prints English day and month names whatever the locale is, which
+                     * put "Wed Nov 25, 2026" into the Arabic activity log. `translatedFormat()`
+                     * renders the same pattern in the active locale and leaves `en` unchanged.
+                     */
+                    $label = Carbon::parse($value)->locale(app()->getLocale())->translatedFormat('D M d, Y');
                 } else {
                     $label = null;
                 }
@@ -297,7 +314,7 @@ class AttributeValueRepository extends Repository
 
             case 'datetime':
                 if ($value) {
-                    $label = Carbon::parse($value)->format('D M d, Y H:i A');
+                    $label = Carbon::parse($value)->locale(app()->getLocale())->translatedFormat('D M d, Y H:i A');
                 } else {
                     $label = null;
                 }
@@ -306,7 +323,7 @@ class AttributeValueRepository extends Repository
 
             default:
                 if ($value instanceof Carbon) {
-                    $label = $value->format('D M d, Y H:i A');
+                    $label = $value->copy()->locale(app()->getLocale())->translatedFormat('D M d, Y H:i A');
                 } else {
                     $label = $value;
                 }

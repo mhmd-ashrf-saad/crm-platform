@@ -2228,6 +2228,7 @@ return [
                 'last-6-months' => '過去6ヶ月',
                 'this-year' => '今年',
             ],
+            'week-label' => '第:week週, :year',
             'start-date' => '開始日',
             'end-date' => '終了日',
             'revenue' => [

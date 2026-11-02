@@ -484,20 +484,31 @@ class Lead extends AbstractReporting
 
     /**
      * Format date for display label
+     *
+     * These labels are chart axis categories and the dashboard PDF's date column, so they are
+     * display text only — the bucket a row belongs to is matched on `formatDateForGrouping()`'s
+     * key, never on this label. They go through `core()->formatDate()` because Carbon's
+     * `format()` prints English month names in every locale, which put "Aug 26" and "Aug 2026"
+     * under the Arabic dashboard's Arabic chart titles. The week bucket keeps its week number
+     * and only the word "Week" is translated: a bare Arabic month would mislabel a bucket that
+     * spans seven days.
      */
     protected function formatDateForLabel(Carbon $date, string $period): string
     {
         switch ($period) {
             case 'day':
-                return $date->format('M d');
+                return core()->formatDate($date, 'M d');
             case 'week':
-                return 'Week '.$date->format('W, Y');
+                return trans('admin::app.dashboard.index.week-label', [
+                    'week' => $date->format('W'),
+                    'year' => $date->format('Y'),
+                ]);
             case 'month':
-                return $date->format('M Y');
+                return core()->formatDate($date, 'M Y');
             case 'year':
                 return $date->format('Y');
             default:
-                return $date->format('M d');
+                return core()->formatDate($date, 'M d');
         }
     }
 }
