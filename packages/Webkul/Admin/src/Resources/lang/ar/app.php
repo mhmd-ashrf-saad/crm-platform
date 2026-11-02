@@ -2226,6 +2226,7 @@ return [
                 'last-6-months' => 'آخر 6 أشهر',
                 'this-year' => 'هذه السنة',
             ],
+            'week-label' => 'الأسبوع :week، :year',
             'start-date' => 'تاريخ البدء',
             'end-date' => 'تاريخ الانتهاء',
             'export-pdf' => 'تصدير PDF',

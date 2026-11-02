@@ -2236,6 +2236,12 @@ return [
                 'last-6-months' => 'Last 6 Months',
                 'this-year' => 'This Year',
             ],
+
+            /**
+             * Axis label for a weekly bucket. The week number is kept because the bucket spans
+             * seven days; only the word "Week" needs translating.
+             */
+            'week-label' => 'Week :week, :year',
             'pdf' => [
                 'title' => 'Dashboard Report',
                 'filtered-date' => 'Filtered Date',
