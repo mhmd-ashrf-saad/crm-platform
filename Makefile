@@ -68,7 +68,7 @@ LOG ?= storage/logs/serve.log
 # operator can actually receive it, and a hardcoded address would prove nothing.
 MAIL_TO ?=
 
-.PHONY: help setup serve stop restart status test test-db lint lint-check admin logs db-reset db-shell mail-test
+.PHONY: help setup serve stop restart status test test-db lint lint-check lint-arabic admin logs db-reset db-shell mail-test
 
 help: ## List the make targets (default target)
 	@printf '\nKrayin CRM dev commands  (checkout: %s)\n\n' '$(ROOT)'
@@ -259,6 +259,9 @@ lint: ## Format PHP with Pint (check only: make lint-check)
 
 lint-check: ## Check PHP formatting with Pint without changing files
 	@cd '$(ROOT)' && ./vendor/bin/pint --test
+
+lint-arabic: ## Check Arabic strings against the terminology glossary (scripts/check-arabic-glossary.php)
+	@cd '$(ROOT)' && php scripts/check-arabic-glossary.php
 
 admin: ## Create/update the admin account (requires KRAYIN_ADMIN_EMAIL and KRAYIN_ADMIN_PASSWORD)
 	@cd '$(ROOT)'
