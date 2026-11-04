@@ -1,3 +1,5 @@
+<!-- Context: guides/arabic-naming-inventory.md | Priority: critical | Version: 1.1 | Updated: 2026-11-04 -->
+
 # Arabic naming inventory — one concept, every name the product currently uses
 
 **What this is.** A map, not a decision. Every Arabic string the product ships for a
@@ -10,6 +12,11 @@ seeder, no `lang` file and no client-guide chapter was touched.
 
 **Beads task:** `crm-mox.2` (parent epic `crm-mox`; blocks `crm-mox.3`).
 **Produced:** 2026-11-04.
+**Corrected:** 2026-11-04 — six mis-classifications that the reconciliation against the glossary measured
+are fixed **in place, and each one states its correction rather than deleting the finding**; §13 lists
+all six with the command that re-measures each number. Three headline counts moved as a result
+(`consistent` 30 → 31, `conflicting` 25 → 24, `data_transfer` names 3 → 2) and every stale total in §3 and
+§5 was recomputed, not left behind.
 
 ---
 
@@ -106,17 +113,24 @@ the rule is stated, so it can be re-derived or disputed.
 | measure | value |
 | --- | --- |
 | Arabic-bearing keys across the five lang files | **2,204** |
-| Latin-only values in the same files | **42** |
+| Latin-only values in the same files | **42** non-empty (43 with the one key whose value is empty, `installer:installer.index.webkul`) |
 | Concepts identified | **55** |
 | Key→concept assignments (a key can serve two concepts) | **2,475** |
 | Naming-slot hits (label-shaped occurrences that were classified) | **555** |
-| Concepts with exactly **1** name — `consistent` | **30** |
-| Concepts with exactly **2** names — `conflicting` | **13** |
-| Concepts with **3 or more** names — `conflicting` | **12** |
+| Concepts with exactly **1** name — `consistent` | **31** |
+| Concepts with exactly **2** names — `conflicting` | **14** |
+| Concepts with **3 or more** names — `conflicting` | **10** |
 | Client-guide chapters scanned | **18** (17 chapters + `README.md`) |
 | Distinct Arabic surface forms flagged `suspect-literal` | **44** |
 
-**55 = 30 + 13 + 12.** 25 of 55 concepts — 45% — carry more than one name today.
+**55 = 31 + 14 + 10.** 24 of 55 concepts — **44%** — carry more than one name today.
+
+*Recomputed 2026-11-04, and the arithmetic stated so it can be checked rather than trusted:* the first
+pass reported `55 = 30 + 13 + 12` and "25 of 55 — 45%". Three corrections in §13 move one concept each
+into a different bucket — `activity_type` and `email_settings` are not conflicts at all (§13 items 1 and
+3) and `contact_person` is one (§13 item 4) — so `consistent` gains two and loses one (**30 + 2 − 1 =
+31**), and `conflicting` loses two and gains one (**25 − 2 + 1 = 24**), of which **14** carry two names
+and **10** carry three or more. 24 ÷ 55 = 43.6% → **44%**.
 
 ### The 15 worst
 
@@ -127,31 +141,41 @@ Ordered by number of names, then by how many keys are affected.
 | 1 | `http_terminology` | 6 | 13 | نقطة النهاية · نقطة نهاية الرابط · حمولة · الرؤوس · رأس · الجسم · الطريقة · إرسال · تحديث |
 | 2 | `lead` | 5 | 180 | عميل محتمل · العملاء المحتملون · العميل / العملاء · الفرصة · القيادة |
 | 3 | `quote` | 5 | 143 | عرض السعر · عروض الأسعار · العروض / عروض · عرض · الاقتباس |
-| 4 | `data_transfer` | 3 | 120 | نقل البيانات · الاستيراد · التصدير |
-| 5 | `webhook` | 3 | 68 | الويب هوك · ويب هوك · Webhook |
-| 6 | `activity_type` | 3 | 20 | مكالمة · اجتماع · غداء (each with a broken plural beside it: الغداءات · المكالمات · الاجتماعات) |
-| 7 | `sales_owner` | 3 | 14 | مالك المبيعات · مندوب المبيعات · مسؤول المبيعات |
-| 8 | `password_reset` | 3 | 13 | نسيت كلمة المرور · استعادة كلمة المرور · إعادة تعيين كلمة المرور |
-| 9 | `pipeline_stage_won` | 3 | 10 | مُنتصر · ربحت / فاز · المكتسب |
-| 10 | `rotten` | 3 | 8 | أيام التعفن / التعفن · متعفن / الفاسد · مهمل |
-| 11 | `mail_trash` | 3 | 4 | سلة المهملات · المهملات · المحذوفات |
-| 12 | `address` | 3 | 4 | عنوان الشحن · عنوان الفوترة · عنوان الفواتير |
-| 13 | `attribute` | 2 | 196 | السمة · الخاصية |
-| 14 | `configuration` | 2 | 98 | التهيئة · التكوين |
-| 15 | `dashboard` | 2 | 81 | لوحة القيادة · لوحة التحكم |
+| 4 | `webhook` | 3 | 68 | الويب هوك · ويب هوك · Webhook |
+| 5 | `sales_owner` | 3 | 14 | مالك المبيعات · مندوب المبيعات · مسؤول المبيعات |
+| 6 | `password_reset` | 3 | 13 | نسيت كلمة المرور · استعادة كلمة المرور · إعادة تعيين كلمة المرور |
+| 7 | `pipeline_stage_won` | 3 | 10 | مُنتصر · ربحت / فاز · المكتسب |
+| 8 | `rotten` | 3 | 8 | أيام التعفن / التعفن · متعفن / الفاسد · مهمل |
+| 9 | `mail_trash` | 3 | 4 | سلة المهملات · المهملات · المحذوفات |
+| 10 | `address` | 3 | 4 | عنوان الشحن · عنوان الفوترة · عنوان الفواتير |
+| 11 | `attribute` | 2 | 196 | السمة · الخاصية |
+| 12 | `data_transfer` | 2 | 120 | نقل البيانات · الاستيراد (التصدير is the sibling action, not a third name — §13 item 2) |
+| 13 | `configuration` | 2 | 98 | التهيئة · التكوين |
+| 14 | `dashboard` | 2 | 81 | لوحة القيادة · لوحة التحكم (5 dashboard keys only — §13 item 5) |
+| 15 | `web_form` | 2 | 78 | نموذج الويب · نماذج الويب (both correct — the glossary protects this concept) |
 
-Runners-up: `web_form` (2 names / 78 keys), `pipeline` (2 / 64), `tag` (2 / 44),
-`email_template` (2 / 31), `organization` (2 / 29), `event` (2 / 28),
-`email_settings` (2 / 12), `pipeline_stage_lost` (2 / 10), `mail_inbox` (2 / 4),
-`mail_sent` (2 / 4).
+Runners-up: `pipeline` (2 names / 64 keys), `tag` (2 / 44), `email_template` (2 / 31),
+`organization` (2 / 29), `event` (2 / 28), `contact_person` (2 / 11), `pipeline_stage_lost` (2 / 10),
+`mail_inbox` (2 / 4), `mail_sent` (2 / 4).
 
-### The 30 concepts that already agree
+*Recomputed 2026-11-04.* The first pass put `data_transfer` at #4 and `activity_type` at #6 on the
+strength of the corrections now undone: `data_transfer` drops to two names (120 keys still rank it 12th,
+because the tie-break is key count) and `activity_type` leaves the table entirely — its three singulars
+are three different values, not three names for one (§13 item 1). `web_form` comes in at 15th only
+because 78 keys break the tie among the two-name concepts; the glossary protects it as shipped as
+correct, so its rank is not a work order.
+
+### The 31 concepts that already agree
 
 `lead_value`, `lead_source`, `lead_type`, `pipeline_stage`, `probability`, `person`,
-`contacts`, `contact_person`, `product`, `activity`, `warehouse`, `inventory`, `role`,
-`group`, `user`, `workflow`, `automation`, `campaign`, `settings`, `mail`,
+`contacts`, `product`, `activity`, `activity_type`, `warehouse`, `inventory`, `role`,
+`group`, `user`, `workflow`, `automation`, `campaign`, `email_settings`, `settings`, `mail`,
 `mail_outbox`, `mail_draft`, `menu_item`, `mega_search`, `notification`, `quick_add`,
 `record_id`, `sku`, `account`, `login`.
+
+*Recomputed 2026-11-04:* `activity_type` and `email_settings` join this list (neither is a conflict —
+§13 items 1 and 3) and `contact_person` leaves it (two lexemes, not one — §13 item 4), so the list is
+**30 + 2 − 1 = 31**.
 
 "Consistent" here means **one name**, not "one spelling". البريد / البريد الإلكتروني,
 المستخدم / المستخدمون / المستخدمين, شخص / أشخاص — these are inflections of one word.
@@ -235,8 +259,8 @@ independent: a string can be both, and often is.
 
 | class | meaning | concepts |
 | --- | --- | --- |
-| `consistent` | the concept has exactly **one** name; all its surface forms are inflections of that one word | **30** |
-| `conflicting` | the concept has **two or more** names — genuinely different Arabic words, not inflections | **25** |
+| `consistent` | the concept has exactly **one** name; all its surface forms are inflections of that one word | **31** |
+| `conflicting` | the concept has **two or more** names — genuinely different Arabic words, not inflections | **24** |
 | `suspect-literal` | a *string-level* flag, applied on top: a transliteration of the English term, or a word-for-word rendering whose Arabic sense does not match the English concept | **44 strings** |
 
 `consistent` does **not** mean "correct". المؤسسة and المنظمة are two names, but
@@ -245,7 +269,7 @@ inventory does not judge fitness; it only reports agreement.
 
 ### Both at once
 
-**12 of the 25 `conflicting` concepts also carry `suspect-literal` strings**, and one
+**12 of the 24 `conflicting` concepts also carry `suspect-literal` strings**, and one
 `consistent` concept does too:
 
 | concept | conflicting because | and suspect-literal because |
@@ -256,7 +280,7 @@ inventory does not judge fitness; it only reports agreement.
 | `pipeline_stage_lost` | مفقود / خسرت / خسر / المفقود | مفقود = `a missing object`, خسرت / خسر are verb forms |
 | `rotten` | التعفن / متعفن / الفاسد / مهمل | متعفن / الفاسد / التعفن all render `rotten` literally |
 | `quote` | عرض السعر / عروض الأسعار / العروض / الاقتباسات | الاقتباسات = `citations` |
-| `dashboard` | لوحة القيادة / لوحة التحكم | لوحة القيادة is a calque of `dashboard` |
+| `dashboard` | لوحة القيادة / لوحة التحكم (the latter in 5 keys; 2 more keys use it for the admin panel — §13 item 5) | لوحة القيادة is a calque of `dashboard` |
 | `webhook` | الويب هوك / ويب هوك / Webhook | a transliteration of `webhook`; `الويب هوكس` welds a Latin `s` onto it |
 | `email_template` | قالب البريد / نموذج البريد | نموذج = `form/model`, a word-for-word rendering of `template` |
 | `mail_trash` | سلة المهملات / المهملات / المحذوفات | المحذوفات = `the deleted things` |
@@ -264,12 +288,17 @@ inventory does not judge fitness; it only reports agreement.
 | `http_terminology` | nine strings for six terms | every one is a word-for-word technical rendering |
 | `login` — `consistent`, not conflicting | — | بيانات الاعتماد = literal `credential data` for `credentials` |
 
-The 13 `conflicting` concepts with **no** suspect-literal string are `activity_type`,
-`address`, `attribute`, `configuration`, `data_transfer`, `email_settings`, `event`,
-`mail_inbox`, `organization`, `password_reset`, `sales_owner`, `tag` and `web_form`.
+The 12 `conflicting` concepts with **no** suspect-literal string are `address`, `attribute`,
+`configuration`, `contact_person`, `data_transfer`, `event`, `mail_inbox`, `organization`,
+`password_reset`, `sales_owner`, `tag` and `web_form`.
 Those are genuine synonym disagreements — two valid Arabic words for one thing — rather
 than bad translation, and a glossary has to choose between them without any of them
 being defensibly "wrong".
+
+*Recomputed 2026-11-04:* the first pass listed 13, counting `activity_type` and `email_settings`, neither
+of which is a synonym disagreement at all (§13 items 1 and 3), and missing `contact_person`, which is
+(§13 item 4) — so 13 − 2 + 1 = **12**, and 24 − 12 = 12 conflicting concepts do carry a suspect-literal
+string.
 
 ---
 
@@ -295,7 +324,7 @@ means what the English means: العميل المحتمل (`probable customer`),
 | Webhook | left untranslated | `webhook` | `admin:settings.workflows.helpers.add-webhook` |
 | webhook | left untranslated inside an Arabic sentence | `webhook` | `admin:settings.workflows.create.no-webhook-found`<br>`admin:settings.workflows.create.create-webhook` |
 | أيام التعفن | `days of rottenness`; word-for-word for `rotten days` | `rotten` | `admin:settings.pipelines.index.datagrid.rotten-days`<br>`admin:settings.pipelines.create.rotten-days`<br>`admin:settings.pipelines.edit.rotten-days` |
-| إرسال | `send`; used as the label for the HTTP verb POST | `http_terminology` | `admin:settings.webhooks.create.post` |
+| إرسال | `send`; used as the label for the HTTP verb POST — **decided 2026-11-04 → Latin `POST`** (glossary decision 8a) | `http_terminology` | `admin:settings.webhooks.create.post`<br>`admin:settings.webhooks.edit.post` |
 | الأنابيب | word-for-word `the pipes` | `pipeline` | `admin:layouts.pipelines`<br>`admin:layouts.pipelines-info` |
 | الاقتباس / اقتباس | `citation`; word-for-word for `quote` | `quote` | `admin:settings.data-transfer.validation.errors.wrong-quotes` |
 | الاقتباسات | `citations`; used for `quote` | `quote` | `admin:components.activities.index.quotes`<br>`admin:leads.view.tabs.quotes` |
@@ -304,7 +333,7 @@ means what the English means: العميل المحتمل (`probable customer`),
 | الرؤوس | literal `heads`; word-for-word for HTTP `headers` | `http_terminology` | `admin:settings.webhooks.create.headers` |
 | الفاسد | `the spoiled/rotten one`; word-for-word for `rotten` | `rotten` | `admin:leads.index.kanban.rotten-days` |
 | القيادة | `leadership`; word-for-word for `lead` | `lead` | `admin:activities.index.datagrid.lead`<br>`admin:activities.edit.lead` |
-| المحذوفات | `the deleted things`; word-for-word for `trash` | `mail_trash` | `admin:acl.trash` |
+| المحذوفات | `the deleted things`; word-for-word for `trash` — **decided 2026-11-04 → `سلة المهملات`** (glossary §4.6) | `mail_trash` | `admin:acl.trash` |
 | المسارات | `paths`; calque for `pipeline` | `pipeline` | `admin:leads.index.view-switcher.all-pipelines` |
 | المفقود | `the missing object` | `pipeline_stage_lost` | `admin:dashboard.index.pdf.lost` |
 | المفقودة | `the missing one`; word-for-word for `lost` | `pipeline_stage_lost` | `admin:dashboard.index.revenue.lost-revenue` |
@@ -315,7 +344,7 @@ means what the English means: العميل المحتمل (`probable customer`),
 | الويب هوك | transliteration of `webhook` + Arabic article | `webhook` | `admin:settings.webhooks.create.save-btn`<br>`admin:settings.webhooks.edit.title`<br>`admin:settings.webhooks.edit.edit-btn`<br>`admin:settings.webhooks.edit.save-btn`<br>`admin:layouts.webhooks`<br>`admin:layouts.webhooks-info` |
 | الويب هوكس | transliteration + Latin plural `s` inside an Arabic word | `webhook` | `admin:settings.webhooks.index.title`<br>`admin:settings.webhooks.create.info`<br>`admin:settings.webhooks.edit.info` |
 | بيانات الاعتماد | literal `credential data`; word-for-word for `credentials` | `login` | `admin:users.login-error` |
-| تحديث | `update`; used as the label for the HTTP verb PUT | `http_terminology` | `admin:settings.webhooks.create.put` |
+| تحديث | `update`; used as the label for the HTTP verb PUT — **decided 2026-11-04 → Latin `PUT`** (glossary decision 8a) | `http_terminology` | `admin:settings.webhooks.create.put`<br>`admin:settings.webhooks.edit.put` |
 | تم الإرسال | a past-tense sentence used as a folder name | `mail_sent` | `admin:mail.index.sent` |
 | حمولة | literal `cargo/load`; word-for-word for `payload` | `http_terminology` | `admin:settings.webhooks.create.add-new-payload` |
 | خسر | `he lost`; verb form used as a stage name | `pipeline_stage_lost` | `admin:settings.pipelines.create.lost-stage`<br>`admin:settings.pipelines.edit.lost-stage` |
@@ -332,9 +361,9 @@ means what the English means: العميل المحتمل (`probable customer`),
 | متعفن | `rotting`; word-for-word for `rotten` | `rotten` | `admin:leads.index.datagrid.rotten-lead` |
 | مفقود | `missing object`; word-for-word for `lost` | `pipeline_stage_lost` | `installer:seeders.lead.pipeline.pipeline-stages.lost` |
 | مُنتصر | `victorious`; word-for-word for `won` | `pipeline_stage_won` | `installer:seeders.lead.pipeline.pipeline-stages.won` |
-| نقطة النهاية | literal `end point`; word-for-word for `endpoint` | `http_terminology` | `admin:settings.webhooks.index.datagrid.end-point` |
-| نقطة نهاية الرابط | literal `link end point` | `http_terminology` | `admin:settings.webhooks.create.url-endpoint` |
-| نموذج البريد الإلكتروني | `form/model`; word-for-word for `template` | `email_template` | `admin:settings.marketing.campaigns.index.create.email-template` |
+| نقطة النهاية | literal `end point`; word-for-word for `endpoint` — **decided 2026-11-04 → `عنوان URL`** (glossary decision 8b) | `http_terminology` | `admin:settings.webhooks.index.datagrid.end-point` |
+| نقطة نهاية الرابط | literal `link end point` — **decided 2026-11-04 → `عنوان URL`** (glossary decision 8b) | `http_terminology` | `admin:settings.webhooks.create.url-endpoint`<br>`admin:settings.webhooks.edit.url-endpoint` |
+| نموذج البريد الإلكتروني | `form/model`; word-for-word for `template` — **decided 2026-11-04 → `قالب البريد الإلكتروني`** (glossary §4.5) | `email_template` | `admin:settings.marketing.campaigns.index.create.email-template` |
 | ويب هوك | transliteration of `webhook` | `webhook` | `admin:acl.webhook`<br>`admin:settings.webhooks.index.create-btn`<br>`admin:settings.webhooks.create.title` |
 
 ---
@@ -524,13 +553,25 @@ Also used in 13 of 18 client-guide chapters.
 
 ### `contact_person` — Contact person (linked person on a record)
 
-**Class:** `consistent` · **names:** 1 · **surface forms:** 3 · **keys scanned:** 11
+**Class:** `conflicting` · **names:** 2 · **surface forms:** 3 · **keys scanned:** 11
+
+**Corrected 2026-11-04 (§13 item 4):** this concept was filed `consistent` on the strength of one name
+("شخص الاتصال / جهة الاتصال") written with a slash. It is **not** one name. Measured with
+`grep -o -F` over `A`: **`شخص الاتصال` 7 occurrences on 7 keys** and **`جهة الاتصال` 5 occurrences on
+5 keys** — two different lexemes (`شخص` = person, `جهة` = party/body), not two inflections of one word,
+and the glossary **overturns** `شخص الاتصال` in favour of `جهة الاتصال` (its §4.2 row). A concept whose
+wrong name the glossary removes cannot be `consistent`; that class was hiding a rename.
 
 | surface form | class | keys that render it |
 | --- | --- | --- |
-| جهة اتصال | `consistent` | `admin:mail.view.link-to-contact` |
-| جهة الاتصال | `consistent` | `admin:settings.warehouses.index.datagrid.contact-name`<br>`admin:mail.view.linked-contact` |
-| شخص الاتصال | `consistent` | `admin:leads.index.datagrid.contact-person`<br>`admin:leads.index.kanban.columns.contact-person`<br>`admin:leads.index.kanban.toolbar.card-settings.contact-person`<br>`admin:leads.create.contact-person`<br>`admin:leads.edit.contact-person` |
+| جهة اتصال | `conflicting` | `admin:mail.view.link-to-contact` |
+| جهة الاتصال | `conflicting` | `admin:settings.warehouses.index.datagrid.contact-name`<br>`admin:mail.view.linked-contact`<br>`admin:notifications.titles.person-updated`<br>`admin:mail.view.save-contact`<br>`admin:leads.view.persons.change-title` |
+| شخص الاتصال | `conflicting` | `admin:leads.index.datagrid.contact-person`<br>`admin:leads.index.kanban.columns.contact-person`<br>`admin:leads.index.kanban.toolbar.card-settings.contact-person`<br>`admin:leads.create.contact-person`<br>`admin:leads.edit.contact-person` |
+
+Note `شخص الاتصال` also ships inside two prose sentences (`leads.create.contact-info` and
+`leads.edit.contact-info`, both `معلومات عن شخص الاتصال`), which do not vote as names but do change with
+the rename; and `جهة الاتصال` is shared with the `contacts` concept (section 9) — the two key sets are in
+`mail`/`warehouses`/`notifications` versus `acl.contacts`, so a rename has to stay key-scoped.
 
 Also used in 9 of 18 client-guide chapters.
 
@@ -578,19 +619,33 @@ Also used in 13 of 18 client-guide chapters.
 
 ### `activity_type` — Activity type (call / meeting / lunch)
 
-**Class:** `conflicting` · **names:** 3 · **surface forms:** 7 · **keys scanned:** 20
+**Class:** `consistent` · **names:** 1 per type (three types) · **surface forms:** 7 · **keys scanned:** 20
+
+**Corrected 2026-11-04 (§13 item 1):** this concept was filed `conflicting` with **3 names**, and that
+was wrong. `مكالمة` (call), `اجتماع` (meeting) and `غداء` (lunch) are **three different types**, not three
+names for one concept: each is a legitimate value of the `type` field, each ships in its own key set
+(`….actions.activity.call` vs `.meeting` vs `…index.calls` vs `.meetings` vs `.lunches`), and the glossary
+**approves all three singulars as shipped**. Counting values as rival names invented a conflict. The one
+real defect on this screen is a **grammar** defect, not a naming one — the broken plural
+`الغداءات` / `غداءات`, measured at **3 occurrences in 2 keys**
+(`components.activities.index.empty-placeholders.lunches.title` and `.description`), which needs
+`أنشطة غداء` instead. The class therefore moves to `consistent` and the plural is recorded separately
+(section 11.8) — **the glossary has no row for it yet**, so it is a naming fix with no decision behind it,
+not one of the four defects the operator approved.
 
 | surface form | class | keys that render it |
 | --- | --- | --- |
-| اجتماع | `conflicting` | `admin:components.activities.actions.activity.meeting`<br>`admin:contacts.persons.view.activities.actions.activity.meeting`<br>`admin:activities.index.datagrid.meeting`<br>`admin:activities.edit.meeting` |
-| اجتماعات | `conflicting` | `admin:components.activities.index.empty-placeholders.meetings.title` |
-| الاجتماعات | `conflicting` | `admin:components.activities.index.meetings`<br>`admin:contacts.persons.view.activities.index.meetings` |
-| الغداء | `conflicting` | `admin:components.activities.index.lunches`<br>`admin:contacts.persons.view.activities.index.lunches` |
-| المكالمات | `conflicting` | `admin:components.activities.index.calls`<br>`admin:contacts.persons.view.activities.index.calls` |
-| مكالمات | `conflicting` | `admin:components.activities.index.empty-placeholders.calls.title` |
-| مكالمة | `conflicting` | `admin:components.activities.actions.activity.call`<br>`admin:contacts.persons.view.activities.actions.activity.call`<br>`admin:activities.index.datagrid.call`<br>`admin:activities.edit.call` |
+| اجتماع | `consistent` | `admin:components.activities.actions.activity.meeting`<br>`admin:contacts.persons.view.activities.actions.activity.meeting`<br>`admin:activities.index.datagrid.meeting`<br>`admin:activities.edit.meeting` |
+| اجتماعات | `consistent` | `admin:components.activities.index.empty-placeholders.meetings.title` |
+| الاجتماعات | `consistent` | `admin:components.activities.index.meetings`<br>`admin:contacts.persons.view.activities.index.meetings` |
+| الغداء | `consistent` | `admin:components.activities.index.lunches`<br>`admin:contacts.persons.view.activities.index.lunches` |
+| المكالمات | `consistent` | `admin:components.activities.index.calls`<br>`admin:contacts.persons.view.activities.index.calls` |
+| مكالمات | `consistent` | `admin:components.activities.index.empty-placeholders.calls.title` |
+| مكالمة | `consistent` | `admin:components.activities.actions.activity.call`<br>`admin:contacts.persons.view.activities.actions.activity.call`<br>`admin:activities.index.datagrid.call`<br>`admin:activities.edit.call` |
 
-Prose-only, never a label: «الغداءات»
+Not names, and not clean: «غداءات» / «الغداءات» — a broken plural inside 2 prose keys
+(`…empty-placeholders.lunches.title` / `.description`), and the glossaries count it as a string-level
+**grammar** defect (§11.8), never as a fourth name.
 
 Also used in 11 of 18 client-guide chapters.
 
@@ -711,14 +766,22 @@ Also used in 3 of 18 client-guide chapters.
 
 ### `email_settings` — Email / IMAP-SMTP settings
 
-**Class:** `conflicting` · **names:** 2 · **surface forms:** 4 · **keys scanned:** 12
+**Class:** `consistent` · **names:** 1 · **surface forms:** 4 · **keys scanned:** 12
+
+**Corrected 2026-11-04 (§13 item 3):** this concept was filed `conflicting` with 2 names, treating
+`إعدادات البريد الإلكتروني` and the `IMAP` family as rivals. They are not rivals: `إعدادات البريد
+الإلكتروني` is the **parent section title** (`configuration.index.email.title`) and `إعدادات IMAP` /
+`حساب IMAP` are its **subsection titles** two levels down (`…email.imap.title`,
+`…email.imap.account.title`), with `IMAP` alone appearing only inside field labels (`اسم مستخدم IMAP`,
+`كلمة مرور IMAP`). One section name, several subsection names, in a deliberate hierarchy — no conflict,
+and no rename owed. The concept joins the 31 that agree.
 
 | surface form | class | keys that render it |
 | --- | --- | --- |
-| IMAP | `conflicting` | `admin:configuration.index.email.imap.account.username`<br>`admin:configuration.index.email.imap.account.password` |
-| إعدادات IMAP | `conflicting` | `admin:configuration.index.email.imap.title` |
-| إعدادات البريد الإلكتروني | `conflicting` | `admin:configuration.index.email.title` |
-| حساب IMAP | `conflicting` | `admin:configuration.index.email.imap.account.title` |
+| IMAP | `consistent` (subsection, not a rival) | `admin:configuration.index.email.imap.account.username`<br>`admin:configuration.index.email.imap.account.password` |
+| إعدادات IMAP | `consistent` (subsection, not a rival) | `admin:configuration.index.email.imap.title` |
+| إعدادات البريد الإلكتروني | `consistent` (the one section name) | `admin:configuration.index.email.title` |
+| حساب IMAP | `consistent` (subsection, not a rival) | `admin:configuration.index.email.imap.account.title` |
 
 Also used in 4 of 18 client-guide chapters.
 
@@ -787,6 +850,13 @@ Also used in 5 of 18 client-guide chapters.
 
 **Class:** `conflicting` · **names:** 2 · **surface forms:** 3 · **keys scanned:** 78
 
+> **Protected — zero edits.** The glossary's operator decision 7 (2026-11-04) keeps every one of these
+> keys as shipped: `نموذج الويب` is a definite label, `نماذج الويب` is the plural a list screen needs, and
+> `نموذج ويب` is the seeded lead-source *value* (`installer:seeders.lead.source.web-form`), which is a
+> list value rather than a label. The inventory still reports the conflict because reporting is its job;
+> **the glossary decides, and here it decides to leave the concept alone.** Nothing under
+> `settings.webforms.*`, `webform:*` or the web-form ACL changes in the apply lane.
+
 | surface form | class | keys that render it |
 | --- | --- | --- |
 | نماذج الويب | `conflicting` | `admin:settings.webforms.index.title`<br>`webform:acl.title`<br>`webform:menu.title` |
@@ -797,14 +867,22 @@ Also used in 6 of 18 client-guide chapters.
 
 ### `data_transfer` — Data transfer / import / export
 
-**Class:** `conflicting` · **names:** 3 · **surface forms:** 5 · **keys scanned:** 120
+**Class:** `conflicting` · **names:** 2 · **surface forms:** 5 · **keys scanned:** 120
+
+**Corrected 2026-11-04 (§13 item 2):** this concept was filed with **3 names**, counting `تصدير`
+(export) as a competing name for import. It is not one. Export is the **sibling action** the same screen
+offers, shipped in 3 keys (`admin:dashboard.index.export-pdf`, `admin:export.export`,
+`admin:export.no-records`) — all three are **correct as shipped and must not change**. The conflict is
+only `نقل البيانات` (section/ACL label) versus the `استيراد` / `الاستيراد` / `الاستيرادات` family the
+screen's own strings use, which is what the glossary overturns. Counting export inflated the concept from
+2 names to 3 and put it at #4 in the worst-fifteen table; it now ranks 12th on key count.
 
 | surface form | class | keys that render it |
 | --- | --- | --- |
 | استيراد | `conflicting` | `admin:acl.import`<br>`admin:settings.data-transfer.imports.create.title`<br>`admin:settings.data-transfer.imports.index.button-title`<br>`admin:settings.data-transfer.imports.import.title` |
 | الاستيراد | `conflicting` | `admin:settings.data-transfer.imports.create.save-btn`<br>`admin:settings.data-transfer.imports.edit.save-btn`<br>`admin:settings.data-transfer.imports.edit.title`<br>`admin:settings.data-transfer.imports.import.importing-info`<br>`admin:settings.data-transfer.imports.not-valid` |
 | الاستيرادات | `conflicting` | `admin:acl.imports`<br>`admin:settings.data-transfer.imports.index.title` |
-| تصدير | `conflicting` | `admin:dashboard.index.export-pdf`<br>`admin:export.export`<br>`admin:export.no-records` |
+| تصدير | **not a name** — sibling action, correct as shipped | `admin:dashboard.index.export-pdf`<br>`admin:export.export`<br>`admin:export.no-records` |
 | نقل البيانات | `conflicting` | `admin:acl.data-transfer`<br>`admin:layouts.data_transfer`<br>`admin:layouts.data_transfer_info` |
 
 Prose-only, never a label: «التصدير»
@@ -815,10 +893,23 @@ Also used in 10 of 18 client-guide chapters.
 
 **Class:** `conflicting` · **names:** 2 · **surface forms:** 2 · **keys scanned:** 81
 
+**Corrected 2026-11-04 (§13 item 5):** the `لوحة التحكم` row below counted **3 keys** while section 10
+counted **7 keys** for the same string — the two figures disagreed and neither was the right one.
+Measured: `grep -o -F 'لوحة التحكم'` over `A` returns **8 occurrences on 7 keys**, and only **5** of them
+render this concept. The other **2** mean the **admin panel as a whole** and do not belong to this concept
+at all: `configuration.index.general.general.locale-settings.title-info` (`A`:2091) and
+`configuration.index.general.settings.footer.show-info` (`A`:2106). `لوحة التحكم` is therefore a
+**homograph** (section 9), the name count stays 2, and the glossary's decision splits it per key: the 5
+dashboard keys become `لوحة المعلومات`, the 2 admin-panel keys stay untouched.
+
 | surface form | class | keys that render it |
 | --- | --- | --- |
-| لوحة التحكم | `conflicting` | `admin:configuration.index.general.settings.dashboard.title`<br>`admin:dashboard.index.pdf.title`<br>`admin:errors.dashboard` |
+| لوحة التحكم | `conflicting` (homograph: 5 keys here, 2 keys for the admin panel elsewhere) | `admin:configuration.index.general.settings.dashboard.title`<br>`admin:configuration.index.general.settings.dashboard.info`<br>`admin:configuration.index.general.settings.dashboard.date-range-info`<br>`admin:dashboard.index.pdf.title`<br>`admin:errors.dashboard` |
 | لوحة القيادة | `conflicting + suspect-literal` | `admin:configuration.index.general.settings.menu.dashboard`<br>`admin:dashboard.index.title`<br>`admin:layouts.dashboard` |
+
+Excluded from this concept on measurement: the 2 admin-panel keys named above. Do not add them back, and
+do not sweep the string — an applier that replaces `لوحة التحكم` everywhere edits the admin panel's own
+chrome.
 
 Also used in 9 of 18 client-guide chapters.
 
@@ -1039,14 +1130,27 @@ Also used in 16 of 18 client-guide chapters.
 
 ## 8. Latin-only strings: the 42 values in the Arabic files that contain no Arabic
 
-Three of these are genuine defects; the rest are correct as they stand.
+The count is **42 non-empty** values; a 43rd key is Latin-only because its value is empty
+(`installer:installer.index.webkul`), which is why a raw count of keys with no Arabic letter returns 43.
+Reproduce both:
+
+```text
+# flatten the five lang files to `ns:key<TAB>value` lines the way Appendix B does, concatenate the
+# results into one file, then:
+$ grep -vcP '[\x{0600}-\x{06FF}]' all-values.tsv                   # 43 — keys with no Arabic letter
+$ grep -vP '[\x{0600}-\x{06FF}]' all-values.tsv | grep -cP '\t\S'  # 42 — the same, with a value
+```
+
+**Four of these are genuine defects, and all four were decided by the operator on 2026-11-04** (glossary
+§4.7.1); the rest are correct as they stand.
 
 | key | value | verdict |
 | --- | --- | --- |
-| `admin:leads.update-failed` | `Leads can not be deleted.` | **defect** — a whole English sentence in the Arabic file |
-| `admin:leads.index.datagrid.id` | `ID` | **defect** — every other grid says المعرف |
-| `admin:leads.index.kanban.columns.id` | `ID` | **defect** — same |
-| `admin:settings.webhooks.create.json` | `Json` | minor — should be `JSON`, as `installer:installer.index.server-requirements.json` already is |
+| `admin:leads.update-failed` | `Leads can not be deleted.` | **defect — decided** → `لا يمكن حذف الفرص.` (uses the approved record term `الفرصة` / `الفرص`) |
+| `admin:leads.index.datagrid.id` | `ID` | **defect — decided** → `المعرف`; every other grid already says it |
+| `admin:leads.index.kanban.columns.id` | `ID` | **defect — decided** → `المعرف`; same |
+| `admin:settings.webhooks.create.json` | `Json` | **defect — decided** → `JSON`, as `installer:installer.index.server-requirements.json` already is |
+| `admin:settings.webhooks.edit.json` | `Json` | **defect — decided** → `JSON`; the `edit` twin of the row above, missing from the first pass |
 | `installer:seeders.attributes.products.sku` | `SKU` | correct — stays Latin by design |
 | `admin:export.csv` / `.xls` / `.xlsx` | `CSV` / `XLS` / `XLSX` | correct — formats |
 | `admin:settings.webhooks.*.x-www-form-urlencoded` | `x-www-form-urlencoded` | correct — media type |
@@ -1083,12 +1187,18 @@ inventory found doing two jobs.
 | مستخدم | `installer:...database-username` — a database **user** | `acl.user` — a CRM **user** |
 | شخص | `account.edit.profile-image` — **your** photo | `acl.persons` — a **person** record |
 | النوع | the Leads **type** | shared by `entity-type`, `condition-type`, `option-type`, `lookup-type`, `permission-type` — five other concepts |
+| لوحة التحكم | the **dashboard page** — 5 keys (`dashboard.index.pdf.title`, the three `configuration…settings.dashboard.*` labels, `errors.dashboard`) | the **admin panel as a whole** — 2 keys (`configuration.index.general.general.locale-settings.title-info`, `configuration.index.general.settings.footer.show-info`) |
 | جهة الاتصال | the **Contacts** module (`acl.contacts`) | the **linked contact** of a single lead (`leads.view.persons.change-title`) |
 
 The `النوع` and `جهة الاتصال` rows are the two that a glossary has to resolve
 explicitly: `النوع` cannot be renamed wholesale without splitting the six concepts it
 currently serves, and `جهة الاتصال` is used for both the module and the lead's link,
 so renaming one renames the other unless the key sets are separated first.
+
+`لوحة التحكم` was added to this table on 2026-11-04 (§13 item 5) because it is the one row where a
+*decided* rename would corrupt an unrelated screen: the glossary moves the dashboard page to
+`لوحة المعلومات`, and a find-and-replace over `لوحة التحكم` would silently relabel the admin panel's own
+locale and footer help text. Measured split: 8 occurrences on 7 keys = 5 dashboard + 2 admin panel.
 
 ---
 
@@ -1121,7 +1231,7 @@ each string returns zero hits:
 | string the guide never mentions | where it is real |
 | --- | --- |
 | المحذوفات | `acl.trash` — a third name for the trash folder |
-| لوحة التحكم | `dashboard.index.pdf.title`, the 3 `configuration.index.general.settings.dashboard.*` keys, `configuration.index.general.general.locale-settings.title-info`, `configuration.index.general.settings.footer.show-info`, `errors.dashboard` — 7 keys in total |
+| لوحة التحكم | `dashboard.index.pdf.title`, the 3 `configuration.index.general.settings.dashboard.*` keys, `configuration.index.general.general.locale-settings.title-info`, `configuration.index.general.settings.footer.show-info`, `errors.dashboard` — 7 keys in total, of which **5 render the dashboard** and **2 mean the admin panel** (§13 item 5) |
 | الاقتباسات | `components.activities.index.quotes`, `leads.view.tabs.quotes` |
 | نموذج البريد الإلكتروني | `settings.marketing.campaigns.index.create.email-template` |
 | الويب هوكس | `settings.webhooks.index.title` — the guide's webhook row lists no alternative name at all, though four exist |
@@ -1131,7 +1241,9 @@ each string returns zero hits:
 
 Two whole clusters are absent from the guide from beginning to end: the
 `http_terminology` cluster (نقطة النهاية, حمولة, الرؤوس, الجسم, الطريقة) and the
-`password_reset` cluster. Both are `conflicting` here.
+`password_reset` cluster. Both are `conflicting` here, and both were **settled by the operator on
+2026-11-04** — the glossary now carries a row for each (§4.5's three HTTP rows, §4.8's password-flow row),
+so the guide chapters get them in the apply lane instead of staying silent about them.
 
 The guide's own framing — "three layers name the same thing" — is confirmed by the
 data, but the inventory finds **23** concepts with all three layers and **12** of them
@@ -1151,12 +1263,23 @@ Stated plainly, because the guardrail task will run into each of these.
 
 2. **`جهة الاتصال` serves two concepts** — the Contacts module and a single lead's
    linked person. `contact_person` and `contacts` both own it. I left it in both rather
-   than guess which one a glossary would keep.
+   than guess which one a glossary would keep. **Settled 2026-11-04:** the glossary keeps `جهة الاتصال`
+   for the linked person (its §4.2 `contact person` row overturns `شخص الاتصال`) and keeps `جهات الاتصال`
+   for the section, so the same word legitimately names both — the key sets are separate, and
+   `person-updated`, `save-contact` and `change-title` belong to the record, not to the module.
 
-3. **`العميل` and `العملاء` (bare, without محتمل) are ambiguous.** They occur only twice
-   in a naming slot (`leads.index.kanban.empty-list`, the two `contacts.persons.index.*-delete-warning`
-   strings) and mean "customer" there rather than "lead". I counted them as `lead`
-   surface forms because the keys are lead keys, and flagged them here.
+3. **`العميل` and `العملاء` (bare, without محتمل) are ambiguous — and the first pass got their key set
+   wrong.** Corrected 2026-11-04 (§13 item 6): the two `contacts.persons.index.*-delete-warning` keys do
+   **not** ship a bare `العميل`. Measured, they read `…لأنهم مرتبطون بعملاء محتملين.` (`A`:512–513) — the
+   *lead* term, not the customer term. The keys that really carry a bare word are three, and they are not
+   interchangeable: `leads.index.kanban.empty-list` (`A`:1901 `قائمة العملاء الخاصة بك فارغة`) and
+   `settings.sources.index.delete-failed-associated-leads` (`A`:830 `…يرجى فصل أو تحديث هؤلاء العملاء قبل
+   الحذف`) carry bare **`العملاء`**, while `emails.common.user.forget-password.subject` (`A`:2475
+   `إعادة تعيين كلمة مرور العميل`) carries bare **`العميل`** — and that one is a defect the operator has
+   already decided, because it labels a CRM **user** as a customer (glossary §4.7.1). I counted all three
+   as `lead` surface forms because the keys are lead keys, and flagged them here. One further occurrence
+   of `العملاء` is not a record name at all: `layouts.inventory-info` (`A`:2444) says `إدارة علاقات العملاء
+   (CRM)`, the CRM product noun.
 
 4. **`منظمة` / `مؤسسة` cannot be ordered.** Both are idiomatic Arabic for
    "organization". Two names is a fact; which one is right is a glossary decision and
@@ -1166,20 +1289,28 @@ Stated plainly, because the guardrail task will run into each of these.
    contains no Arabic letter, so the seven-line `leads` grid header defect shows up in
    section 8 rather than in the concept table. `record_id` reads `consistent` there.
 
-6. **`http_terminology` severity is a judgement.** I called إرسال and تحديث
-   suspect-literal for HTTP `POST` and `PUT` because the labels hide the verb a webhook
-   author is choosing. A reviewer could reasonably classify them as acceptable
-   localization instead; the strings are listed so that call can be re-made.
+6. **`http_terminology` severity is a judgement — and it has been made.** I called إرسال and تحديث
+   suspect-literal for HTTP `POST` and `PUT` because the labels hide the verb a webhook author is
+   choosing, and a reviewer could reasonably have called them acceptable localisation. **Settled
+   2026-11-04 in the direction this finding pointed:** both become the Latin `POST` / `PUT` (glossary
+   decision 8a), the endpoint field becomes `عنوان URL` (8b), and `حمولة` / `الرؤوس` / `رأس` / `الجسم` /
+   `الطريقة` keep their shipped values with a glossary row of their own (8c) — so the cluster is no longer
+   an open question, and the strings stay listed here for the record.
 
 7. **Whether the pipeline is one concept or two is arguable.** `pipeline` and
    `pipeline_stage` are separate concepts here because they have separate ACL, sidebar
    and title slots. If a glossary treats "the pipeline and its stages" as one screen,
    the counts merge (`pipeline` 2 names + `pipeline_stage` 1 name).
 
-8. **`activity_type`'s broken plurals are not a conflict but they are not clean
-   either.** الغداء (lunch) takes الغداءات, which is not a normal Arabic plural; the
-   three activity types also each ship singular and plural label sets. Classed
-   `conflicting` on the strength of the plural forms being separate strings.
+8. **`activity_type`'s broken plural is a grammar defect, not a naming conflict — corrected 2026-11-04
+   (§13 item 1).** الغداء (lunch) takes `الغداءات` / `غداءات`, which is not a normal Arabic plural, and
+   that is the only defect on this screen. The three types are three different values, so they are not
+   rival names for one concept and the class is `consistent`, not `conflicting`; this item previously
+   said otherwise. The plural ships in **2 keys** — `components.activities.index.empty-placeholders.lunches.title`
+   (`A`:199) and `.description` (`A`:200), 3 occurrences between them — and the fix needs no new invented
+   plural: `أنشطة غداء` / `أنشطة الغداء`, matching how the `calls` and `meetings` blocks read. That
+   suggestion is **not decided** — the glossary carries no row for it — so the apply lane takes it from
+   here or asks, and must not invent a different plural.
 
 9. **Prose was excluded by rule, so some mentions never appear as names.** For example
    `leads.file.*` is a block of eleven AI-upload error sentences that mention
@@ -1221,7 +1352,8 @@ The map the extraction uses, reproduced. A concept may own more than one name (t
 | `organization` (conflicting) | المؤسسة / المؤسسات | المؤسسات · مؤسسات · المؤسسة · مؤسسة | — |
 |  | المنظمة / المنظمات | المنظمات · منظمات · المنظمة · منظمة | — |
 | `contacts` (consistent) | جهات الاتصال | جهات الاتصال · جهة الاتصال · جهات اتصال · جهة اتصال | — |
-| `contact_person` (consistent) | شخص الاتصال / جهة الاتصال | شخص الاتصال · جهة الاتصال · جهة اتصال | — |
+| `contact_person` (**conflicting**; §13 item 4) | شخص الاتصال | شخص الاتصال | — |
+|  | جهة الاتصال | جهة الاتصال · جهة اتصال | — |
 | `quote` (conflicting) | عرض السعر | عرض السعر · عرض سعر | — |
 |  | عروض الأسعار (quotation) | عروض الأسعار | — |
 |  | العروض / عروض | العروض · عروض | — |
@@ -1229,9 +1361,9 @@ The map the extraction uses, reproduced. A concept may own more than one name (t
 |  | الاقتباس (citation) | الاقتباسات · الاقتباس · اقتباس | suspect-literal: الاقتباسات · الاقتباس · اقتباس |
 | `product` (consistent) | المنتج / المنتجات | المنتجات · منتجات · المنتج · منتج | — |
 | `activity` (consistent) | النشاط / الأنشطة | الأنشطة · أنشطة · النشاط · نشاط | — |
-| `activity_type` (conflicting) | مكالمة / مكالمات | المكالمات · مكالمات · مكالمة | — |
+| `activity_type` (**consistent** — three values, one name each; §13 item 1) | مكالمة / مكالمات | المكالمات · مكالمات · مكالمة | — |
 |  | اجتماع / اجتماعات | الاجتماعات · اجتماعات · اجتماع | — |
-|  | غداء / الغداءات | الغداءات · الغداء · غداء | — |
+|  | غداء | الغداء · غداء  (**not** a name: `الغداءات` · `غداءات`) | — (grammar defect, §11.8) |
 | `warehouse` (consistent) | المستودع / المستودعات | المستودعات · مستودعات · المستودع · مستودع | — |
 | `inventory` (consistent) | المخزون | المخزون · مخزون | — |
 | `tag` (conflicting) | الوسم / الوسوم | الوسوم · وسوم · الوسم · وسم | — |
@@ -1246,9 +1378,9 @@ The map the extraction uses, reproduced. A concept may own more than one name (t
 |  | مسؤول المبيعات | مسؤول المبيعات | — |
 | `email_template` (conflicting) | قالب البريد الإلكتروني | قوالب البريد الإلكتروني · قالب البريد الإلكتروني · قوالب البريد · قالب البريد | — |
 |  | نموذج البريد الإلكتروني | نموذج البريد الإلكتروني | suspect-literal: نموذج البريد الإلكتروني |
-| `email_settings` (conflicting) | إعدادات البريد الإلكتروني | إعدادات البريد الإلكتروني | — |
-|  | IMAP | إعدادات IMAP · حساب IMAP · IMAP | — |
-|  | SMTP | SMTP | — |
+| `email_settings` (**consistent**; §13 item 3) | إعدادات البريد الإلكتروني | إعدادات البريد الإلكتروني | — |
+|  | IMAP (subsection titles, not a rival name) | إعدادات IMAP · حساب IMAP · IMAP | — |
+|  | SMTP (protocol token) | SMTP | — |
 | `workflow` (consistent) | سير العمل | سير العمل · سير عمل | — |
 | `automation` (consistent) | الأتمتة | الأتمتة · أتمتة | — |
 | `campaign` (consistent) | الحملة / الحملات | الحملات · حملات · الحملة · حملة | — |
@@ -1257,14 +1389,14 @@ The map the extraction uses, reproduced. A concept may own more than one name (t
 | `webhook` (conflicting) | الويب هوك | الويب هوكس · الويب هوك | suspect-literal: الويب هوكس · الويب هوك |
 |  | ويب هوك | ويب هوك | suspect-literal: ويب هوك |
 |  | Webhook (left in English) | Webhooks · Webhook · webhooks · webhook | suspect-literal: Webhook · webhook |
-| `web_form` (conflicting) | نموذج الويب | نموذج الويب · نموذج ويب | — |
+| `web_form` (conflicting — **protected as shipped by the glossary; no edit**) | نموذج الويب | نموذج الويب · نموذج ويب | — |
 |  | نماذج الويب | نماذج الويب · نماذج ويب | — |
 | `data_transfer` (conflicting) | نقل البيانات | نقل البيانات | — |
 |  | الاستيراد / استيراد | الاستيرادات · الاستيراد · استيراد | — |
-|  | التصدير / تصدير | التصدير · تصدير | — |
+|  | ~~التصدير / تصدير~~ **not a name** (§13 item 2) | التصدير · تصدير | — sibling action, correct as shipped |
 | `dashboard` (conflicting) | لوحة القيادة | لوحة القيادة | suspect-literal: لوحة القيادة |
-|  | لوحة التحكم (control panel) | لوحة التحكم | — |
-|  | لوحة المعلومات | لوحة المعلومات | — |
+|  | لوحة التحكم (5 dashboard keys only; 2 more keys mean the admin panel — §13 item 5 and section 9) | لوحة التحكم | — |
+|  | لوحة المعلومات (approved, ships 0×) | لوحة المعلومات | — |
 | `settings` (consistent) | الإعدادات | الإعدادات · إعدادات | — |
 | `configuration` (conflicting) | التهيئة | التهيئة | — |
 |  | التكوين | التكوينات · التكوين · تكوينات · تكوين | — |
@@ -1274,7 +1406,7 @@ The map the extraction uses, reproduced. A concept may own more than one name (t
 | `mail_sent` (conflicting) | المرسل | المرسل | — |
 |  | تم الإرسال (past tense used as folder name) | تم الإرسال · المرسلة | suspect-literal: تم الإرسال |
 | `mail_outbox` (consistent) | الصادر | الصادر · الصادرة | — |
-| `mail_draft` (consistent) | المسودات | المسودات · المسودة · مسودة | — |
+| `mail_draft` (consistent) | المسودات | المسودات · المسودة · مسودة | — (per key: folder label → المسودات, compose dialog stays مسودة — glossary decision 10) |
 | `mail_trash` (conflicting) | سلة المهملات | سلة المهملات | — |
 |  | المهملات | المهملات | — |
 |  | المحذوفات | المحذوفات | suspect-literal: المحذوفات |
@@ -1291,15 +1423,76 @@ The map the extraction uses, reproduced. A concept may own more than one name (t
 |  | SKU | SKU | — |
 | `account` (consistent) | حسابي | حسابي | — |
 | `login` (consistent) | تسجيل الدخول | تسجيل الدخول | — |
-| `password_reset` (conflicting) | إعادة تعيين كلمة المرور | إعادة تعيين كلمة المرور | — |
-|  | استعادة كلمة المرور | استعادة كلمة المرور | — |
-|  | نسيت كلمة المرور | نسيت كلمة المرور | — |
-| `http_terminology` (conflicting) | نقطة النهاية | نقطة نهاية الرابط · نقطة النهاية | suspect-literal: نقطة نهاية الرابط · نقطة النهاية |
-|  | حمولة | حمولة | suspect-literal: حمولة |
-|  | الرؤوس | الرؤوس · رأس | suspect-literal: الرؤوس · رأس |
-|  | الجسم | الجسم | suspect-literal: الجسم |
-|  | الطريقة | الطريقة | suspect-literal: الطريقة |
-|  | إرسال / تحديث (POST / PUT) | إرسال · تحديث | suspect-literal: إرسال · تحديث |
+| `password_reset` (conflicting — **settled 2026-11-04**, glossary decision 9) | إعادة تعيين كلمة المرور | إعادة تعيين كلمة المرور | — step two, stays |
+|  | استعادة كلمة المرور | استعادة كلمة المرور | — step one, and the tab title joins it |
+|  | نسيت كلمة المرور | نسيت كلمة المرور | — the login link only, not a screen title |
+| `http_terminology` (conflicting — **settled 2026-11-04**, glossary decision 8) | نقطة النهاية | نقطة نهاية الرابط · نقطة النهاية | suspect-literal: نقطة نهاية الرابط · نقطة النهاية — resolved to `عنوان URL` in 3 keys |
+|  | حمولة | حمولة | suspect-literal: حمولة — **kept as shipped** |
+|  | الرؤوس | الرؤوس · رأس | suspect-literal: الرؤوس · رأس — **kept as shipped** |
+|  | الجسم | الجسم | suspect-literal: الجسم — **kept as shipped** |
+|  | الطريقة | الطريقة | suspect-literal: الطريقة — **kept as shipped** |
+|  | إرسال / تحديث (POST / PUT) | إرسال · تحديث | suspect-literal: إرسال · تحديث — resolved to Latin `POST` / `PUT` in 4 keys |
+
+---
+
+## 13. Corrections applied 2026-11-04
+
+The reconciliation against [arabic-terminology.md](arabic-terminology.md) measured six classifications in
+this inventory that were wrong, and wrong in the direction that matters: an applier trusting them would
+have edited the wrong keys. Each one is **corrected in place above, with the correction stated** rather
+than deleted, and each keeps its original finding visible so the next agent can see what changed and why.
+Every number below is re-measurable with the command quoted beside it.
+
+| # | concept | was | now | why it was wrong |
+| --- | --- | --- | --- | --- |
+| 1 | `activity_type` | `conflicting`, 3 names / 20 keys | **`consistent`**, 1 name per type | مكالمة / اجتماع / غداء are three **different types**, not three names for one concept; each ships in its own key set and the glossary approves all three singulars. The only defect is the broken plural `الغداءات` / `غداءات`, a grammar error in 2 prose keys — string-level, not a naming conflict. |
+| 2 | `data_transfer` | `conflicting`, 3 names / 120 keys | **`conflicting`, 2 names / 120 keys** | `تصدير` (export) is the sibling action, not a competing name for import. Its 3 keys are **correct as shipped** and must not change. |
+| 3 | `email_settings` | `conflicting`, 2 names / 12 keys | **`consistent`**, 1 name | A parent section title (`إعدادات البريد الإلكتروني`) and its IMAP subsection titles are a deliberate hierarchy, not rivals. |
+| 4 | `contact_person` | `consistent`, 1 name / 11 keys | **`conflicting`, 2 names / 11 keys** | `شخص الاتصال` (**7 `A`** keys) and `جهة الاتصال` (**5 `A`** keys) are two different lexemes, and the glossary overturns one of them — a concept carrying a rename cannot be `consistent`. |
+| 5 | `dashboard` | `لوحة التحكم` = 3 keys here, 7 keys in section 10 | **5 keys here, 2 excluded** | Measured: 8 occurrences on **7 keys**, of which **5** render the dashboard and **2** mean the admin panel as a whole. `لوحة التحكم` is a homograph (section 9), and the glossary splits it per key. |
+| 6 | section 11.3 | "the two `contacts.persons.index.*-delete-warning` strings ship a bare `العميل`" | **they ship `مرتبطون بعملاء محتملين`** (`A`:512–513) | The bare word is not there. The keys that really carry it are `leads.index.kanban.empty-list` (`A`:1901, bare **`العملاء`**), `settings.sources.index.delete-failed-associated-leads` (`A`:830, bare **`العملاء`**) and `emails.common.user.forget-password.subject` (`A`:2475, bare **`العميل`** — the one the operator has already decided). |
+
+### The commands that re-measure each correction
+
+```bash
+A=packages/Webkul/Admin/src/Resources/lang/ar/app.php
+
+# 1 — the broken plural is prose in exactly 2 keys (title + description of the lunches block)
+grep -n 'الغداءات\|غداءات' $A                    # A:199 title, A:200 description
+grep -o -F 'غداءات' $A | wc -l                    # 3 occurrences (الغداءات counted inside غداءات)
+
+# 2 — export is a separate action, shipped correctly in 3 keys
+grep -n 'تصدير' $A                                # export-pdf, export.export, export.no-records are labels
+
+# 3 — one section title, two subsection titles, no rival name
+grep -n 'إعدادات البريد الإلكتروني\|إعدادات IMAP\|حساب IMAP' $A
+
+# 4 — two lexemes, not two inflections
+grep -o -F 'شخص الاتصال' $A | wc -l               # 7
+grep -o -F 'جهة الاتصال' $A | wc -l               # 5
+
+# 5 — 8 occurrences on 7 keys, split 5 dashboard + 2 admin panel
+grep -o -F 'لوحة التحكم' $A | wc -l               # 8
+grep -n 'لوحة التحكم' $A                          # 7 lines: 2091, 2106 (admin panel) + 2132, 2133, 2135×2, 2234, 2492 (dashboard)
+
+# 6 — the delete-warning wording that was mis-quoted
+grep -n 'delete-warning' $A                       # A:512–513 both say مرتبطون بعملاء محتملين
+grep -n 'قائمة العملاء الخاصة بك فارغة' $A         # A:1901
+grep -n 'كلمة مرور العميل' $A                      # A:2475
+```
+
+### What these corrections do **not** change
+
+- The **55 concepts** and the **2,204 Arabic-bearing keys** are untouched: no concept was added, removed
+  or re-scoped.
+- The **44 suspect-literal strings** in section 6 are untouched. Item 1's broken plural is not a
+  suspect-literal (it is not a transliteration or a word-for-word rendering), which is why it is recorded
+  as a grammar defect instead of being counted there.
+- `web_form` **stays `conflicting` here** even though the glossary protects it as shipped: reporting the
+  disagreement is this file's job, deciding it is the glossary's, and the glossary's decision is
+  **zero edits** (its operator decision 7).
+- The glossary's own decisions are not restated here. They live in
+  [arabic-terminology.md](arabic-terminology.md) §operator decisions 6–10, §4.5, §4.6, §4.8 and §4.7.1.
 
 ---
 
@@ -1739,10 +1932,11 @@ assignments.
     },
     "contact_person": {
         "english": "Contact person (linked person on a record)",
-        "class": "consistent",
-        "n_names": 1,
+        "class": "conflicting",
+        "n_names": 2,
         "names": [
-            "شخص الاتصال / جهة الاتصال"
+            "شخص الاتصال",
+            "جهة الاتصال"
         ],
         "strings": [
             "جهة اتصال",
@@ -1751,14 +1945,13 @@ assignments.
         ],
         "suspect": [],
         "naming_keys": [
+            "admin:leads.create.contact-info",
             "admin:leads.create.contact-person",
+            "admin:leads.edit.contact-info",
             "admin:leads.edit.contact-person",
             "admin:leads.index.datagrid.contact-person",
             "admin:leads.index.kanban.columns.contact-person",
-            "admin:leads.index.kanban.toolbar.card-settings.contact-person",
-            "admin:mail.view.link-to-contact",
-            "admin:mail.view.linked-contact",
-            "admin:settings.warehouses.index.datagrid.contact-name"
+            "admin:leads.index.kanban.toolbar.card-settings.contact-person"
         ]
     },
     "quote": {
@@ -1899,19 +2092,19 @@ assignments.
     },
     "activity_type": {
         "english": "Activity type (call / meeting / lunch)",
-        "class": "conflicting",
-        "n_names": 3,
+        "class": "consistent",
+        "n_names": 1,
         "names": [
-            "مكالمة / مكالمات",
-            "اجتماع / اجتماعات",
-            "غداء / الغداءات"
+            "مكالمة / اجتماع / غداء — three values, one name each (corrected 2026-11-04)"
         ],
         "strings": [
             "اجتماع",
             "اجتماعات",
             "الاجتماعات",
             "الغداء",
+            "الغداءات",
             "المكالمات",
+            "غداءات",
             "مكالمات",
             "مكالمة"
         ],
@@ -1925,6 +2118,8 @@ assignments.
             "admin:components.activities.actions.activity.meeting",
             "admin:components.activities.index.calls",
             "admin:components.activities.index.empty-placeholders.calls.title",
+            "admin:components.activities.index.empty-placeholders.lunches.description",
+            "admin:components.activities.index.empty-placeholders.lunches.title",
             "admin:components.activities.index.empty-placeholders.meetings.title",
             "admin:components.activities.index.lunches",
             "admin:components.activities.index.meetings",
@@ -2210,11 +2405,10 @@ assignments.
     },
     "email_settings": {
         "english": "Email / IMAP-SMTP settings",
-        "class": "conflicting",
-        "n_names": 2,
+        "class": "consistent",
+        "n_names": 1,
         "names": [
-            "إعدادات البريد الإلكتروني",
-            "IMAP"
+            "إعدادات البريد الإلكتروني (the section; إعدادات IMAP / حساب IMAP are subsection titles — corrected 2026-11-04)"
         ],
         "strings": [
             "IMAP",
@@ -2389,11 +2583,10 @@ assignments.
     "data_transfer": {
         "english": "Data transfer / import / export",
         "class": "conflicting",
-        "n_names": 3,
+        "n_names": 2,
         "names": [
             "نقل البيانات",
-            "الاستيراد / استيراد",
-            "التصدير / تصدير"
+            "الاستيراد / استيراد"
         ],
         "strings": [
             "استيراد",
@@ -2407,9 +2600,6 @@ assignments.
             "admin:acl.data-transfer",
             "admin:acl.import",
             "admin:acl.imports",
-            "admin:dashboard.index.export-pdf",
-            "admin:export.export",
-            "admin:export.no-records",
             "admin:layouts.data_transfer",
             "admin:layouts.data_transfer_info",
             "admin:settings.data-transfer.imports.create.save-btn",
@@ -2429,7 +2619,7 @@ assignments.
         "n_names": 2,
         "names": [
             "لوحة القيادة",
-            "لوحة التحكم (control panel)"
+            "لوحة التحكم (this page, 5 keys only; the 2 keys that mean the admin panel are excluded — corrected 2026-11-04)"
         ],
         "strings": [
             "لوحة التحكم",
@@ -2439,6 +2629,8 @@ assignments.
             "لوحة القيادة"
         ],
         "naming_keys": [
+            "admin:configuration.index.general.settings.dashboard.date-range-info",
+            "admin:configuration.index.general.settings.dashboard.info",
             "admin:configuration.index.general.settings.dashboard.title",
             "admin:configuration.index.general.settings.menu.dashboard",
             "admin:dashboard.index.pdf.title",

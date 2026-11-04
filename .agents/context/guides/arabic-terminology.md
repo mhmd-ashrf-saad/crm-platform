@@ -1,4 +1,4 @@
-<!-- Context: guides/arabic-terminology.md | Priority: critical | Version: 1.1 | Updated: 2026-11-04 -->
+<!-- Context: guides/arabic-terminology.md | Priority: critical | Version: 1.2 | Updated: 2026-11-04 -->
 
 # Arabic terminology — the one glossary
 
@@ -14,9 +14,11 @@ Beads origin: `crm-mox.1`. Application of these decisions is `crm-mox.3`, not th
 ## Operator decisions — 2026-11-04
 
 The review table below was taken to the operator row by row on **2026-11-04** and is **approved as
-written: 26 of 26 rows, none rejected.** The five decisions that came out of that review are final for
-the apply lane (`crm-mox.3`). They are recorded here, in this file's own voice, so no later agent
-reopens them; §6 keeps each one's evidence trail.
+written: 26 of 26 rows, none rejected.** The decisions that came out of that review are final for the
+apply lane (`crm-mox.3`): five from the row-by-row pass (items 1–5 below) and five more from a second
+pass run against the shipped tree, which closed the five holes the reconciliation had found (items
+6–10, in the subsection at the end of this block). They are recorded here, in this file's own voice, so
+no later agent reopens them; §6 keeps each one's evidence trail.
 
 1. **All 26 rows approved, including rows 1 and 2.** `lead` → **الفرصة** and `pipeline` →
    **مسار المبيعات** therefore *approve* the overturn of `brand/copy-deck.md` §3, which had committed
@@ -36,10 +38,11 @@ reopens them; §6 keeps each one's evidence trail.
    the invoicing epic must not arrive under a second name for it.
 4. **`dashboard` → `لوحة المعلومات`**, overruling the "keep as shipped" recommendation. It replaces
    `لوحة القيادة` — **3 occurrences in `A`** (`A`:2115 widget, `A`:2217 page title, `A`:2362 menu) plus
-   **36 mentions** across `docs/` and `brand/`. `لوحة التحكم` is untouched and keeps its different
-   referent: the admin panel as a whole, never this page. *Origin:* an **operator decision on Egyptian
-   usage**, not a research finding — no external source settled this row (§9.4), and none is claimed
-   for it.
+   **36 mentions** across `docs/` and `brand/`. `لوحة التحكم` keeps its different referent — the admin
+   panel as a whole — in the **2 keys** where it means that, and moves to `لوحة المعلومات` in the other
+   **5**, where it renders this page (measured and split in decision 6 below). *Origin:* an **operator
+   decision on Egyptian usage**, not a research finding — no external source settled this row (§9.4),
+   and none is claimed for it.
 5. **`warehouse` → `المخزن` / pl. `المخازن`**, overruling the "keep as shipped" recommendation. It
    replaces `المستودع` — **14 occurrences in `A`**, 5 of them the plural `المستودعات`, plus **33
    mentions** across `docs/` and `brand/`. The inventory card keeps `المخزون`, so `المخزن` / `المخزون`
@@ -49,6 +52,64 @@ reopens them; §6 keeps each one's evidence trail.
 OQ-4 (`مسار المبيعات` versus AccFlex's `المسار البيعي`) was settled at the same review: **`مسار
 المبيعات` stays**, as recommended. §6 now holds five resolved entries (OQ-1 to OQ-5) and the three
 questions these decisions genuinely do not reach (OQ-6 to OQ-8).
+
+### Second review, 2026-11-04 — the five holes, closed
+
+Taking the table back to the operator a second time, against the **shipped tree** rather than against the
+research, closed the five questions the first pass left open. Each is a decision on record exactly like
+items 1–5, and the apply lane executes it as written; they are numbered 6–10 because they continue that list.
+
+#### Decision 6 — `dashboard` — split the concept; do not blanket-replace.
+The approved `لوحة المعلومات` covers the **5 keys that render the dashboard page**: `dashboard.index.pdf.title` (`A`:2234 `تقرير لوحة التحكم`),
+`configuration.index.general.settings.dashboard.title` (`A`:2132), `…settings.dashboard.info`
+(`A`:2133), `…settings.dashboard.date-range-info` (`A`:2135 — **two** occurrences inside that one
+value), and `errors.dashboard` (`A`:2492). The **2 keys that mean the admin panel keep `لوحة التحكم`
+untouched**: `configuration.index.general.general.locale-settings.title-info` (`A`:2091) and
+`configuration.index.general.settings.footer.show-info` (`A`:2106). Measured:
+`grep -o -F 'لوحة التحكم' packages/Webkul/Admin/src/Resources/lang/ar/app.php | wc -l` = **8**, on
+**7 keys** — 5 dashboard + 2 admin panel. *Apply lane:* key by key, never by string; `لوحة التحكم` is a
+homograph (see §4.5 and the inventory's §9).
+
+#### Decision 7 — `web_form` — protected as shipped: zero edits, and this is a recorded do-not-unify.
+78 keys. Its three renderings are all correct and must **not** be unified: the definite label `نموذج الويب` (settings
+— 4 naming slots, 10 occurrences in `A`:963–1031) and the plural list screen `نماذج الويب` (3 keys:
+`settings.webforms.index.title`, `webform:acl.title`, `webform:menu.title`); the third, `نموذج ويب`, is
+the **seeded lead source value** (`installer:seeders.lead.source.web-form`), which is a list value, not
+a label. *Apply lane:* no key under `settings.webforms.*`, `acl.*` or `menu.*` for this concept changes.
+*Conflict of authority, resolved here:* the inventory classes `web_form` `conflicting` (two lexemes,
+2 names / 78 keys); this glossary protects it as shipped. **The glossary wins** — see §4.5's row.
+
+#### Decision 8 — `http_terminology` — settled, four decisions in one.
+(a) The HTTP method labels stay **Latin `POST` and `PUT`**: `settings.webhooks.create.post` (`A`:974) and `settings.webhooks.create.put` (`A`:975),
+with their `edit` twins (`A`:1001, `A`:1002) — those four keys change from `إرسال` and `تحديث` to
+`POST` and `PUT`. This is the **first Latin token used as a control label in this UI**, and the
+exception is recorded in §3. (b) The duplicate endpoint field resolves to **`عنوان URL`** under §3's
+existing rule: `webhooks.index.datagrid.end-point` (`A`:968, `نقطة النهاية`),
+`webhooks.create.url-endpoint` (`A`:976) and its `edit` twin (`A`:1003) (both `نقطة نهاية الرابط`).
+(c) The remaining HTTP labels keep their shipped values and now have a row of their own in §4.5 so they
+are no longer unsettled: `حمولة` payload, `الرؤوس` / `رأس` headers, `الجسم` body, `الطريقة` method.
+(d) Why (a) cannot be done in Arabic: `تحديث` already means *update* in **60 `A` keys** (61 occurrences
+of the `تحديث` family, counting `التحديث`) and `إرسال` already means *send* in **22 `A` keys**, so
+neither can be reused as a method label without breaking the screens that use it as a verb.
+
+#### Decision 9 — `password_reset` — settled.
+`users.forget-password.create.page-title` (`A`:67) moves from `نسيت كلمة المرور` to **`استعادة كلمة
+المرور`**, matching the screen heading it sits above (`users.forget-password.create.title`, `A`:71),
+under the rule that a tab title and its heading must read the same. `users.reset-password.title` and
+`.submit-btn` (`A`:80) stay **`إعادة تعيين كلمة المرور`** — they are genuinely the second step, where a
+new password is typed. `users.login.forget-password-link` (`A`:58 `نسيت كلمة المرور؟`) stays as
+shipped: it is the question a user clicks, not a screen name. The flow had no glossary row and no
+client-guide chapter; §4.8 adds the row.
+
+#### Decision 10 — `mail_draft` — the self-contradiction resolved by splitting the keys.
+`mail.index.draft` (`A`:1757, the **folder label** in the mail sidebar) moves to **`المسودات`**, on the
+row's own reason that folder names are plural (`المسودات` already ships 3× `A`: `acl.draft`, `…menu.draft`,
+`layouts.mail.draft`). `mail.index.mail.draft` (`A`:1773, the **compose dialog** that saves one draft)
+stays **`مسودة`**: that screen is one draft, not a folder. *Apply lane:* exactly one of those two keys
+changes, which is why the row can no longer say `no` while naming the shipped label. The four fixture
+defects approved in the same pass — the English sentence at `leads.update-failed`, the two bare `ID`
+headers, `Json`, and the customer-labelled password-reset subject — are recorded in §4.7.1, which is
+the table the apply lane reads for string-level fixes.
 
 ---
 
@@ -84,7 +145,7 @@ can be re-checked rather than re-argued.
 | 22 | `sent` folder | `تم الإرسال` | **المرسل** | A past-tense sentence used as a folder name. |
 | 23 | `trash` action | `تم النقل إلى سلة المهملات` | **نقل إلى سلة المهملات** | Same class of error; a control label is a verb phrase. |
 | 24 | `Existing Business` seed | `عمل موجود` | **عمل قائم** | `موجود` means "present/available", not "existing". |
-| 25 | `dashboard` | `لوحة القيادة` — **3 `A`** (`A`:2115 widget, `A`:2217 page title, `A`:2362 menu), plus **36 mentions** across `docs/` and `brand/` | **لوحة المعلومات** | `لوحة القيادة` is a cockpit calque; an Egyptian manager who has opened Excel or Power BI has already read `لوحة المعلومات`. **Operator decision on Egyptian usage, 2026-11-04 — no external source settles this row, and none is cited for it.** `لوحة التحكم` is untouched: it means the admin panel. |
+| 25 | `dashboard` | `لوحة القيادة` — **3 `A`** (`A`:2115 widget, `A`:2217 page title, `A`:2362 menu), plus **36 mentions** across `docs/` and `brand/` | **لوحة المعلومات** | `لوحة القيادة` is a cockpit calque; an Egyptian manager who has opened Excel or Power BI has already read `لوحة المعلومات`. **Operator decision on Egyptian usage, 2026-11-04 — no external source settles this row, and none is cited for it.** `لوحة التحكم` is **not** uniformly out of scope: measured, it renders this page in **5 keys** and the admin panel in **2**, so this row is applied key by key, never by string (operator decision 6, §4.5). |
 | 26 | `warehouse` | `المستودع` / `المستودعات` — **14 `A`** family occurrences, 5 of them the plural, plus **33 mentions** across `docs/` and `brand/` | **المخزن / المخازن** | The Egyptian word is `المخزن`, and `المخزون` (inventory) already ships beside the Gulf form on the same screen. **Operator decision on Egyptian usage, 2026-11-04 — no external source settles this row, and none is cited for it.** |
 
 Four of these contradict `brand/copy-deck.md` §3, which committed the rebrand to `عميل محتمل`, a
@@ -198,7 +259,8 @@ untranslated words — they are tokens that Arabic-market products leave in Lati
 | `SKU` | The product code. Must match the string printed on the warehouse label and in the `PDF`. | The column header is Arabic (`رمز المنتج`), the value and the token are Latin — that pairing is right. |
 | `API`, `URL`, `JSON`, `HTTP`, `HTTPS` | Technical surfaces only (webhook endpoint, import errors). | `عنوان URL` is shipped and correct. |
 | `base64` | Appears inside a technical error string (A:1869). | Left as-is; it is a protocol token. |
-| `ID` | *Not* kept — see §5 row 8. Use `المعرف`. | The one Latin token this glossary removes. |
+| `ID` | *Not* kept. Use `المعرف` — the rule is this table's own: Latin is for protocol and format tokens, and a column header is neither. Every other grid already ships `المعرف`; only the lead grid ships `ID` (`A`:1881 `leads.index.datagrid.id`, `A`:1906 `leads.index.kanban.columns.id`). | The one Latin token this glossary removes. (An earlier draft of this cell pointed at "§5 row 8"; §5 is the seeded-data section and has no row 8. The rule lives here, and §4.7 carries the two keys.) |
+| `POST`, `PUT` | **Kept Latin — and this is the first Latin token used as a *control label* in this UI.** The webhook method buttons are `settings.webhooks.{create,edit}.{post,put}`. | Recorded exception, operator decision 2026-11-04 (decision 8). The rule above allows Latin for tokens, not for labels; a method label is the one case where the token *is* the label, and `إرسال` / `تحديث` cannot be used because they already mean *send* (22 `A` keys) and *update* (60 `A` keys) on other screens. |
 | `Google`, `Sijilna`, `سجلنا` | Brand names. `Sijilna` is written in Latin where the wordmark appears, `سجلنا` where the text runs in Arabic prose. | Both are approved; do not "correct" one into the other. |
 | `webhook` → **`ويب هوك`** | Deliberately *not* Latin. Arabic technical teams in Egypt say "ويب هوك", and the shipped string is that transliteration 17 times in `A`. | Kept as an Arabic-transliterated domain term, not a Latin token. |
 | `Kanban` | *Not* a product word. The screen is `العملاء المحتملون` / `الفرص` with two view icons and no label. Do not introduce `كانبان` into the UI. | The client guide may use it to describe the view, the UI may not. |
@@ -253,12 +315,12 @@ should read first: `yes` means the shipped Arabic changes, `no` means it is conf
 | `credit note` | **إشعار دائن** | `0` — not shipped | ETA e-invoicing: a correction/return is an independent **إشعار دائن** linked to the original invoice. | Reserved so the roadmap does not invent `مذكرة دائنة` (the Gulf/MS rendering) and break the tax vocabulary. | domain (document) | Gulf-divergent — Gulf tools say `مذكرة دائنة`; Egypt's ETA says `إشعار دائن` | high | n/a — reserved |
 | `tax registration number` | **الرقم الضريبي** | `0` — not shipped | Egyptian usage; `الرقم الضريبي` is what appears on the tax card and on ETA filings. | Reserved for `crm-ytp`; do not let a future form say `رقم التسجيل الضريبي` on one screen and `الرقم الضريبي` on the next. | domain (document) | same | high | n/a — reserved |
 | `product` | **المنتج** — pl. **المنتجات** | — | Shipped consistently. | Universal. | domain | same | high | no |
-| `SKU` | **`SKU`** in Latin; the column header is **رمز المنتج** | `ID` used where `المعرف` belongs (see row 8 in §5) | Convention in every Arabic commerce product; the code must match the printed label. | See §3. | protocol | same | high | no |
+| `SKU` | **`SKU`** in Latin; the column header is **رمز المنتج** | `ID` used where `المعرف` belongs (§3's own kept-in-Latin rule) | Convention in every Arabic commerce product; the code must match the printed label. | See §3. | protocol | same | high | no |
 | `warehouse` | **المخزن** — pl. **المخازن**; inventory card **المخزون** | `المستودع` / `المستودعات` — 14 `A` occurrences of the family, 5 of them the plural, plus 33 mentions across `docs/` and `brand/` | **Operator decision on Egyptian usage, 2026-11-04** (OQ-3 in §6 is resolved). No external source settles `المستودع` versus `المخزن` — Egyptian vendor pages use both (§9.4) — so this row is a decision on record, not a research finding. | `المخزون` (inventory) is already shipped for the parent card, so `المستودع` puts the Gulf form next to the Egyptian root on the same screen; `المخزن` makes the two one family, and it is the word the client's warehouse keeper says. | domain | **Gulf-divergent, now resolved Egypt-side** — Gulf products say `مستودع`, Egypt says `مخزن` | medium — **decided** | **yes** — was `المستودع` / `المستودعات` |
 | `quantity`, `price`, `amount`, `total` | **الكمية**, **السعر**, **المبلغ**, **الإجمالي** | — | Shipped consistently in quotes, products and the `PDF`. | Standard line-item vocabulary. | chrome | same | high | no |
 | `sub total` / `grand total` | **المجموع الفرعي** / **المجموع الكلي** | — | Shipped (`A` quotes + `I`:60 `الإجمالي الفرعي`) | `I` has one divergent string (`الإجمالي الفرعي`); it should be `المجموع الفرعي`. | domain (document) | same | high | **yes** — the installer's `sub-total` label |
 | `discount` / `tax` / `adjustment` | **الخصم** / **الضريبة** / **التعديل** | — | Shipped consistently. | Standard. | domain (document) | same | high | no |
-| `billing address` / `shipping address` | **عنوان الفوترة** / **عنوان الشحن** | — | Shipped (`A` quote `PDF`). | Standard. | domain (document) | same | high | no |
+| `billing address` / `shipping address` | **عنوان الفوترة** / **عنوان الشحن** | `عنوان الفواتير` — **1 `I`**, the seeded quote attribute label (`installer:seeders.attributes.quotes.billing-address`), naming the same attribute the quote `PDF` calls `عنوان الفوترة` | Shipped (`A` quote `PDF`). | The seed is the defect: the `PDF` and the seeded attribute label disagree on the same field, and `الفواتير` is the *invoices* plural while this product has no invoice entity yet — §4.3's `invoice` row reserves `فاتورة` for `crm-ytp`. | domain (document) | same | high | **yes** — the installer seed's `billing-address` value |
 
 ### 4.4 Activities
 
@@ -274,7 +336,7 @@ should read first: `yes` means the shipped Arabic changes, `no` means it is conf
 | concept | approved Arabic | rejected renderings present in the product | source | reason | register | EG vs Gulf | confidence | overturns shipped term? |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- |
 | `settings` (the card page: users, leads, inventory, automation, other) | **الإعدادات** | — | Shipped 15× `A`, including the menu fallback `layouts.setting` (`A`:2375). | The word an Egyptian admin looks for. | chrome | same | high | no |
-| `configuration` (the settings tree: general, email) | **التهيئة** | The configuration root renders the **same label** `الإعدادات` as the card page — this is the exact defect `docs/client-guide/ar/17-glossary.md` documents as «البندان متطابقان نصاً في القائمة، وهما شاشتان مختلفتان تماماً» | `التهيئة` is already the ACL name (4 `A`:31, plus the global-search tab). | Two different screens with the identical label is a navigation defect, not a terminology preference; one of them must move, and the ACL already picked which. | chrome | same | high | **yes** — the configuration menu label was `الإعدادات`, identical to the other one |
+| `configuration` (the settings tree: general, email) | **التهيئة** | Two shipped families. **(a)** The configuration root renders the **same label** `الإعدادات` as the card page — this is the exact defect `docs/client-guide/ar/17-glossary.md` documents as «البندان متطابقان نصاً في القائمة، وهما شاشتان مختلفتان تماماً». **(b)** `التكوين` — **4 `A` keys**, measured with `grep -o -F 'التكوين'` = 4 occurrences (`التكوينات` 1 of them): `configuration.index.title` (`A`:2082 `التكوين`), `…index.save-btn` (`A`:2077 `حفظ التكوين`), `…index.save-success` (`A`:2078 `تم حفظ التكوين بنجاح.`), and the global-search tab `components.layouts.header.mega-search.explore-all-configurations` (`A`:360 `استكشاف جميع التكوينات`); plus `configuration.index.general.info` (`A`:2085 `تكوين عام`). | `التهيئة` is already the ACL name — 4 `A` occurrences: `acl.configuration` (`A`:31), the global-search tab `…mega-search.tabs.configurations` (`A`:247), the settings-tree menu label (`A`:1617), plus one help sentence (`A`:1775) where `والتهيئة` means "setup", which is the same word doing a different job. | Two different screens with the identical label is a navigation defect, not a terminology preference; one of them must move, and the ACL already picked which. | chrome | same | high | **yes** — the configuration menu label was `الإعدادات`, identical to the other one, and the screen title is `التكوين` |
 | `role` | **الدور** — pl. **الأدوار** | — | Shipped 11× `A`. | Standard. | domain | same | high | no |
 | `group` | **المجموعة** — pl. **المجموعات** | — | Shipped. | Standard. | domain | same | high | no |
 | `permission type` / data scope (`view_permission`: global / group / individual) | **نطاق البيانات** — values **عام**, **المجموعة**, **فردي** | `عرض الصلاحية` (1 `A`:1213) | The product already uses `نطاق بياناتك` in two admin error strings (`A`:2498–2499), and `نطاق البيانات` is the phrase Egyptian admins use for row-level scope. | `عرض الصلاحية` parses as "the viewing of the permission" — it names the ACL, not the scope. | domain | same | high | **yes** — was `عرض الصلاحية` |
@@ -283,13 +345,16 @@ should read first: `yes` means the shipped Arabic changes, `no` means it is conf
 | `workflow` | **سير العمل** | — | Shipped 13× `A`. | Standard. | domain | same | high | no |
 | `event` (automation trigger) | **الحدث** — pl. **الأحداث** | `الفعاليات` (2 `A`: 2422–2423) | `حدث` is already shipped 20× as the trigger word. | `فعالية` means "an event you attend"; using it for a trigger is the same class of literal as `القيادة`. | domain | same | high | **yes** — was `الفعاليات` |
 | `campaign` | **الحملة** — pl. **الحملات** | — | Shipped 6× `A`. | Standard marketing Arabic. | domain | same | high | no |
-| `email template` | **قالب البريد الإلكتروني** | — | Shipped. | Standard. | domain | same | high | no |
+| `email template` | **قالب البريد الإلكتروني** | `نموذج البريد الإلكتروني` — **1 `A` key**, `settings.marketing.campaigns.index.create.email-template` (`A`:842). The other 2 names the inventory counts for this concept (`قالب البريد`, `قوالب البريد`) are the same lexeme shortened in the same key family (`settings.email-template.*`), not a third name. | Shipped **9× `A`** singular (`قالب البريد الإلكتروني`) and **4×** plural (`قوالب البريد الإلكتروني`), across `settings.email-template.*`, the ACL and the sidebar. | `نموذج` means a *form* or a *model*, not a template — in this product `نموذج` already means the web form (`نماذج الويب`), so the campaign screen's dropdown offers a word that names a different object. | domain | same | high | **yes** — was `نموذج البريد الإلكتروني` in the campaign form |
 | `webhook` | **ويب هوك** — pl. **الويب هوك** | `الويب هوكس` as a plural (mixed Arabic article + English plural) | Shipped 17× `A`. | Egyptian developers say "ويب هوك"; the Arabic-transliterated form is what the UI already uses and what a support reply will use. Fix only the plural construction if it is touched. | domain | same | medium | no |
-| `data transfer` / `import` | **استيراد البيانات** for the section, **استيراد** for the action, **الاستيرادات** for the history list | `نقل البيانات` (3 `A`:44 and two configuration labels) | The screen's own strings are all `استيراد` (10+ `A`: 1561, 1611, 1632, 1636, 1642, 1666, 1667). | `نقل البيانات` ("moving data") is vaguer and disagrees with every string inside the screen it opens. | chrome | same | high | **yes** — was `نقل البيانات` for the section label |
-| `web form` | **نموذج الويب** | — | Shipped (`A`, `W`). It is also the seeded lead source `نموذج ويب`. | Consistent. Note the two spellings `نموذج الويب` (settings) and `نموذج ويب` (source value) — both correct, different grammar (definite label vs list value). Do not unify. | domain | same | high | no |
+| `HTTP method label` (webhook POST/PUT) | **`POST`** / **`PUT`** — kept in Latin | `إرسال` (`settings.webhooks.create.post` `A`:974, `…edit.post` `A`:1001) and `تحديث` (`…create.put` `A`:975, `…edit.put` `A`:1002) | **Operator decision, 2026-11-04** (decision 8a). The label names the protocol verb the webhook author is choosing; this screen already keeps `HTTP`, `HTTPS` and `URL` in Latin (§3), and every Arabic webhook UI in the market leaves the method in Latin. | `إرسال` already means *send* in **22 `A` keys** and `تحديث` already means *update* in **60 `A` keys** (61 with `التحديث`), so neither can label a method without reading as an action button. **This is the first Latin token used as a control label in this UI** — the exception is recorded in §3. | protocol | same | high — **decided** | **yes** — was `إرسال` / `تحديث` |
+| `webhook endpoint` | **عنوان URL** | `نقطة النهاية` (`settings.webhooks.index.datagrid.end-point` `A`:968), `نقطة نهاية الرابط` (`…create.url-endpoint` `A`:976, `…edit.url-endpoint` `A`:1003) | §3's existing rule: **`عنوان URL` is shipped and correct.** The webhook screen's own error string already reads `يجب أن يكون عنوان URL لنقطة نهاية الويب هوك عنوان HTTP أو HTTPS عامًا` (`A`:962). | Three names for one field, and the field is a URL: `نقطة النهاية` is a word-for-word *endpoint*, and `نقطة نهاية الرابط` is the same literal with `الرابط` welded on. The error sentence at `A`:962 is prose, not a naming slot, and keeps its wording. | protocol | same | high | **yes** — those three keys |
+| `payload` / `headers` / `body` / `method` (webhook) | **`حمولة`**, **`الرؤوس`** (sing. **`رأس`**), **`الجسم`**, **`الطريقة`** | — nothing rejected: these **keep their shipped values** | **Operator decision, 2026-11-04** (decision 8c), taken to close the inventory's `http_terminology` cluster: the strings ship (`A`:980–986 plus the `edit` twins) and were unsettled rather than wrong. | They are word-for-word technical renderings (`حمولة` is *cargo*), but only a developer reads them, on the webhook form, and no competing Arabic rendering ships anywhere in the tree. The row exists so the cluster stops being an open question, **not** because a change is owed. | protocol | same | medium — **decided, no change** | no |
+| `data transfer` / `import` | **استيراد البيانات** for the section, **استيراد** for the action, **الاستيرادات** for the history list | `نقل البيانات` (3 `A`:44 and two configuration labels) | The screen's own strings are all `استيراد` (10+ `A`: 1561, 1611, 1632, 1636, 1642, 1666, 1667). | `نقل البيانات` ("moving data") is vaguer and disagrees with every string inside the screen it opens. **`تصدير` (export) is the sibling action and is correct as shipped** — it is not a competing name for import, so the 3 keys that carry it (`dashboard.index.export-pdf`, `export.export`, `export.no-records`) do **not** change (inventory §7 correction, 2026-11-04). | chrome | same | high | **yes** — was `نقل البيانات` for the section label |
+| `web form` | **نموذج الويب** | — **nothing is rejected here: this concept is protected as shipped (operator decision 7, 2026-11-04).** The three renderings are `نموذج الويب` (settings — 4 naming slots, 10 occurrences `A`:963–1031), `نموذج ويب` (the seeded lead source value, `installer:seeders.lead.source.web-form`) and `نماذج الويب` (the list title and the package menu, 3 keys). | Shipped (`A`, `W`), and it is also the seeded lead source `نموذج ويب`. | **Do not unify.** Definite label, list value and plural list screen are three grammars of one word, all correct: `نموذج الويب` is a definite noun label, `نماذج الويب` is the plural a list screen needs, and `نموذج ويب` is an indefinite list *value* sitting in a dropdown beside `البريد الإلكتروني` and `مباشر`. Merging them would break either the label or the seeded data. The inventory classes `web_form` `conflicting` (2 names / 78 keys); **the glossary protects it, and the glossary wins** — an applier must leave every one of these keys alone. | domain | same | high | **no — and no key may be touched** |
 | `source` | **المصدر** — pl. **المصادر** | — | Shipped 13× `A`. | Standard. | domain | same | high | no |
 | `type` | **النوع** — pl. **الأنواع** | — | Shipped 20× `A`. | Standard. | domain | same | high | no |
-| `dashboard` | **لوحة المعلومات** | `لوحة القيادة` (3 `A`: 2115 widget, 2217 page title, 2362 menu; plus 36 mentions across `docs/` and `brand/`) — and note that `لوحة التحكم` (8 `A`) is **not** a rendering of this concept | **Operator decision on Egyptian usage, 2026-11-04** (OQ-2 in §6 is resolved). `لوحة المعلومات` is the Microsoft / Power BI / Excel rendering — the form an Egyptian manager who has opened any analytics tool has already read. No external source lists Arabic dashboard terms (§9.4), so the row rests on the operator's read of Egyptian usage and on nothing else. | `لوحة القيادة` is a cockpit calque: it puts a steering wheel on a report page. `لوحة التحكم` stays reserved for the *admin panel as a whole* ("واجهة لوحة التحكم"), a different referent, so it is neither this page nor a duplicate label for it. | chrome | **Egypt-divergent** — Gulf products keep `لوحة القيادة`; Egyptian readers meet `لوحة المعلومات` in Excel / Power BI | medium — **decided** | **yes** — was `لوحة القيادة` |
+| `dashboard` | **لوحة المعلومات** | `لوحة القيادة` (3 `A`: 2115 widget, 2217 page title, 2362 menu; plus 36 mentions across `docs/` and `brand/`). `لوحة التحكم` is **a homograph, not a rival term**: measured, `grep -o -F 'لوحة التحكم'` = **8 occurrences on 7 keys** — it renders *this page* in **5** of them (`dashboard.index.pdf.title` `A`:2234, `…settings.dashboard.title` `A`:2132, `.info` `A`:2133, `.date-range-info` `A`:2135 ×2 inside the value, `errors.dashboard` `A`:2492) and the *admin panel* in the other **2** (`…locale-settings.title-info` `A`:2091, `…footer.show-info` `A`:2106). | **Operator decision on Egyptian usage, 2026-11-04** (OQ-2 in §6 is resolved). `لوحة المعلومات` is the Microsoft / Power BI / Excel rendering — the form an Egyptian manager who has opened any analytics tool has already read. No external source lists Arabic dashboard terms (§9.4), so the row rests on the operator's read of Egyptian usage and on nothing else. | `لوحة القيادة` is a cockpit calque: it puts a steering wheel on a report page. The 5 dashboard keys become `لوحة المعلومات`; the 2 admin-panel keys keep `لوحة التحكم` untouched, because that string means the admin panel *as a whole* ("واجهة لوحة التحكم") and the same 5-key/2-key split is what makes a string sweep unsafe here (operator decision 6). | chrome | **Egypt-divergent** — Gulf products keep `لوحة القيادة`; Egyptian readers meet `لوحة المعلومات` in Excel / Power BI | medium — **decided** | **yes** — was `لوحة القيادة`, and `لوحة التحكم` in exactly 5 keys |
 | `quick add` | **إضافة سريعة** | — | Shipped. | Standard. | chrome | same | high | no |
 | `notifications` | **الإشعارات** | — | Shipped. | Standard. | chrome | same | high | no |
 | `global search` | **البحث الشامل** | — | Shipped. | Standard. | chrome | same | high | no |
@@ -303,23 +368,43 @@ should read first: `yes` means the shipped Arabic changes, `no` means it is conf
 | `inbox` | **البريد الوارد** | `الوارد` (1 of the 5 `A` hits, the bare folder label at `A`:1758; the other 4 are inside `البريد الوارد`) | `البريد الوارد` is the menu item and the datagrid action (`A`); regional Arabic mail clients use `البريد الوارد`. | The bare `الوارد` reads as an adjective with no noun. | chrome | same | high | **yes** — was `الوارد` as the folder label |
 | `outbox` | **الصادر** | — | Shipped. | Correct Arabic for outgoing-in-progress. | chrome | same | high | no |
 | `sent` (folder) | **المرسل** | `تم الإرسال` (1 `A`:1761) | The menu already says `المرسل` (`A` layouts), the inner string says `تم الإرسال`. | A folder is a noun; `تم الإرسال` is a past-tense sentence used as a folder name. | chrome | same | high | **yes** — was `تم الإرسال` |
-| `drafts` | **المسودات** | `مسودة` (2 `A`, singular, used as the mail folder label at `A`:1757 and again in the compose dialog) | Shipped majority `المسودات` (3 `A`). | Folder names are plural. | chrome | same | high | no |
-| `trash` | **سلة المهملات** | `المهملات` (1 of 4 `A` hits, the mail folder label at `A`:1761 — the other 3 are inside `سلة المهملات`), `تم النقل إلى سلة المهملات` (1 `A`:1785, an action label written as a past-tense sentence) | Shipped majority `سلة المهملات` (`A`:2129 settings, `A`:2374 menu). | Both the folder and the action currently exist; the folder should read `سلة المهملات` and the action should read `نقل إلى سلة المهملات`. | chrome | same | high | **yes** — the action label `تم النقل إلى سلة المهملات` |
+| `drafts` | **المسودات** | `مسودة` in the **folder label** only: `mail.index.draft` (`A`:1757). The second `مسودة` — `mail.index.mail.draft` (`A`:1773, the compose dialog that saves *one* draft) — is **not** rejected and does not change (operator decision 10, 2026-11-04). | Shipped majority `المسودات` (3 `A`: `acl.draft`, `…settings.menu.draft`, `layouts.mail.draft`). | Folder names are plural, and the sidebar already ships `المسودات` in two other places — but a compose dialog is one draft, so the split is by key, not by word. | chrome | same | high | **yes** — the single folder label `mail.index.draft` |
+| `trash` | **سلة المهملات** | `المهملات` (1 of 4 `A` hits, the mail folder label at `A`:1761 — the other 3 are inside `سلة المهملات`), `تم النقل إلى سلة المهملات` (1 `A`:1785, an action label written as a past-tense sentence), and `المحذوفات` — **1 `A` key**, the ACL label `acl.trash` (`A`:10), which is a *third* name for this folder in a screenshot a client sees when building a role | Shipped majority `سلة المهملات` (3 `A`:1785, 2129 settings, 2374 menu). | Both the folder and the action currently exist; the folder should read `سلة المهملات` and the action should read `نقل إلى سلة المهملات`. `المحذوفات` ("the deleted things") is a word-for-word rendering of *trash* sitting in the ACL tree, which is the one place a role builder reads it beside its siblings `البريد الوارد` and `المرسل`. | chrome | same | high | **yes** — the action label `تم النقل إلى سلة المهملات` and the ACL label `المحذوفات` |
 | `routed mail` (`المرسل` vs `الصادر` distinction) | **الصادر** = queued, **المرسل** = actually left the system | — | Both shipped; the client guide already documents the difference. | Keep the distinction; it is real and the guide explains it. | chrome | same | high | no |
 
 ### 4.7 Fixture-level defects the client guide already names
 
-These are not terminology choices; they are Arabic errors in shipped strings. `crm-mox.3` fixes them
-by name.
+These are not terminology choices; they are Arabic errors in shipped strings. The first block is the set the client guide already names; the second is the four defects the operator approved in the second 2026-11-04 pass, recorded here so the apply lane executes them from one table.
 
 | what ships | where | problem | approved replacement |
 | --- | --- | --- | --- |
 | `لا توجد أشخاص متاحة للفترة المختارة` | dashboard `top-persons.empty-info` (`A`) | Gender disagreement: `أشخاص` is masculine plural, `متاحة` is feminine singular. | `لا توجد أشخاص متاحون للفترة المختارة` |
-| `Leads can not be deleted.` | `leads.update-failed` (`A`:1861) | A full English sentence left inside the Arabic file — and it is also the wrong message for `update-failed`. | `تعذر تحديث العميل المحتمل` → after the `lead` overturn: `تعذر تحديث الفرصة.` |
 | `العميل الفاسد منذ :days أيام` | kanban card | Literal rendering of *rotten*; covered by the rotten-lead row above. | `مهمل منذ :days يومًا` (with the correct number agreement arm) |
 | `تم النقل إلى سلة المهملات` | mail datagrid action | Past-tense sentence where a verb phrase belongs on a control. | `نقل إلى سلة المهملات` |
 | `تم الإرسال` | mail folder label | Past-tense sentence where a noun belongs. | `المرسل` |
 | `أضف طلب المنتج لهذا العرض.` | quotes (`A`:453, 482) | "طلب المنتج" is not a thing in this product; a quote line is a product line. | `أضف منتجًا إلى هذا العرض.` |
+
+### 4.7.1 The four defects approved 2026-11-04
+
+Decided, not proposed. Each is a single key (or a two-key pair), so none of them needs a sweep.
+
+| what ships | where | problem | approved replacement |
+| --- | --- | --- | --- |
+| `Leads can not be deleted.` | `leads.update-failed` (`A`:1861) | A full English sentence left inside the Arabic file, in the message a user sees when an edit fails. | **`لا يمكن حذف الفرص.`** — it uses the approved record term **`الفرصة` / `الفرص`** (row 1 of the 26), **not** `العملاء المحتملين`. Note the value is what changes: the key is `update-failed`, but the sentence it carries is the delete-failure sentence, and the operator's decision is to translate the sentence it actually carries rather than invent an update message here. |
+| `ID` | `leads.index.datagrid.id` (`A`:1881) and `leads.index.kanban.columns.id` (`A`:1906) | Bare Latin `ID` as a column header, in the only grid in the product that does not ship `المعرف` — measured, **21 other keys** ship `المعرف` exactly (20 `*.datagrid.id` headers plus `leads.view.quotes.id`), and these two are the only ones that do not. | **`المعرف`**, per §3's own kept-in-Latin rule (the dangling "see §5 row 8" pointer that used to live in that rule is fixed). |
+| `Json` | `settings.webhooks.create.json` (`A`:1325) and `settings.webhooks.edit.json` (`A`:1354) | Case defect in a Latin token the UI keeps on purpose; the installer's server-requirements checklist already ships `JSON` (`installer:installer.index.server-requirements.json`). | **`JSON`** |
+| `إعادة تعيين كلمة مرور العميل` | `emails.common.user.forget-password.subject` (`A`:2475) | Labels the CRM **user** as a customer: this is the mail subject sent to a *user* who forgot their password, and `عميل` is **reserved** for the customer record that does not exist yet (§4.2 `customer` row, §6 OQ-1). | **`إعادة تعيين كلمة مرور المستخدم`** — required by the reserved-word rule, not by style. |
+
+### 4.8 Sign-in and password reset
+
+This surface had **no glossary row at all** before 2026-11-04, and the inventory records that the flow
+appears in **no client-guide chapter** either — which is how it shipped three titles for a two-step flow
+without anyone noticing.
+
+| concept | approved Arabic | rejected renderings present in the product | source | reason | register | EG vs Gulf | confidence | overturns shipped term? |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| `sign-in` screen | **تسجيل الدخول** | — (the button and the title agree: `users.login.submit-btn` and `users.login.title`, `A`:60–61) | Shipped. | The standard Arabic for the screen. The credential error on that screen (`users.login-error`, `A`:54 `بيانات الاعتماد`) is a word-for-word *credential data* that the inventory flags `suspect-literal`; it is flagged here, **not decided**, and it is not part of this row's change. | chrome | same | high | no |
+| `password reset` / forgot-password flow | **استعادة كلمة المرور** for step one, **إعادة تعيين كلمة المرور** for step two | `نسيت كلمة المرور` as a **title**: `users.forget-password.create.page-title` (`A`:67) | **Operator decision, 2026-11-04** (decision 9). The rule it applies is already in this file (§1, and the `quotes` row): a tab title and the heading under it must read the same — and that heading is `استعادة كلمة المرور` (`users.forget-password.create.title`, `A`:71). | The flow has two real steps, so two names are correct here: step one asks for the address that resets the password (`استعادة كلمة المرور`), step two is where the new password is typed (`إعادة تعيين كلمة المرور`, `users.reset-password.title` and `.submit-btn`, `A`:80). The link that opens the flow, `users.login.forget-password-link` (`A`:58 `نسيت كلمة المرور؟`), **stays as shipped** — it is the question a user clicks, not a screen name. | chrome | same | high — **decided** | **yes** — the tab title `users.forget-password.create.page-title` moves from `نسيت كلمة المرور` to `استعادة كلمة المرور` |
 
 ---
 
@@ -436,7 +521,8 @@ defect this glossary exists to prevent.
 **OQ-2 — `لوحة القيادة` versus `لوحة المعلومات`.**
 `لوحة القيادة` is shipped and the 17-chapter client guide is built on it. `لوحة المعلومات` is the
 Microsoft / Power BI / Excel rendering and is what an Egyptian manager who has used any analytics tool
-has seen. `لوحة التحكم` is already taken in this product for the admin panel as a whole.
+has seen. `لوحة التحكم` is already taken in this product for the admin panel as a whole — in 2 of its 7
+keys; the other 5 use it for the dashboard itself, which is the split decision 6 records.
 Options: keep `لوحة القيادة` (zero churn, cockpit calque); move to `لوحة المعلومات` (modern MSA,
 matches the analytics tools the client already uses). *What would settle it:* the operator's read of
 whether `لوحة القيادة` sounds like a cockpit to an Egyptian sales manager. Recommended: keep, revisit
@@ -448,7 +534,9 @@ is the form an Egyptian manager has already read in Excel and Power BI. No exter
 Arabic dashboard terms (§9.4), so this is a **decision on record, not a research finding — do not cite
 one for it.** Cost accepted: 3 occurrences in `A` plus 36 mentions across `docs/` and `brand/`,
 including the 17-chapter client guide, which is rewritten in the apply lane. `لوحة التحكم` is
-unaffected and still means the admin panel as a whole.
+**split by key, not replaced** (decision 6): measured, `grep -o -F 'لوحة التحكم'` finds **8 occurrences
+on 7 keys** — 5 render this page and move to `لوحة المعلومات`, 2 mean the admin panel as a whole and
+keep `لوحة التحكم`. The string is therefore a homograph and no sweep on it is safe.
 
 **OQ-3 — `المستودع` versus `المخزن` for warehouse.**
 19 shipped strings say `المستودعات`. An Egyptian finance team says `المخزن` at least as often, and
@@ -555,6 +643,17 @@ grep -o -F 'متعفن'  packages/Webkul/Admin/src/Resources/lang/ar/app.php | w
 grep -o -F 'القيادة' packages/Webkul/Admin/src/Resources/lang/ar/app.php | wc -l  # 5, of which only 2 are the lead field
 grep -o -F 'الاقتباسات' packages/Webkul/Admin/src/Resources/lang/ar/app.php | wc -l  # 3 = 2 (quotes tab) + 1 (quotation marks)
 grep -o -F 'مالك المبيعات' packages/Webkul/Installer/src/Resources/lang/ar/app.php | wc -l  # 8
+
+# 1b. The second-review decisions of 2026-11-04, each measurable on its own:
+grep -o -F 'لوحة التحكم' packages/Webkul/Admin/src/Resources/lang/ar/app.php | wc -l   # 8 occurrences, on 7 keys
+#     5 dashboard keys + 2 admin-panel keys — the split is in operator decision 6
+grep -n 'لوحة التحكم' packages/Webkul/Admin/src/Resources/lang/ar/app.php
+#     2091 locale-settings.title-info · 2106 footer.show-info            → admin panel, keep
+grep -o -F 'نموذج الويب' packages/Webkul/Admin/src/Resources/lang/ar/app.php | wc -l    # 10 — protected, no edit
+grep -o -F 'التكوين' packages/Webkul/Admin/src/Resources/lang/ar/app.php | wc -l       # 4 → all become التهيئة
+grep -o -F 'نقطة نهاية الرابط' packages/Webkul/Admin/src/Resources/lang/ar/app.php | wc -l  # 2 → عنوان URL
+grep -o -F 'إرسال' packages/Webkul/Admin/src/Resources/lang/ar/app.php | wc -l          # 22 keys — why POST cannot reuse it
+grep -o -F 'تحديث' packages/Webkul/Admin/src/Resources/lang/ar/app.php | wc -l          # 60 keys — why PUT cannot reuse it
 
 # 2. Numerals: no Arabic-Indic digits anywhere in the Arabic files.
 #    Use an explicit PCRE class — `[٠-٩]` is a multibyte byte range and matches Latin digits too.
