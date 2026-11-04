@@ -1,4 +1,4 @@
-<!-- Context: guides/arabic-terminology.md | Priority: critical | Version: 1.2 | Updated: 2026-11-04 -->
+<!-- Context: guides/arabic-terminology.md | Priority: critical | Version: 1.5 | Updated: 2026-11-04 -->
 
 # Arabic terminology — the one glossary
 
@@ -50,8 +50,8 @@ no later agent reopens them; §6 keeps each one's evidence trail.
    research finding (§9.4).
 
 OQ-4 (`مسار المبيعات` versus AccFlex's `المسار البيعي`) was settled at the same review: **`مسار
-المبيعات` stays**, as recommended. §6 now holds five resolved entries (OQ-1 to OQ-5) and the three
-questions these decisions genuinely do not reach (OQ-6 to OQ-8).
+المبيعات` stays**, as recommended. §6 now holds six resolved entries (OQ-1 to OQ-5, plus OQ-8, which
+§4.7.1 answered) and the two questions these decisions genuinely do not reach (OQ-6 and OQ-7).
 
 ### Second review, 2026-11-04 — the five holes, closed
 
@@ -102,11 +102,15 @@ shipped: it is the question a user clicks, not a screen name. The flow had no gl
 client-guide chapter; §4.8 adds the row.
 
 #### Decision 10 — `mail_draft` — the self-contradiction resolved by splitting the keys.
-`mail.index.draft` (`A`:1757, the **folder label** in the mail sidebar) moves to **`المسودات`**, on the
-row's own reason that folder names are plural (`المسودات` already ships 3× `A`: `acl.draft`, `…menu.draft`,
-`layouts.mail.draft`). `mail.index.mail.draft` (`A`:1773, the **compose dialog** that saves one draft)
-stays **`مسودة`**: that screen is one draft, not a folder. *Apply lane:* exactly one of those two keys
-changes, which is why the row can no longer say `no` while naming the shipped label. The four fixture
+`mail.index.draft` (`A`:1757, the **folder label** in the mail sidebar) **has moved to `المسودات`**
+(applied 2026-11-04, v1.4), on the row's own reason that folder names are plural (`المسودات` shipped 3×
+`A` before it and ships **4×** now: `acl.draft`, `…menu.draft`, `layouts.mail.draft`, and this key).
+`mail.index.mail.draft` (`A`:1773, the **compose dialog** that saves one draft) **stays `مسودة`**: that
+screen is one draft, not a folder. *Applied, measured:*
+`grep -n "'draft' =>" packages/Webkul/Admin/src/Resources/lang/ar/app.php` → `A`:11, `A`:1757, `A`:2116
+and `A`:2371 all read `المسودات`, and `A`:1773 is the only `مسودة` left (`grep -o -F 'مسودة'` = 1). Exactly
+one of those two keys changed, which is why the row can no longer say `no` while naming the shipped
+label. The four fixture
 defects approved in the same pass — the English sentence at `leads.update-failed`, the two bare `ID`
 headers, `Json`, and the customer-labelled password-reset subject — are recorded in §4.7.1, which is
 the table the apply lane reads for string-level fixes.
@@ -114,6 +118,22 @@ the table the apply lane reads for string-level fixes.
 ---
 
 ## Read this first — the 26 rows that change what ships
+
+> **Evidence note (v1.4, 2026-11-04) — the shipped counts in these tables are pre-apply history.** The
+> "ships today", "shipped count" and "current text" evidence in the 26 rows below, in every §4 table and
+> in §5.2 describes the tree **before** the apply lane (`crm-mox.3`) landed on **2026-11-04**. What the
+> guardrail enforces **today** is each row's `rejected renderings` column, not the sentence around it;
+> where a shipped count and the tree disagree, **the tree is truth**. A rejected rendering that now
+> measures `0` means the row was applied — it does not mean the cell was wrong — and a `ships today`
+> cell that still names a rejected rendering is history, not a claim about the checkout in front of you.
+> Do not relabel the count cells one by one; re-measure the one you are about to quote:
+>
+> ```bash
+> grep -o -F 'المصطلح' packages/Webkul/Admin/src/Resources/lang/ar/app.php | wc -l   # occurrences of one form
+> grep -n  -F 'المصطلح' packages/Webkul/Admin/src/Resources/lang/ar/app.php           # …and where they are
+> grep -oP 'الفرص(?!\p{Arabic})' packages/Webkul/Admin/src/Resources/lang/ar/app.php | wc -l  # a whole word, not a prefix
+> php scripts/check-arabic-glossary.php --locale                                     # what still drifts
+> ```
 
 Everything else in §4 confirms the shipped Arabic. **These 26 change it.** All 26 are approved as of
 2026-11-04, and each one keeps its evidence in the row's `source` and `reason` cells so the approval
@@ -244,6 +264,16 @@ Rules that follow from it:
 `شهر واحد` while `3-months` is `3 أشهر`. That is correct Arabic (one takes a word, three takes a
 digit) and is not a contradiction. Do not "fix" it.
 
+**One written form per word — shadda included.** The rule the drift guardrail enforces is *one written
+form of one word across a file*, not one form per key. `تعذّر` is the form this product uses for the
+verb "failed to", and it is currently the only such form in `A`:
+`grep -o -F 'تعذّر' packages/Webkul/Admin/src/Resources/lang/ar/app.php | wc -l` = **1**
+(`leads.update-failed`, `A`:1861), against `grep -o -P 'تعذر' … | wc -l` = **2** shipped without the
+shadda (`settings.google-contacts.index.connect-failed`, `A`:954, and
+`leads.view.quotes.mail-send-failed`, `A`:2034). Those two older keys are being unified to the shadda
+form in the same apply lane, so this record matches the tree once that lands; a key that keeps or
+reintroduces the bare spelling is a defect to report, not a variant to preserve.
+
 ---
 
 ## 3. Kept in Latin script
@@ -259,7 +289,7 @@ untranslated words — they are tokens that Arabic-market products leave in Lati
 | `SKU` | The product code. Must match the string printed on the warehouse label and in the `PDF`. | The column header is Arabic (`رمز المنتج`), the value and the token are Latin — that pairing is right. |
 | `API`, `URL`, `JSON`, `HTTP`, `HTTPS` | Technical surfaces only (webhook endpoint, import errors). | `عنوان URL` is shipped and correct. |
 | `base64` | Appears inside a technical error string (A:1869). | Left as-is; it is a protocol token. |
-| `ID` | *Not* kept. Use `المعرف` — the rule is this table's own: Latin is for protocol and format tokens, and a column header is neither. Every other grid already ships `المعرف`; only the lead grid ships `ID` (`A`:1881 `leads.index.datagrid.id`, `A`:1906 `leads.index.kanban.columns.id`). | The one Latin token this glossary removes. (An earlier draft of this cell pointed at "§5 row 8"; §5 is the seeded-data section and has no row 8. The rule lives here, and §4.7 carries the two keys.) |
+| `ID` | *Not* kept. Use `المعرف` — the rule is this table's own: Latin is for protocol and format tokens, and a column header is neither. **Every grid now ships `المعرف`, the two lead-grid keys included** (`A`:1881 `leads.index.datagrid.id`, `A`:1906 `leads.index.kanban.columns.id` — this cell used to say they were the only two that did not); re-measured after the apply, `grep -c 'المعرف' packages/Webkul/Admin/src/Resources/lang/ar/app.php` = **24 lines**, **23** of them `'id' => 'المعرف'` keys, and bare `ID` as a value measures **0**. | The one Latin token this glossary removes. (An earlier draft of this cell pointed at "§5 row 8"; §5 is the seeded-data section and has no row 8. The rule lives here, and §4.7 carries the two keys.) |
 | `POST`, `PUT` | **Kept Latin — and this is the first Latin token used as a *control label* in this UI.** The webhook method buttons are `settings.webhooks.{create,edit}.{post,put}`. | Recorded exception, operator decision 2026-11-04 (decision 8). The rule above allows Latin for tokens, not for labels; a method label is the one case where the token *is* the label, and `إرسال` / `تحديث` cannot be used because they already mean *send* (22 `A` keys) and *update* (60 `A` keys) on other screens. |
 | `Google`, `Sijilna`, `سجلنا` | Brand names. `Sijilna` is written in Latin where the wordmark appears, `سجلنا` where the text runs in Arabic prose. | Both are approved; do not "correct" one into the other. |
 | `webhook` → **`ويب هوك`** | Deliberately *not* Latin. Arabic technical teams in Egypt say "ويب هوك", and the shipped string is that transliteration 17 times in `A`. | Kept as an Arabic-transliterated domain term, not a Latin token. |
@@ -279,7 +309,8 @@ should read first: `yes` means the shipped Arabic changes, `no` means it is conf
 
 | concept | approved Arabic | rejected renderings present in the product | source | reason | register | EG vs Gulf | confidence | overturns shipped term? |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| `lead` (the tracked deal: value, stage, probability, expected close date, products, quotes, won/lost) | **الفرصة** — pl. **الفرص** | `عميل محتمل` (12 `A` + 1 `I`), `العملاء المحتملون` (5 `A`), `القيادة` (2 of the 5 `A` hits, lines 1707/1735 — the other 3 are `لوحة القيادة`), `قائمة العملاء الخاصة بك` / `إنشاء عميل` (kanban empty state, `A`:1993–1994). **`الفرص` as a plural does not ship at all** (`الفرص` matches only inside `الفرصة`). | **Settled by an Egyptian ERP's own Arabic docs** — AccFlex: «الفرصة البيعية (Opportunity) هي صفقة قيد التنفيذ … تقع في مرحلة واحدة من مسار بيعي واحد», with fields المرحلة / القيمة / تاريخ الإغلاق المتوقع / المسؤول. Naffes CRM defines it the same way («صفقة مفتوحة في المسار لها قيمة وموعد إغلاق متوقع») and explicitly separates it from العميل المحتمل. The product already uses `الفرصة: :title`, `حول الفرصة`, `...لهذه الفرصة` on the record screen (7×, `A`:2003–2051), so the tree is already half-converted. | The record carries stage + value + probability + expected close date + products + quotes, which is the market definition of **فرصة**, not of **عميل محتمل** (which the same sources define as an *unqualified contact*). Keeping `عميل محتمل` also collides with the seeded stage that is *also* named `عميل محتمل`. | domain | same | **high** | **yes** — was `عميل محتمل` / `العملاء المحتملون` |
+| `lead` (the tracked deal: value, stage, probability, expected close date, products, quotes, won/lost) | **الفرصة** — pl. **الفرص** | `عميل محتمل` (12 `A` + 1 `I`), `العملاء المحتملون` (5 `A`), `القيادة` (2 of the 5 `A` hits, lines 1707/1735 — the other 3 are `لوحة القيادة`), `قائمة العملاء الخاصة بك` / `إنشاء عميل` (kanban empty state, `A`:1993–1994). **`الفرص` as a plural was absent when this row was written and ships now — 27 occurrences on 27 `A` keys**, measured after the apply: `grep -oP 'الفرص(?!\p{Arabic})' packages/Webkul/Admin/src/Resources/lang/ar/app.php \| wc -l` = **27** (whole word only, so the 28 hits on `الفرصة` are excluded) — `acl.leads`, `layouts.leads` (`A`:6), `leads.index.title` (`A`:1878), `dashboard.index.total-leads.title`, `dashboard.index.over-all.total-leads`. | **Settled by an Egyptian ERP's own Arabic docs** — AccFlex: «الفرصة البيعية (Opportunity) هي صفقة قيد التنفيذ … تقع في مرحلة واحدة من مسار بيعي واحد», with fields المرحلة / القيمة / تاريخ الإغلاق المتوقع / المسؤول. Naffes CRM defines it the same way («صفقة مفتوحة في المسار لها قيمة وموعد إغلاق متوقع») and explicitly separates it from العميل المحتمل. The product already uses `الفرصة: :title`, `حول الفرصة`, `...لهذه الفرصة` on the record screen (7×, `A`:2003–2051), so the tree is already half-converted. | The record carries stage + value + probability + expected close date + products + quotes, which is the market definition of **فرصة**, not of **عميل محتمل** (which the same sources define as an *unqualified contact*). Keeping `عميل محتمل` also collides with the seeded stage that is *also* named `عميل محتمل`. | domain | same | **high** | **yes** — was `عميل محتمل` / `العملاء المحتملون` |
+| `lead` — **the word in prose** (client guide, sales docs, brand copy). **A documents rule as much as a UI rule:** the product's own record term and the client-facing prose must be the same word, so a doc may not use a name no screen shows. | **الفرصة / الفرص** — the word the UI ships | `الصفقة` / `صفقة` / `الصفقات` **in documents**: **156 occurrences across the Arabic docs at the 2026-11-04 review, and `0` in every locale file** (`grep -rn 'صفق' packages/Webkul/*/src/Resources/lang/ar/ lang/ar/` → no match), so it was never a UI rendering — only a second name invented for the prose. Re-measured after the docs purge, same day: **0**. | **Operator decision, 2026-11-04: `الصفقة` is purged.** No source is cited and none is needed — this is the operator's call that one word names the deal everywhere a client reads it, not a research finding. | It is a **second name for the concept on the surface a client reads most**, and the product never shows it: a client who reads `الصفقة` in the guide and then looks at the screen sees `الفرصة`, which is the exact class of defect this file exists to prevent. `صفقة` was also the word AccFlex and Naffes use when *defining* `الفرصة` (§4.1 `lead` source cell), which is how it leaked into prose. | domain (document) | same | high — **decided** | **yes** — the documents move from `الصفقة` to `الفرصة` |
 | `prospect` (seed pipeline stage 3) | **عميل محتمل** | — | Shipped seed (`I`:96). AccFlex and Naffes both define **العميل المحتمل** as the pre-qualification stage of an interest signal; Egyptian sales usage matches. | Keeping it here is what makes the `lead` overturn above coherent: the stage means "prospect", the record means "opportunity". Two different objects, two different words. | domain | same | high | no — kept, and now unambiguous |
 | `opportunity` (as a separate entity) | **does not exist as its own entity** — the approved `lead` record *is* the opportunity | — | Product has one table (`leads`), no `opportunities`. | Do not introduce an opportunity entity in Arabic that has no English counterpart in the code. One word, one record. | domain | same | high | n/a |
 | `pipeline` | **مسار المبيعات** — pl. **مسارات المبيعات**; short form in a picker: **المسار** | `خط الأنابيب` (12 `A`: 993, 1027, 1225–1278) + `خطوط الأنابيب` (1 `A`:1223), `الأنابيب` (15 `A` in total — 13 of those are inside the two `خط…` forms just listed, the 2 bare ones are at `A`:2408–2409), `قنوات البيع` (2 `A`: 28, 2354), `قناة المبيعات` (3 `I`:88, default pipeline name), `المسارات` (1 `A`: 1952) | **Settled by AccFlex**, which names the pipeline **المسار البيعي** throughout its Arabic UI and docs («يقع في مرحلة واحدة من مسار بيعي واحد», «لوحة المسار البيعي»), and by Naffes («صفقة مفتوحة في المسار»). `خط أنابيب` is a literal calque of *pipeline* (a physical pipe); `قناة بيع` is a real, different marketing concept (direct vs reseller channel) that the `source` field already carries. `كل المسارات` is already shipped in the pipeline picker (`A`:1952). | One concept, one word, no collision with "channel", and the market reference already says `مسار`. | domain | **Gulf-divergent** — Gulf products favour `خط أنابيب المبيعات`; Egypt code-switches to "البايبلاين" verbally and uses `مسار` when it needs an Arabic noun | **high** | **yes** — was `خط الأنابيب` / `الأنابيب` / `قنوات البيع` / `قناة المبيعات` |
@@ -293,6 +324,30 @@ should read first: `yes` means the shipped Arabic changes, `no` means it is conf
 | `won revenue` / `lost revenue` | **الإيرادات المكتسبة** / **الإيرادات المفقودة** | — | Shipped dashboard card (`A`, `revenue.won-revenue` / `lost-revenue`). | Already coherent with the approved stage adjectives; changing it would reintroduce the split this glossary removes. | domain | same | high | no |
 | `won value` (value the deal closed at) | **قيمة الإغلاق** | `قيمة الربح` (2 `A`, kanban `stages.won-value` + record view) | Egyptian accounting usage: `ربح` is *profit*, a different number from deal value. | A won deal's value is not its profit; using `ربح` tells the user the wrong number. | domain | same | high | **yes** — was `قيمة الربح` |
 | `lost reason` | **سبب الخسارة** | — | Shipped. | The correct Egyptian business phrase; `سبب الضياع` would be wrong. | domain | same | high | no |
+
+> **`الصفقة` in prose — the documents rule, and its two legal survivors.** The row above is enforced by
+> `scripts/check-arabic-glossary.php` (the `deal, in documents (the صفقة family)` rule, scope `docs`) over
+> `docs/client-guide/**`, `docs/sales/**` and `brand/**`; the rule matches the **family**, not one written
+> form, because the word also ships with proclitics (`بالصفقة`, `للصفقة`, `والصفقة`) and in the construct
+> form (`صفقته`). Two senses keep it, and each is an exemption with its own recorded `why`:
+> (1) **a glossary's own record row**, which names a rejected term by quoting it — the client guide's
+> glossary uses «…» for that; (2) **a change-log line** that records the old name, and **a verbatim client
+> quotation** inside «…» (the discovery script prints the rep's own colloquial sentences that way). The
+> prose *around* a quotation is not exempt: a line that says `انقل الصفقة لمفاوضات` next to a quoted
+> sentence is still a violation.
+>
+> **History — the brand tagline used to be a third survivor, and stopped being one on 2026-11-04.** The
+> rule shipped with an exemption for the approved tagline, which carried `الصفقة` because it was approved
+> before this decision existed ([`brand.md`](../operations/brand.md) records that approval); the exemption
+> was reported as "the one place the purged word survives with approval". Carrying the tagline with the
+> terminology decision, the operator moved it to **كل فرصة لها سجل.** — same line, `الفرصة` in place of
+> `الصفقة`, English unchanged (`Every deal, on the record.` is not in this decision's scope). The
+> exemption was therefore deleted rather than reworded: the guardrail now *enforces* the tagline instead
+> of excusing it, in both directions — any document that quotes the old wording fails the documents rule,
+> and `app/Providers/BrandingServiceProvider.php` is asserted by value (`BRAND_VALUES` in the script,
+> `sijilna.tagline.ar`), so reverting the shipped string fails the check even though the provider is
+> neither a locale file nor a prose surface. The earlier wording was approved and is now superseded: it
+> is kept in the record as history, and may not be reinstated without a new operator decision.
 
 ### 4.2 People and organizations
 
@@ -336,11 +391,11 @@ should read first: `yes` means the shipped Arabic changes, `no` means it is conf
 | concept | approved Arabic | rejected renderings present in the product | source | reason | register | EG vs Gulf | confidence | overturns shipped term? |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- |
 | `settings` (the card page: users, leads, inventory, automation, other) | **الإعدادات** | — | Shipped 15× `A`, including the menu fallback `layouts.setting` (`A`:2375). | The word an Egyptian admin looks for. | chrome | same | high | no |
-| `configuration` (the settings tree: general, email) | **التهيئة** | Two shipped families. **(a)** The configuration root renders the **same label** `الإعدادات` as the card page — this is the exact defect `docs/client-guide/ar/17-glossary.md` documents as «البندان متطابقان نصاً في القائمة، وهما شاشتان مختلفتان تماماً». **(b)** `التكوين` — **4 `A` keys**, measured with `grep -o -F 'التكوين'` = 4 occurrences (`التكوينات` 1 of them): `configuration.index.title` (`A`:2082 `التكوين`), `…index.save-btn` (`A`:2077 `حفظ التكوين`), `…index.save-success` (`A`:2078 `تم حفظ التكوين بنجاح.`), and the global-search tab `components.layouts.header.mega-search.explore-all-configurations` (`A`:360 `استكشاف جميع التكوينات`); plus `configuration.index.general.info` (`A`:2085 `تكوين عام`). | `التهيئة` is already the ACL name — 4 `A` occurrences: `acl.configuration` (`A`:31), the global-search tab `…mega-search.tabs.configurations` (`A`:247), the settings-tree menu label (`A`:1617), plus one help sentence (`A`:1775) where `والتهيئة` means "setup", which is the same word doing a different job. | Two different screens with the identical label is a navigation defect, not a terminology preference; one of them must move, and the ACL already picked which. | chrome | same | high | **yes** — the configuration menu label was `الإعدادات`, identical to the other one, and the screen title is `التكوين` |
+| `configuration` (the settings tree: general, email) | **التهيئة** | Two shipped families. **(a)** *Was* the **same label** `الإعدادات` on the configuration root and the card page — the exact defect `docs/client-guide/ar/17-glossary.md` documents as «البندان متطابقان نصاً في القائمة، وهما شاشتان مختلفتان تماماً». **Applied 2026-11-04 (v1.4):** `layouts.configuration` (`A`:2438) now reads `التهيئة`, while the Settings menu keeps `الإعدادات` (`layouts.settings`, `A`:2385) — so the two menu items no longer read the same and this half of the row is closed. **(b)** `التكوين` — **4 `A` keys**, measured with `grep -o -F 'التكوين'` = 4 occurrences (`التكوينات` 1 of them): `configuration.index.title` (`A`:2082 `التكوين`), `…index.save-btn` (`A`:2077 `حفظ التكوين`), `…index.save-success` (`A`:2078 `تم حفظ التكوين بنجاح.`), and the global-search tab `components.layouts.header.mega-search.explore-all-configurations` (`A`:360 `استكشاف جميع التكوينات`); plus `configuration.index.general.info` (`A`:2085 `تكوين عام`). | `التهيئة` is already the ACL name — 4 `A` occurrences: `acl.configuration` (`A`:31), the global-search tab `…mega-search.tabs.configurations` (`A`:247), the settings-tree menu label (`A`:1617), plus one help sentence (`A`:1775) where `والتهيئة` means "setup", which is the same word doing a different job. | Two different screens with the identical label is a navigation defect, not a terminology preference; one of them must move, and the ACL already picked which. | chrome | same | high | **yes** — the configuration menu label was `الإعدادات`, identical to the other one, and the screen title was `التكوين` (both closed on 2026-11-04: `A`:2438 and the title/save keys now read the `التهيئة` family) |
 | `role` | **الدور** — pl. **الأدوار** | — | Shipped 11× `A`. | Standard. | domain | same | high | no |
 | `group` | **المجموعة** — pl. **المجموعات** | — | Shipped. | Standard. | domain | same | high | no |
 | `permission type` / data scope (`view_permission`: global / group / individual) | **نطاق البيانات** — values **عام**, **المجموعة**, **فردي** | `عرض الصلاحية` (1 `A`:1213) | The product already uses `نطاق بياناتك` in two admin error strings (`A`:2498–2499), and `نطاق البيانات` is the phrase Egyptian admins use for row-level scope. | `عرض الصلاحية` parses as "the viewing of the permission" — it names the ACL, not the scope. | domain | same | high | **yes** — was `عرض الصلاحية` |
-| `attribute` (custom field) | **الخاصية** — pl. **الخصائص** | `السمات` (4 `A`: ACL `attributes`, web-form `attributes`, `add-attribute-btn`) | Screens/automation use `الخصائص` (2 `A`); ACL and web-form use `السمات`. Egyptian users of Arabic SaaS meet `حقل مخصص` most, and `الخاصية` for the definition. | `سمة` in Arabic means a *trait of a person*; on a form it reads as psychology, not as a field definition. | domain | same | medium | **yes** — was `السمات` in the ACL and web-form labels |
+| `attribute` (custom field) | **الخاصية** — pl. **الخصائص** | **Two rejected forms, not one — the singular was the larger share and this cell used to leave it unrecorded.** (a) `السمات` — **4** occurrences at `HEAD`, **0** now: `git grep -c -F 'السمات' HEAD -- packages/Webkul/Admin/src/Resources/lang/ar/app.php` = 4 (ACL `attributes`, the web-form `create` and `edit` `attributes`, and the attribute-index title), and the same command without `HEAD --` on the working tree = 0. (b) `السمة` and bare `سمات` — **11** and **7** occurrences at `HEAD`, **0** of either now, measured the same way (`git grep -c -F 'السمة' HEAD -- …` = 11, `git grep -c -F 'سمات' HEAD -- …` = 7); 4 of the 7 `سمات` are the `السمات` in (a), so **3 are bare `سمات`**. The web-form screen shipped `زر إضافة سمة` and `لون تسمية السمة` (both `create` and `edit`) and `أضف سمات مخصصة إلى النموذج.`, and the attribute index shipped its own sentences — `تم إنشاء السمة بنجاح.`, `تم تحديث السمة بنجاح.`, `تم حذف السمة بنجاح.`, `لا يمكن حذف السمة.`, `حفظ السمة`, `إضافة خيارات السمة`, `تعديل السمة`, `لا يمكن حذف سمات النظام.` — and the three web-form keys that carried the singular now ship `زر إضافة خاصية`, `لون تسمية الخاصية` and `أضف خصائص مخصصة إلى النموذج.` | Screens/automation use `الخصائص` — **6 `A`** counted now (`grep -o -F 'الخصائص' packages/Webkul/Admin/src/Resources/lang/ar/app.php \| wc -l` = 6: the ACL, the web-form `create` and `edit` `attributes`, the attribute-index title, the settings menu and its `attributes-info`), against **12** for the singular `الخاصية`; this cell said "2 `A`" before the apply; ACL and web-form use the rejected `السمات`, which is the part that changes. Egyptian users of Arabic SaaS meet `حقل مخصص` most, and `الخاصية` for the definition. | `سمة` in Arabic means a *trait of a person*; on a form it reads as psychology, not as a field definition — and the defect is the same in the singular as in the plural, which is why both are rejected here. | domain | same | medium | **yes** — was `السمات` in the ACL and web-form labels, **and `السمة` / `سمات` in the web-form screen and the attribute index** |
 | `tag` | **الوسم** — pl. **الوسوم** | `العلامات` (5 `A`: 1780 mail, 1912, 1938, 2432, 2433) + `العلامة` (6 `A`: 1833, 1834, 1887, 2068, 2069, 2165) | Shipped majority is already `الوسوم`/`الوسم` — **16 `A`** (11 `الوسم` + 5 `الوسوم`) against **11 `A`** for `العلامات` + `العلامة` (5 + 6, counted once each; `العلامات` and `العلامة` are different words, so the pair cannot overlap, and one of the six is `لون العلامة التجارية` at `A`:2165 — the brand mark itself). | `علامة` collides with the brand mark (`العلامة التجارية`) and with a check mark; `وسم` is the standard Arabic for a tag in every Arabic product. | domain | same | high | **yes** — was `العلامات` / `العلامة` in mail, the lead grid and the tag tool |
 | `workflow` | **سير العمل** | — | Shipped 13× `A`. | Standard. | domain | same | high | no |
 | `event` (automation trigger) | **الحدث** — pl. **الأحداث** | `الفعاليات` (2 `A`: 2422–2423) | `حدث` is already shipped 20× as the trigger word. | `فعالية` means "an event you attend"; using it for a trigger is the same class of literal as `القيادة`. | domain | same | high | **yes** — was `الفعاليات` |
@@ -374,7 +429,7 @@ should read first: `yes` means the shipped Arabic changes, `no` means it is conf
 
 ### 4.7 Fixture-level defects the client guide already names
 
-These are not terminology choices; they are Arabic errors in shipped strings. The first block is the set the client guide already names; the second is the four defects the operator approved in the second 2026-11-04 pass, recorded here so the apply lane executes them from one table.
+These are not terminology choices; they are Arabic errors in shipped strings. The first block is the set the client guide already names; the second is the four defects the operator approved in the second 2026-11-04 pass (§4.7.1), recorded here so the apply lane executes them from one table; the third is the one defect that surfaced while applying those four and was decided then (§4.7.2).
 
 | what ships | where | problem | approved replacement |
 | --- | --- | --- | --- |
@@ -390,10 +445,19 @@ Decided, not proposed. Each is a single key (or a two-key pair), so none of them
 
 | what ships | where | problem | approved replacement |
 | --- | --- | --- | --- |
-| `Leads can not be deleted.` | `leads.update-failed` (`A`:1861) | A full English sentence left inside the Arabic file, in the message a user sees when an edit fails. | **`لا يمكن حذف الفرص.`** — it uses the approved record term **`الفرصة` / `الفرص`** (row 1 of the 26), **not** `العملاء المحتملين`. Note the value is what changes: the key is `update-failed`, but the sentence it carries is the delete-failure sentence, and the operator's decision is to translate the sentence it actually carries rather than invent an update message here. |
-| `ID` | `leads.index.datagrid.id` (`A`:1881) and `leads.index.kanban.columns.id` (`A`:1906) | Bare Latin `ID` as a column header, in the only grid in the product that does not ship `المعرف` — measured, **21 other keys** ship `المعرف` exactly (20 `*.datagrid.id` headers plus `leads.view.quotes.id`), and these two are the only ones that do not. | **`المعرف`**, per §3's own kept-in-Latin rule (the dangling "see §5 row 8" pointer that used to live in that rule is fixed). |
+| `Leads can not be deleted.` → `لا يمكن حذف الفرص.` | `leads.update-failed` — English `packages/Webkul/Admin/src/Resources/lang/en/app.php`:1863, Arabic (`A`):1861 | The English value was an upstream copy-paste of the **delete**-failure sentence (`leads.destroy-failed`, `en`:1865) sitting under an **`update-failed`** key, in the message a user sees when an edit fails. Fixing only the Arabic, as first decided, left a correct translation honouring a promise the key never makes. | **Both sides were fixed, not only the Arabic.** English source `Leads can not be deleted.` → **`Lead can not be updated.`**; Arabic → **`تعذّر تحديث الفرصة.`** Verified in the tree with `grep -n "'update-failed'" packages/Webkul/Admin/src/Resources/lang/en/app.php packages/Webkul/Admin/src/Resources/lang/ar/app.php` → `en`:1863 `Lead can not be updated.`, `A`:1861 `تعذّر تحديث الفرصة.` **The now-superseded first decision, taken in the first 2026-11-04 pass: translate the sentence it actually carries.** That pass shipped `Leads can not be deleted.` → **`لا يمكن حذف الفرص.`**, using the approved record term **`الفرصة` / `الفرص`** (row 1 of the 26), **not** `العملاء المحتملين`, on the reasoning that the value is what changes and the sentence under the key is what the user reads — i.e. translate the bug faithfully rather than invent an update message. **A later pass on the same day, 2026-11-04, superseded it:** the operator reversed the decision — the key is `update-failed`, and translating the delete sentence faithfully left the Arabic promising something the key never does, so the English was corrected too. Read the shipped sibling family in the `en` file rather than from memory — it now reads `Lead created successfully.` / `Leads updated successfully.` / `Lead can not be updated.` (this key) / `Lead deleted successfully.` / `Lead can not be deleted.` |
+| `ID` | `leads.index.datagrid.id` (`A`:1881) and `leads.index.kanban.columns.id` (`A`:1906) | Bare Latin `ID` as a column header, in what **was** the only grid in the product that did not ship `المعرف` — measured at review time, **21 other keys** shipped `المعرف` exactly (20 `*.datagrid.id` headers plus `leads.view.quotes.id`), and these two were the only ones that did not. **Applied 2026-11-04 (v1.4):** both keys now read `المعرف`; re-measured, `A` ships **23** `'id' => 'المعرف'` keys (24 occurrences — the 24th is the `id-not-found` message at `A`:1580) and **zero** bare `ID` values. | **`المعرف`**, per §3's own kept-in-Latin rule (the dangling "see §5 row 8" pointer that used to live in that rule is fixed). |
 | `Json` | `settings.webhooks.create.json` (`A`:1325) and `settings.webhooks.edit.json` (`A`:1354) | Case defect in a Latin token the UI keeps on purpose; the installer's server-requirements checklist already ships `JSON` (`installer:installer.index.server-requirements.json`). | **`JSON`** |
 | `إعادة تعيين كلمة مرور العميل` | `emails.common.user.forget-password.subject` (`A`:2475) | Labels the CRM **user** as a customer: this is the mail subject sent to a *user* who forgot their password, and `عميل` is **reserved** for the customer record that does not exist yet (§4.2 `customer` row, §6 OQ-1). | **`إعادة تعيين كلمة مرور المستخدم`** — required by the reserved-word rule, not by style. |
+
+### 4.7.2 Decided during the apply phase — the import header error
+
+One defect the first two passes never reached; applying §4.7.1 surfaced it. Same class as the block
+above — a wrong noun in a shipped string, not a terminology preference — so it is recorded here.
+
+| what ships | where | problem | approved replacement |
+| --- | --- | --- | --- |
+| `الرأس يحتوي على سمة غير صالحة: "%s".` | `settings.data-transfer.validation.errors.invalid-attribute` (`A`:1591) | `سمة` means a *personal trait* — the same wrong noun §4.5's `attribute` row rejects — and it was naming a column of an imported file. **Verified from the code, not assumed:** `AbstractImporter::validateData()` (`packages/Webkul/DataTransfer/src/Helpers/Importers/AbstractImporter.php`:222–241) iterates `$this->getSource()->getColumnNames()` — the CSV **header** row — and raises this code at `:239–240` when a header column name is not in `getValidColumnNames()`; `AbstractImporter::addErrors()` (`:455–461`) joins the offending names with `implode('", "', $errors)`; and `Error::getErrorMessage()` (`packages/Webkul/DataTransfer/src/Helpers/Error.php`:120–142) runs `sprintf($message, $columnName)` at `:134`. So the placeholder is **always a column name** (or several, joined) — never an attribute's label. | **`اسم العمود "%s" غير صالح.`** — the noun is `العمود` because the column is what the user has to fix, and `اسم` names the thing in the header, which is what the placeholder carries. The sibling key `column-name-invalid` (`A`:1588, `أسماء الأعمدة غير صالحة: "%s".`) is a **different code path** — the header name failed the `^[a-z][a-z0-9_]*$` shape check — stays **plural**, and was **not touched**. The English value of this key, `Header contains invalid attribute(s): "%s".` (`en`:1593), was also **not touched** — an attribute *is* what the header declares, so the English is correct and only the Arabic noun was wrong; do not "align" the two. |
 
 ### 4.8 Sign-in and password reset
 
@@ -487,13 +551,14 @@ next to a stage name; the bar for churning them is higher than for a screen titl
 
 ---
 
-## 6. Questions: five resolved, three still open
+## 6. Questions: six resolved, two still open
 
 Rows the research did not settle. Each one names the options and the evidence that would decide it.
 OQ-1 to OQ-5 went to the operator on **2026-11-04** and are recorded below as resolved — what was
 asked, what was decided, why, and the constraint each answer leaves behind. Read the resolved entry
-before reopening one: a decision on record beats a second opinion. OQ-6 to OQ-8 are still open; do not
-guess them in code, ask the operator.
+before reopening one: a decision on record beats a second opinion. OQ-6 and OQ-7 are still open; do not
+guess them in code, ask the operator. OQ-8 was closed on 2026-11-04 by the fixture fix in §4.7.1 and is
+kept below as history.
 
 ### 6.1 Resolved — operator decisions, 2026-11-04
 
@@ -587,10 +652,11 @@ which makes it actively ambiguous as a field name; `مالك الفرصة` is th
 reads as legal ownership to an Egyptian reader and it ships `0` times, so it would be a new word
 rather than a decision.
 
-### 6.2 Still open — OQ-6 to OQ-8
+### 6.2 OQ-6 and OQ-7 still open; OQ-8 closed 2026-11-04
 
-Neither the research nor the decisions above reach these three: one needs a rendering check, one a
-policy call, one a cleanup.
+Neither the research nor the decisions above reach OQ-6 and OQ-7: one needs a rendering check, one a
+policy call. OQ-8 is kept below because its question was real when it was asked and its answer lives
+somewhere else — a resolved question is history worth keeping, not a row to delete.
 
 **OQ-6 — `عرض سعر` inside a record is a document; the record-screen tab is a *list* of quotes.**
 The approved pair is `عرض سعر` (one) / `عروض الأسعار` (the section). The tab on the deal record lists
@@ -603,10 +669,22 @@ The rule is Western digits everywhere, and ETA's own documents use Western digit
 open if the operator wants the exported quote `PDF` to look "official" in a different way. No evidence
 supports changing it. Listed so that no one "improves" the `PDF` later without a decision on record.
 
-**OQ-8 — the other nine locales carry Arabic-looking or untranslated leftovers.**
+**OQ-8 — the other nine locales carry Arabic-looking or untranslated leftovers.** *(The question as it
+was first written, kept verbatim as history:)*
 `packages/Webkul/Admin/src/Resources/lang/fa/app.php` contains `مفقود`, and `leads.update-failed`
 ships as a full English sentence in the **Arabic** file. Locale hygiene is outside this glossary;
 recorded so that a `fa` string is never mistaken for an `ar` one during the rename pass.
+
+**Resolved 2026-11-04 (v1.4) — the Arabic half is closed by §4.7.1; the `fa` half stands, still unowned.**
+The claim that `leads.update-failed` ships as an English sentence in the Arabic file is **no longer true**:
+the apply lane corrected both sides of that key, because the defect was the key promising an update while
+the sentence promised a delete. Measured:
+`grep -n "'update-failed'" packages/Webkul/Admin/src/Resources/lang/{ar,en}/app.php` → `ar`:1861
+`تعذّر تحديث الفرصة.`, `en`:1863 `Lead can not be updated.` So the question no longer speaks about the
+Arabic locale and has nothing left to decide there. Its other half — a `مفقود` string sitting in
+`packages/Webkul/Admin/src/Resources/lang/fa/app.php` — was never about this glossary, is not read by
+`scripts/check-arabic-glossary.php` (the `fa` file is not one of the five `ar` files), and remains open
+where it belongs: locale hygiene across the other nine locales.
 
 ---
 

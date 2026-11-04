@@ -1,4 +1,4 @@
-<!-- Context: operations/brand.md | Priority: high | Version: 1.3 | Updated: 2026-10-17 -->
+<!-- Context: operations/brand.md | Priority: high | Version: 1.4 | Updated: 2026-11-04 -->
 
 # Sijilna Brand
 
@@ -16,7 +16,7 @@ Assets live in `brand/`; the config layer that applies them is recorded below.
 - **Arabic is set larger and heavier than Latin** (16 px minimum, weight 500);
   Arabic carries more vertical detail per glyph, so a size that reads in Latin
   is under-set in Arabic.
-- **The tagline is decided.** "Every deal, on the record." / كل صفقة لها سجل.
+- **The tagline is decided.** "Every deal, on the record." / كل فرصة لها سجل.
   is approved; its placement is the login screen and the mail chrome only.
 
 ## Name and domain
@@ -37,13 +37,24 @@ rejected options, not as candidates.
 
 | # | English | Arabic | Status |
 | --- | --- | --- | --- |
-| 1 | Every deal, on the record. | كل صفقة لها سجل. | **APPROVED** |
+| 1 | Every deal, on the record. | كل فرصة لها سجل. | **APPROVED** |
 | 2 | Your register. Your rules. | سجلك. قواعدك. | **REJECTED** — ownership angle, less explanatory |
 | 3 | The CRM you own. | نظام إدارة عملاء تملكه. | **REJECTED** — weakest as a line |
 
 **Why #1 won:** it explains the name (سجل = record/register) and it matches the
 ETA e-invoicing promise that every transaction is a recorded entry, in both
 languages and without a literal translation.
+
+**History — the Arabic was reworded on 2026-11-04.** Option 1 was approved
+first with `الصفقة` for the deal; the terminology decision of 2026-11-04 purged
+that word from every Arabic surface a client reads (the record is **الفرصة**),
+and the operator carried the tagline with it. The Arabic therefore now reads
+كل فرصة لها سجل. while the English is unchanged — English marketing voice is
+not covered by that decision. The earlier approval stands as history, not as a
+live option: there is only one approved tagline, and
+[`arabic-terminology.md`](../guides/arabic-terminology.md) §4.1 records the
+reasoning and the guardrail that now fails the check if the old wording comes
+back.
 
 **Placement (decided):** the login screen and the transactional mail chrome
 **only**. Nothing in the admin's working screens, and the footer credit is not
