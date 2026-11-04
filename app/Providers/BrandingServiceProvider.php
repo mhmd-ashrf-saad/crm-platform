@@ -339,7 +339,7 @@ class BrandingServiceProvider extends ServiceProvider
              */
             'sijilna.brand_color' => class_exists(Brand::class) ? Brand::PRIMARY_COLOR : '#0B3C5D',
             'sijilna.tagline.en' => 'Every deal, on the record.',
-            'sijilna.tagline.ar' => 'كل صفقة لها سجل.',
+            'sijilna.tagline.ar' => 'كل فرصة لها سجل.',
 
             /*
              * Installer caption under the wizard logo. The English wording is

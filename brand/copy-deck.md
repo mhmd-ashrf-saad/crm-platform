@@ -13,7 +13,7 @@ anything except the items listed under [Needs a human decision](#9-needs-a-human
   `updates.krayincrm.com`.
 - Scope is `guides/rebrand-boundary.md`: user-facing surfaces only. PHP
   namespaces, `packages/Webkul/**` paths and composer dependency names stay.
-- **The tagline is approved:** “Every deal, on the record.” / **كل صفقة لها
+- **The tagline is approved:** “Every deal, on the record.” / **كل فرصة لها
   سجل.** Its placement is the **login screen and the mail chrome only** —
   nothing in the admin's working screens, and not the footer credit (decisions
   1 and 11 in the record below).
@@ -32,7 +32,7 @@ first.
 
 All twelve are **approved**:
 
-1. **Tagline approved.** “Every deal, on the record.” / **كل صفقة لها سجل.**
+1. **Tagline approved.** “Every deal, on the record.” / **كل فرصة لها سجل.**
    This is a decision, not a proposal (`operations/brand.md`).
 2. **Help & Resources — cards deleted, not reworded.** The support,
    documentation, extensions, API-docs, forum and video cards are **deleted**
@@ -402,11 +402,24 @@ not a copy edit:
 
 ## 3. Arabic table
 
-Arabic reuses the terminology already in
-`packages/Webkul/Admin/src/Resources/lang/ar/app.php`: عميل محتمل (lead), جهات
-الاتصال (contacts), العرض (quote), الأنشطة (activity), المستودعات (warehouse),
-الأدوار (roles), لوحة القيادة (dashboard), الإعدادات (settings). No new parallel
-terms are introduced.
+Arabic reuses the approved terminology of the `ar` locale and the client
+guide: الفرصة (lead), مسار المبيعات (pipeline), جهات الاتصال (contacts),
+عروض الأسعار (quote), الأنشطة (activity), المخازن (warehouse), الأدوار (roles),
+لوحة المعلومات (dashboard), الإعدادات (settings). No new parallel terms are
+introduced.
+
+> **Superseded in part, 2026-11-04 — the four rows this opening got wrong.** The
+> paragraph above was written on 2026-10-17 as a *record of what shipped*, not an
+> independent decision: it reused the Arabic already present in
+> `packages/Webkul/Admin/src/Resources/lang/ar/app.php`. Four of those shipped
+> terms have since been reviewed and are now the ones that change:
+> **الفرصة** (was عميل محتمل — lead), **مسار المبيعات** (was a
+> `قناة`/`خط أنابيب` family — pipeline), **لوحة المعلومات** (was لوحة القيادة —
+> dashboard) and **المخازن** (was المستودعات — warehouse). These four follow the
+> terminology glossary in `.agents/context/guides/arabic-terminology.md` rather
+> than the earlier shipped-term reuse, and both the `ar` locale and the client
+> guide are rewritten to match. Any row below that still shows one of the older
+> words is superseded by this note; the English table in §2 is untouched.
 
 ### 3.1 Login / forgot / reset footer
 
@@ -810,7 +823,7 @@ command (`add`, `commit`, `stash`, `checkout`, `restore`, `clean`) was run.
 ## 9. Needs a human decision
 
 1. **Tagline — RESOLVED (decisions 1 and 11).** “Every deal, on the record.” /
-   كل صفقة لها سجل. is **approved**, not proposed. Its placement is the login
+   كل فرصة لها سجل. is **approved**, not proposed. Its placement is the login
    screen and the mail chrome only; nothing in the admin's working screens, and
    the footer credit is **not** its home — that suggestion was wrong.
 2. **Invented Sijilna URLs — RESOLVED (decision 2).** No invented
