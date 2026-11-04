@@ -1860,7 +1860,7 @@ return [
     'leads' => [
         'create-success' => 'Lead created successfully.',
         'update-success' => 'Leads updated successfully.',
-        'update-failed' => 'Leads can not be deleted.',
+        'update-failed' => 'Lead can not be updated.',
         'destroy-success' => 'Lead deleted successfully.',
         'destroy-failed' => 'Lead can not be deleted.',
         'file' => [

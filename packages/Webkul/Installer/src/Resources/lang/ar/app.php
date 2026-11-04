@@ -6,17 +6,17 @@ return [
             'leads' => [
                 'description' => 'الوصف',
                 'expected-close-date' => 'تاريخ الإغلاق المتوقع',
-                'lead-value' => 'القيمة التقديرية للعميل المحتمل',
-                'sales-owner' => 'مالك المبيعات',
+                'lead-value' => 'القيمة التقديرية للفرصة',
+                'sales-owner' => 'مندوب المبيعات',
                 'source' => 'المصدر',
                 'title' => 'العنوان',
                 'type' => 'النوع',
-                'pipeline' => 'قناة المبيعات',
+                'pipeline' => 'مسار المبيعات',
                 'stage' => 'المرحلة',
                 'lead-source-id' => 'المصدر',
                 'lead-type-id' => 'النوع',
-                'user-id' => 'مالك المبيعات',
-                'lead-pipeline-id' => 'قناة المبيعات',
+                'user-id' => 'مندوب المبيعات',
+                'lead-pipeline-id' => 'مسار المبيعات',
                 'lead-pipeline-stage-id' => 'المرحلة',
             ],
 
@@ -25,17 +25,17 @@ return [
                 'emails' => 'البريد الإلكتروني',
                 'job-title' => 'المسمى الوظيفي',
                 'name' => 'الاسم',
-                'organization' => 'المنظمة',
-                'sales-owner' => 'مالك المبيعات',
-                'user-id' => 'مالك المبيعات',
-                'organization-id' => 'المنظمة',
+                'organization' => 'المؤسسة',
+                'sales-owner' => 'مندوب المبيعات',
+                'user-id' => 'مندوب المبيعات',
+                'organization-id' => 'المؤسسة',
             ],
 
             'organizations' => [
                 'address' => 'العنوان',
                 'name' => 'الاسم',
-                'sales-owner' => 'مالك المبيعات',
-                'user-id' => 'مالك المبيعات',
+                'sales-owner' => 'مندوب المبيعات',
+                'user-id' => 'مندوب المبيعات',
             ],
 
             'products' => [
@@ -48,19 +48,19 @@ return [
 
             'quotes' => [
                 'adjustment-amount' => 'مبلغ التعديل',
-                'billing-address' => 'عنوان الفواتير',
+                'billing-address' => 'عنوان الفوترة',
                 'description' => 'الوصف',
                 'discount-amount' => 'مبلغ الخصم',
                 'discount-percent' => 'نسبة الخصم',
                 'expired-at' => 'منتهي في',
-                'grand-total' => 'الإجمالي',
+                'grand-total' => 'المجموع الكلي',
                 'person' => 'شخص',
-                'sales-owner' => 'مالك المبيعات',
+                'sales-owner' => 'مندوب المبيعات',
                 'shipping-address' => 'عنوان الشحن',
-                'sub-total' => 'الإجمالي الفرعي',
+                'sub-total' => 'المجموع الفرعي',
                 'subject' => 'الموضوع',
                 'tax-amount' => 'مبلغ الضريبة',
-                'user-id' => 'مالك المبيعات',
+                'user-id' => 'مندوب المبيعات',
                 'person-id' => 'شخص',
             ],
 
@@ -87,7 +87,7 @@ return [
 
         'lead' => [
             'pipeline' => [
-                'default' => 'قناة المبيعات الافتراضية',
+                'default' => 'مسار المبيعات الافتراضي',
 
                 'pipeline-stages' => [
                     'follow-up' => 'متابعة',
@@ -95,7 +95,7 @@ return [
                     'negotiation' => 'مفاوضات',
                     'new' => 'جديد',
                     'prospect' => 'عميل محتمل',
-                    'won' => 'مُنتصر',
+                    'won' => 'مكتسب',
                 ],
             ],
 
@@ -108,7 +108,7 @@ return [
             ],
 
             'type' => [
-                'existing-business' => 'عمل موجود',
+                'existing-business' => 'عمل قائم',
                 'new-business' => 'عمل جديد',
             ],
         ],

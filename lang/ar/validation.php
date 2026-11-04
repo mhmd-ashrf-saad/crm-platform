@@ -24,7 +24,7 @@ return [
     'after' => 'يجب أن يكون :attribute تاريخًا بعد :date.',
     'after_or_equal' => 'يجب أن يكون :attribute تاريخًا بعد أو يساوي :date.',
     'alpha' => 'يجب أن يحتوي :attribute على حروف فقط.',
-    'alpha_dash' => 'يجب أن يحتوي :attribute على حروف وأرقام وشرطات فقط.',
+    'alpha_dash' => 'يجب أن يحتوي :attribute على حروف وأرقام وشرطات وشرطة سفلية (_) فقط.',
     'alpha_num' => 'يجب أن يحتوي :attribute على حروف وأرقام فقط.',
     'array' => 'يجب أن يكون :attribute مصفوفة.',
     'before' => 'يجب أن يكون :attribute تاريخًا قبل :date.',
