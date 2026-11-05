@@ -1,3 +1,17 @@
 /playwright-report
 /test-results
 /.state
+
+# Run scratch that the suite rewrites on every execution, so it must never be a committed artifact.
+# Each of these was tracked, and because an ignore rule does not apply to a tracked file the tree went
+# dirty after every run and the committed copy was only ever a stale snapshot. They stay on disk.
+#
+#   /test-data/runtime.json     a data bag one fixture writes for another to read; only this file
+#                               lives in test-data/, and it carries no fixture the suite needs to run.
+#   /data/data-transfer/*.csv   the files the import specs upload and the export specs overwrite.
+#                               Deliberately not `/data/`: data/images/ holds twelve fixture images
+#                               the specs attach and those are read-only inputs worth tracking.
+#
+# `.state/` needs no entry of its own -- `/.state` above already covers it.
+/test-data/runtime.json
+/data/data-transfer/*.csv

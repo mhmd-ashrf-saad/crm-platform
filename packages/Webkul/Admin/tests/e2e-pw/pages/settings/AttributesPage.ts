@@ -37,7 +37,7 @@ export class AttributesPage extends SettingsPage {
         this.entityTypeDropdown = page.locator('#entity_type');
         this.validationDropdown = page.locator('#validation');
         this.saveAttributeButton = page.getByRole('button', { name: 'Save Attribute' });
-        this.successMessage = page.getByText('Success', { exact: true });
+        this.successMessage = this.flash('Success', { exact: true });
         this.firstEditButton = page.locator('//span[contains(@class,"icon-edit")]').first();
         this.firstDeleteButton = page.locator('//span[contains(@class,"icon-delete")]').first();
         this.deleteConfirmButton = page.getByRole('button', { name: 'Agree', exact: true });

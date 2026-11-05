@@ -1,13 +1,12 @@
 import { expect, Locator, Page } from "playwright/test";
 import CoreLocators from "../locator/CoreLocators";
-import { generateEmail, generateFullName, generateName, generatePhoneNumber } from "../utils/faker";
+import { generateEmail, generateName, generatePhoneNumber } from "../utils/faker";
 import { organizationData } from "../pages/OrganizationPage";
 export type PersonData = {
     name: string;
     emails: string;                     // array to hold multiple emails
     contactNumber: string;             // array to hold multiple contact numbers
     jobTitle: string;
-    salesOwnerId: string;                 // id or value representing Sales Owner
     organizationName: string;
 };
 
@@ -25,7 +24,6 @@ export function buildPersonData(overrides: Partial<PersonData> = {}): PersonData
         emails: generateEmail(),
         contactNumber: generatePhoneNumber(),
         jobTitle: generateName(),
-        salesOwnerId: "1", // Example sales owner id
         organizationName: organizationData.name,
         ...overrides,
     };
@@ -52,6 +50,19 @@ export default class PersonsPage extends CoreLocators {
     }
     async createPerson(personData: PersonData) {
 
+        /**
+         * The Sales Owner this person is assigned to: the account the suite is signed in as, read
+         * from its own account screen. Reading it visits that screen, so it happens before the form
+         * is reached and the listing is re-opened afterwards.
+         *
+         * The picker used to be searched for the literal "Example", a name that existed only because
+         * `tests/account.spec.ts` renames the signed-in administrator earlier in a full run. See
+         * `currentUserName()`. It is only needed when the person is being assigned an owner, which
+         * is what `organizationName` gates.
+         */
+        const salesOwner = personData.organizationName ? await this.currentUserName() : "";
+
+        await this.navigageToPersonsPage();
         await this.createPersonLink.click();
 
         // Fill person details (use first email/phone if multiple provided)
@@ -74,9 +85,7 @@ export default class PersonsPage extends CoreLocators {
              * this spec to another spec's record - but the picker is now addressed by name and
              * scoped to its own root instead of matching a listitem anywhere on the page.
              */
-            await this.lookupTrigger("user_id").click();
-            await this.lookupSearch("user_id").fill("Example");
-            await this.lookupOption("user_id", "Example").click();
+            await this.selectSalesOwner(salesOwner);
         }
         // Save person
         await this.savePersonButton.click();
@@ -86,6 +95,10 @@ export default class PersonsPage extends CoreLocators {
 
     }
     async updatePerson(personData: PersonData) {
+        /** See `createPerson`: the owner comes from the session, not from a hardcoded name. */
+        const salesOwner = personData.organizationName ? await this.currentUserName() : "";
+
+        await this.navigageToPersonsPage();
         await this.searchInputExact.fill(personData.name);
         await this.page.keyboard.press('Enter');
         await this.firstEditIcon.click();
@@ -101,9 +114,7 @@ export default class PersonsPage extends CoreLocators {
 
         // Assign organization (if provided) - Sales Owner lookup, see createPerson above.
         if (personData.organizationName) {
-            await this.lookupTrigger("user_id").click();
-            await this.lookupSearch("user_id").fill("Example");
-            await this.lookupOption("user_id", "Example").click();
+            await this.selectSalesOwner(salesOwner);
         }
         // Save person
         await this.savePersonButton.click();
@@ -117,13 +128,4 @@ export default class PersonsPage extends CoreLocators {
         await this.agreeButton.click();
         await expect(this.successMessage.first()).toBeVisible();
     }
-    async personMassDelete() {
-        await this.multiSelectCheckbox.click();
-        await this.deleteButton.click();
-        await this.agreeButton.click();
-        await expect(this.successMessage.first()).toBeVisible();
-    }
-
-
-
 }

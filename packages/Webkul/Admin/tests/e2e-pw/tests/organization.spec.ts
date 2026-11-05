@@ -62,7 +62,12 @@ test.describe("organization mangement", () => {
         await organizationPage.navigateToOrganization();
         await organizationPage.createOrganization(orgData);
 
-        /* than mass delete organization*/
-        await organizationPage.massDelete();
+        /*
+         * Mass-deleting this record specifically, not "the first row". The assertion inside
+         * `massDelete` is that this organization's row is gone, which holds whatever else the
+         * listing contains — the previous version asserted the grid had become empty, which was only
+         * true on an instance holding a single organization.
+         */
+        await organizationPage.massDelete(orgData.name);
     })
 })

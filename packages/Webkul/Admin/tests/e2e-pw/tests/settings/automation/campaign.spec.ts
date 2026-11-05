@@ -1,5 +1,6 @@
 import { expect, test } from "../../../fixtures/AdminFixtures";
 import { generateCampaignName, generateDate, generateDescription, generateFullName } from "../../../utils/faker";
+import { flashOf } from "../../../utils/flash";
 
 test.describe("campaign management", () => {
    test("should create a event for campaign", async ({ adminPage }) => {
@@ -32,9 +33,7 @@ test.describe("campaign management", () => {
          */
          await adminPage.getByRole('button', { name: 'Save Event' }).click();
 
-        await expect(
-            adminPage.getByText("Event created successfully.")
-        ).toBeVisible();
+        await expect(flashOf(adminPage, "Event created successfully.")).toBeVisible();
     });
     test("should create a campaign", async ({ adminPage }) => {
         /* Navigate to the campaigns listing page */
@@ -70,12 +69,10 @@ test.describe("campaign management", () => {
         await adminPage.locator('.peer.h-5').click();
 
         /* Submit the form and create the campaign */
-        await adminPage.getByRole('button', { name: 'Save Activity' }).click();
+        await adminPage.getByRole('button', { name: 'Save Campaign' }).click();
 
         /* Assert the success message */
-        await expect(
-            adminPage.getByText("Campaign created successfully.")
-        ).toBeVisible();
+        await expect(flashOf(adminPage, "Campaign created successfully.")).toBeVisible();
     });
 
     test("should edit a campaign", async ({ adminPage }) => {
@@ -107,13 +104,12 @@ test.describe("campaign management", () => {
         /* Toggle the active status */
         await adminPage.locator('.peer.h-5').click();
 
-        /* Save changes */
-        await adminPage.getByRole('button', { name: 'Save Activity' }).click();
+        /* Save changes — the campaign dialog captions its submit button `Save Campaign`, unlike
+           the activity form's `Save Activity`. */
+        await adminPage.getByRole('button', { name: 'Save Campaign' }).click();
 
         /* Assert the update success message */
-        await expect(
-            adminPage.getByText("Campaign updated successfully.")
-        ).toBeVisible();
+        await expect(flashOf(adminPage, "Campaign updated successfully.")).toBeVisible();
 
     });
     test("should delete a campaign", async ({ adminPage }) => {
@@ -127,9 +123,7 @@ test.describe("campaign management", () => {
         await adminPage.getByRole('button', { name: 'Agree', exact: true }).click();
 
         /* Assert the deletion success message */
-        await expect(
-            adminPage.getByText("Campaign deleted successfully.")
-        ).toBeVisible();
+        await expect(flashOf(adminPage, "Campaign deleted successfully.")).toBeVisible();
     }); 
 
 });

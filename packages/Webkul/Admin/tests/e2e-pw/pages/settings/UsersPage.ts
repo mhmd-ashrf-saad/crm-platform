@@ -81,9 +81,9 @@ export class UsersPage extends SettingsPage {
          */
         this.statusCheckbox = page.locator('input#status[type="checkbox"]');
 
-        this.createSuccessMessage = page.getByText("User created successfully.");
-        this.updateSuccessMessage = page.getByText("User updated successfully.");
-        this.deleteSuccessMessage = page.getByText("User deleted successfully.");
+        this.createSuccessMessage = this.flash("User created successfully.");
+        this.updateSuccessMessage = this.flash("User updated successfully.");
+        this.deleteSuccessMessage = this.flash("User deleted successfully.");
 
         this.unauthorizedMessage = page.getByText("This action is unauthorized.");
         this.roleExceedsOwnMessage = page.getByText(

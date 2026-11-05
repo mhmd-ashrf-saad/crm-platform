@@ -48,7 +48,7 @@ export class MailPage extends CoreLocators {
         this.replyToInput = page.getByLabel(/reply to/i).or(page.locator('input[name="temp-reply_to"]'));
         this.subjectInput = page.getByLabel(/subject/i).or(page.locator('input[name="subject"]'));
         this.sendButton = page.getByRole("button", { name: "Send" });
-        this.successMessage = page.getByText("Email sent successfully.");
+        this.successMessage = this.flash("Email sent successfully.");
         this.editorFrame = page.frameLocator("iframe.tox-edit-area__iframe");
         this.saveDraftButton = page.getByRole("button", { name: "Draft" });
         this.moveToTrashButton = page.getByRole('button', { name: 'Moved To Trash' })
@@ -196,7 +196,7 @@ export class MailPage extends CoreLocators {
 
         await this.agreeButton.click();
 
-        await expect(this.page.getByText(/deleted successfully/i).first()).toBeVisible();
+        await expect(this.flash(/deleted successfully/i).first()).toBeVisible();
     }
     async searchEmail(subject: string) {
         await this.searchInputExact.fill(subject);
@@ -224,7 +224,7 @@ export class MailPage extends CoreLocators {
          * The delete is confirmed before the caller asserts the row is gone, so the assertion is
          * not racing the request that removes it.
          */
-        await expect(this.page.getByText(/deleted successfully/i).first()).toBeVisible();
+        await expect(this.flash(/deleted successfully/i).first()).toBeVisible();
     }
 
 }

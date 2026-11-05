@@ -182,15 +182,22 @@ export class QuickAddPage extends CoreLocators {
         await this.quickAddMailSubjectInput.fill(mailData.subject);
 
         /**
-         * The body is required, and it is typed into the editor's own document rather than a form
-         * field: the editor copies it across to the field the form submits, so the text is waited
-         * for in the frame before the modal is submitted.
+         * The body is required, and it lives in TinyMCE rather than in a form field: the editor copies
+         * its own content into the field the form submits, and it only does that for content it saw
+         * arrive. Assigning the text to the iframe's document (`fill()`) is not enough — the frame
+         * showed the text while the submitted field stayed empty, so saving answered "The Message
+         * field is required" with the body still on screen. Measured in both `APP_DEBUG` states, so it
+         * is the editor disagreeing with its own document, not a debug build being slow.
+         *
+         * Typing is what `utils/tinymce.ts` and `AdminFixtures.fillInTinymce` already do for this
+         * reason: real key events are what the editor listens to.
          */
         const editorBody = this.quickAddMailEditorFrame.locator("body");
 
         await editorBody.waitFor({ state: "visible" });
 
-        await editorBody.fill(mailData.body);
+        await editorBody.click();
+        await editorBody.pressSequentially(mailData.body);
 
         await expect(editorBody).toContainText(mailData.body);
 

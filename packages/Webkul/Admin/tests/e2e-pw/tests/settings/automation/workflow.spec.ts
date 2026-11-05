@@ -1,5 +1,6 @@
 import { expect, test } from "../../../fixtures/AdminFixtures";
 import { generateDescription, generateName } from "../../../utils/faker";
+import { flashOf } from "../../../utils/flash";
 
 /**
  * A workflow is an event, the conditions that narrow it, and the actions it then takes.
@@ -105,7 +106,7 @@ test.describe("Workflow Management", () => {
          * has finished as after it.
          */
         await expect(
-            adminPage.getByText(/deleted successfully/i).first()
+            flashOf(adminPage, /deleted successfully/i).first()
         ).toBeVisible();
     });
 });

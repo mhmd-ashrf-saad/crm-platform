@@ -1,5 +1,8 @@
 import { test, expect } from "../../fixtures/AdminFixtures";
 
+import { AdminPage } from "../../pages/AdminPage";
+import { ADMIN_EMAIL, ADMIN_PASSWORD } from "../../utils/acl";
+
 /**
  * Security regressions around admin authentication, exercised through the browser.
  *
@@ -21,11 +24,17 @@ async function submitLogin(page, email: string, password: string) {
     await page.locator('input[name="email"]').fill(email);
     await page.locator('input[name="password"]').fill(password);
 
+    /**
+     * The submit button is taken from the page object rather than by its label: the label is
+     * translated, and every case below reaches the panel through this one function.
+     */
+    const login = new AdminPage(page);
+
     const [response] = await Promise.all([
         page.waitForResponse(
             (r) => r.url().includes("/admin/login") && r.request().method() === "POST"
         ),
-        page.getByRole("button", { name: "Sign In" }).click(),
+        login.signInButton.click(),
     ]);
 
     return response;
@@ -63,7 +72,7 @@ test.describe("admin authentication hardening", () => {
             const page = await context.newPage();
 
             try {
-                const response = await submitLogin(page, "admin@example.com", "admin123");
+                const response = await submitLogin(page, ADMIN_EMAIL, ADMIN_PASSWORD);
 
                 expect(response.status(), `sign-in ${attempt} should not be throttled`).not.toBe(429);
 

@@ -1,16 +1,25 @@
 import { defineConfig, devices } from "@playwright/test";
-import dotenv from "dotenv";
 import path from "path";
 import { fileURLToPath } from "url";
+
+import {
+    ADMIN_AUTH_STATE_PATH,
+    BASE_URL,
+    STATE_DIR_PATH,
+    TESTS_ROOT_PATH,
+} from "./fixtures/env";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-export const TESTS_ROOT_PATH = __dirname;
-export const STATE_DIR_PATH = `${ TESTS_ROOT_PATH }/.state/`;
-export const ADMIN_AUTH_STATE_PATH = `${ STATE_DIR_PATH }/admin-auth.json`;
-
-dotenv.config({ path: path.resolve(__dirname, "../../../../../.env") });
+/**
+ * Re-exported for the modules that already import their paths from here, and for the pin's state
+ * directory, which has to be the same `.state/` the auth file lives in.
+ *
+ * `BASE_URL`, `UI_LOCALE` and the administrator's credentials come from `fixtures/env.ts`, which
+ * loads `.env` before any of this is read.
+ */
+export { ADMIN_AUTH_STATE_PATH, STATE_DIR_PATH, TESTS_ROOT_PATH };
 
 export default defineConfig({
     /**
@@ -19,6 +28,25 @@ export default defineConfig({
      * directory, which is how an editor or a root-level invocation found none.
      */
     testDir: path.resolve(__dirname, "tests"),
+
+    /**
+     * Pin the admin interface locale for the run, and put it back afterwards.
+     *
+     * The remaining specs assert English labels, placeholders and flash messages. Rather than
+     * translating every assertion, the interface language the run sees is made explicit: setup
+     * writes the locale the admin middleware reads (`general.general.locale_settings.locale` in
+     * `core_config`) when the instance is not already serving `UI_LOCALE`, and teardown restores
+     * whatever was there before. Both live in `fixtures/`; `pinUiLocale.ts` explains why an
+     * `APP_LOCALE` environment variable cannot do this job.
+     *
+     * That write only touches a database the run can name: `pinDatabase()` in `fixtures/env.ts`
+     * allows `.env`'s own database only while the suite drives the instance `.env` describes, and
+     * otherwise requires `DB_DATABASE` to be exported for this run. A suite aimed at a scratch
+     * instance without it fails here, before anything is written, instead of pinning the live row.
+     */
+    globalSetup: path.resolve(__dirname, "fixtures/pinUiLocale.ts"),
+
+    globalTeardown: path.resolve(__dirname, "fixtures/restoreUiLocale.ts"),
 
     /**
      * Sized for a cold CI runner, not for this laptop.
@@ -97,7 +125,11 @@ export default defineConfig({
     ],
 
     use: {
-        baseURL: `${process.env.APP_URL}/`.replace(/\/+$/, "/"),
+        /**
+         * One resolved value, shared with the locale pin, so the suite cannot drive one instance and
+         * pin the locale of another. See `fixtures/env.ts`.
+         */
+        baseURL: BASE_URL,
         screenshot: { mode: "only-on-failure", fullPage: true },
         video: "retain-on-failure",
         trace: "retain-on-failure",

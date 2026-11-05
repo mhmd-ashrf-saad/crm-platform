@@ -1,4 +1,4 @@
-import { expect, test } from "../fixtures/AdminFixtures";
+import { test } from "../fixtures/AdminFixtures";
 import PersonsPage, { buildPersonData } from "../pages/PersonsPage";
 
 test.describe("person managment", () => {
@@ -46,6 +46,25 @@ test.describe("person managment", () => {
 
         await person.navigageToPersonsPage();
         await person.createPerson(massDeletePersonData);
-        await person.personMassDelete();
+
+        /**
+         * Mass-deleting this record specifically, through the shared `CoreLocators.massDelete()` the
+         * organization spec uses. `PersonsPage.personMassDelete()` — which ticked the grid header's
+         * select-all and asserted nothing but the flash — has been deleted rather than fixed: a
+         * one-line wrapper around `massDelete(name)` would only duplicate it.
+         *
+         * The header selects what the page is showing, not the record under test. Measured on a
+         * scratch copy, that checkbox ticked all ten rows of an unfiltered persons listing, and the
+         * mass action deleted the eight of them the product allowed: two were refused, but nine of
+         * the ten were records no case had created. The old case survived it only by accident —
+         * `createPerson` leaves the listing filtered to the new name, so the header happened to tick
+         * a single row — and it asserted nothing about which record was chosen, so a wrong record, or
+         * two persons sharing a name, would have passed just as quietly.
+         *
+         * `massDelete()` narrows the listing to this name itself, ticks that row's own checkbox,
+         * asserts that exactly one record id is selected (counted by id, since the grid renders each
+         * record twice — desktop row and mobile card), deletes, and asserts the row is gone.
+         */
+        await person.massDelete(massDeletePersonData.name);
     })
 })

@@ -9,8 +9,25 @@ export type WarehouseData = {
     contactName: string;
     contactEmail: string;
     contactAddress: string;
+
+    /**
+     * ISO 3166-1 alpha-2 country code — the *value* the country select's options carry.
+     *
+     * Not the country's name: those labels come from the `countries` table in the interface
+     * language, so India's option reads `الهند` on this Arabic-first install. Selecting the label
+     * `India` waited for an option that no longer exists and timed out. The organization and quote
+     * page objects already select by code for the same reason.
+     */
     country: string;
+
+    /**
+     * The state's ISO 3166-2 code — again the option's value rather than its label.
+     *
+     * A country with no rows in `country_states` renders this field as free text instead of a
+     * list, and `fillContactAddress` types the value in when that is what the form drew.
+     */
     state: string;
+
     city: string;
     zipcode: string;
     phone: string;
@@ -22,8 +39,8 @@ export const warehouseData: WarehouseData = {
     contactName: generateLastName(),
     contactEmail:generateEmail(),
     contactAddress: 'Plot 123, Industrial Area, Meerut, UP 250001',
-    country: 'India',
-    state: 'Uttar Pradesh',
+    country: 'IN',
+    state: 'UP',
     city: 'Meerut',
     zipcode: '250001',
     phone: generatePhoneNumber(),
@@ -58,7 +75,7 @@ export class WarehousePage extends SettingsPage {
         this.saveButton = page.getByRole('button', { name: 'Save Warehouse' })
         this.firstEditButton = page.locator('span.cursor-pointer.icon-edit').first();
         this.firstDeleteButton = page.locator('span.cursor-pointer.icon-delete').first();
-        this.successMessage = page.getByText(/Warehouse.*successfully/);
+        this.successMessage = this.flash(/Warehouse.*successfully/);
         this.warehousesTable = page.getByRole('table');
         this.contactNameInput = page.getByRole('textbox', { name: 'Contact Name *' });
         this.contactEmailInput = page.getByRole('textbox', { name: 'Contact Emails *' })
@@ -79,8 +96,7 @@ export class WarehousePage extends SettingsPage {
         await this.contactEmailInput.fill(warehouseData.contactEmail);
         await this.contactPhoneInput.fill(warehouseData.phone);
         await this.contactAddressTextarea.fill(warehouseData.contactAddress);
-        await this.countrySelect.selectOption({ label: warehouseData.country });
-        await this.stateSelect.selectOption({ label: warehouseData.state });
+        await this.fillContactAddress(warehouseData.country, warehouseData.state);
         await this.cityInput.fill(warehouseData.city);
         await this.zipcodeInput.fill(warehouseData.zipcode);
         await this.saveButton.click();
@@ -89,6 +105,37 @@ export class WarehousePage extends SettingsPage {
         await expect(this.page.getByRole('paragraph').filter({ hasText: warehouseData.contactName }).first()).toBeVisible();
         
     }
+
+    /**
+     * Choose the country and then the state, both by code.
+     *
+     * The labels are translated — the country list reads `الهند` here — while the option values are
+     * ISO codes (`countries.code`, `country_states.code`), so a code is the only handle that does
+     * not depend on the interface language.
+     *
+     * The state control is not fixed either: the address component
+     * (`attributes/edit/address.blade.php`) renders a select only for a country that has rows in
+     * `country_states`, and a free-text input for one that has none, so which one it drew is read
+     * after the country is applied rather than assumed.
+     */
+    async fillContactAddress(countryCode: string, stateCode: string): Promise<void> {
+        await this.countrySelect.selectOption(countryCode);
+
+        /**
+         * The country's own value is what the swap hangs off, so waiting for it orders the read
+         * below after the re-render instead of reading the control the old country left behind.
+         */
+        await expect(this.countrySelect).toHaveValue(countryCode);
+
+        if (await this.stateSelect.count()) {
+            await this.stateSelect.selectOption(stateCode);
+
+            return;
+        }
+
+        await this.page.locator('input[name="contact_address[state]"]').fill(stateCode);
+    }
+
     async searchWarehouse(warehouseName:string)
     {
         await this.searchInputExact.fill(warehouseName);

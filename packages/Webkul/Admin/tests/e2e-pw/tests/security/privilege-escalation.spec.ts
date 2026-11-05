@@ -207,18 +207,26 @@ test.describe.serial("privilege escalation guards", () => {
         const rolesPage = new RolesPage(managerSession!.page);
 
         /**
-         * The seeded Administrator role holds `permission_type = all`, so it is strictly broader
-         * than the manager's. Editing it would be the shortest path to full control.
+         * The seeded administrator role — id 1 — holds `permission_type = all`, so it is strictly
+         * broader than the manager's. Editing it would be the shortest path to full control.
+         *
+         * Its name cannot be read from the listing and must not be written in English here. The
+         * installer seeds it in the install's locale (`مسؤول` on this fork), and the grid scopes
+         * rows to the acting user's data scope, so a `group`-scoped manager does not see role 1 at
+         * all: the listing answers null for it even though the update route accepts its id. That
+         * gap is exactly why the tampering below is addressed by id — the same thing an attacker
+         * would do — and why the manager only opens the listing before it.
          */
-        await rolesPage.searchRole("Administrator");
+        await rolesPage.navigateToRoles();
 
         /**
          * The update route is a PUT, so the verb is spoofed through `_method` exactly as the admin
-         * panel's own forms do — posting without it answers 405 and never reaches the guard.
+         * panel's own forms do — posting without it answers 405 and never reaches the guard. The
+         * name in the payload is whatever the attacker chose to call it; nothing reads it back.
          */
         const response = await postRoute(managerSession!, "admin/settings/roles/edit/1", {
             _method: "put",
-            name: "Administrator",
+            name: "Tampered Administrator Role",
             description: "tampered by a non-administrator",
             permission_type: "all",
         });

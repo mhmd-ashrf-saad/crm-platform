@@ -33,8 +33,8 @@ export class GroupPage extends SettingsPage {
         this.descriptionTextarea = page.locator('textarea[name="description"]');
         
         // Notifications
-        this.successMessageGroupCreated = page.getByText("Group created successfully.");
-        this.successMessageGroupUpdated = page.getByText("Group updated successfully.");
+        this.successMessageGroupCreated = this.flash("Group created successfully.");
+        this.successMessageGroupUpdated = this.flash("Group updated successfully.");
     }
     async createGroup(groupData:GroupData): Promise<void>
     {

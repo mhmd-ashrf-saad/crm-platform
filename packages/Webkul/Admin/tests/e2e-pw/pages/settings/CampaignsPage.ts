@@ -40,21 +40,38 @@ export class CampaignsPage extends SettingsPage {
         super(page);
         this.page = page;
 
-        this.createCampaignButton = page.getByRole('button', { name: 'Create Campaigns' })
+        /**
+         * `Create Campaign` — the listing's header button.
+         *
+         * It read "Create Campaigns" while the copy called the section "Campaigns"; the create
+         * button is now named for the one thing it makes, matching every other listing in settings.
+         */
+        this.createCampaignButton = page.getByRole('button', { name: 'Create Campaign' })
         this.campaignNameInput = page.locator('input[name="name"]');
         this.campaignSubjectInput = page.getByRole('textbox', { name: 'Subject *' });
         this.emailTemplateDropdown = page.locator('#marketing_template_id');
         this.eventDropdown = page.getByLabel('Event');
         this.activeToggle = page.locator('.peer.h-5');
-        this.saveCampaignButton = page.getByRole('button', { name: 'Save Activity' });
+        /**
+         * `Save Campaign`, not `Save Activity`.
+         *
+         * The dialog used to borrow the activity form's caption — the campaigns view had no
+         * `save-btn` key of its own, so a button reading "Save Activity" submitted a campaign —
+         * and it now owns one: `admin::app.settings.marketing.campaigns.index.create.save-btn`.
+         * The same button saves the edit dialog, because both read that one key.
+         *
+         * The activity form's own `Save Activity` locator (`CoreLocators.saveActivityButton`) is
+         * untouched, and still correct for the form it belongs to.
+         */
+        this.saveCampaignButton = page.getByRole('button', { name: 'Save Campaign' });
 
         this.firstCampaignEditButton = page.locator('.row > div:nth-child(6) > a').first();
         this.firstCampaignDeleteButton = page.locator('xpath=(//span[contains(@class, "icon-delete")])[1]');
         this.confirmDeleteButton = page.getByRole('button', { name: 'Agree', exact: true });
 
-        this.successCreatedMessage = page.getByText(/(created) successfully\./).first();
-        this.successUpdatedMessage = page.getByText(/(updated) successfully\./).first();
-        this.successDeletedMessage = page.getByText(/(deleted) successfully\./).first();
+        this.successCreatedMessage = this.flash(/(created) successfully\./).first();
+        this.successUpdatedMessage = this.flash(/(updated) successfully\./).first();
+        this.successDeletedMessage = this.flash(/(deleted) successfully\./).first();
     }
 
     async gotoCampaigns() {

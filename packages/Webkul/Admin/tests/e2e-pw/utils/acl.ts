@@ -16,8 +16,16 @@ import { AdminPage } from "../pages/AdminPage";
  * middleware.
  */
 
-export const ADMIN_EMAIL = "admin@example.com";
-export const ADMIN_PASSWORD = "admin123";
+/**
+ * The administrator every suite signs in as.
+ *
+ * Re-exported from `fixtures/env.ts` rather than repeated as literals, because this pair is the one
+ * credential the whole harness shares: the `adminPage` fixture stores a session in
+ * `.state/admin-auth.json` using it, and a spec that asserted an account email from a second copy
+ * could not notice the two drifting apart. Overridable with `E2E_ADMIN_EMAIL` / `E2E_ADMIN_PASSWORD`
+ * for a checkout whose administrator has another address.
+ */
+export { ADMIN_EMAIL, ADMIN_PASSWORD } from "../fixtures/env";
 
 /**
  * Password handed to every user these suites create. Kept above Krayin's six character minimum.

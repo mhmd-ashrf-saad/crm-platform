@@ -66,7 +66,7 @@ export class ProductPage extends CoreLocators {
     await this.productQuantityInput.fill(productdata.quantity);
 
     // Save product
-    await this.saveProductsButton.click();
+    await this.saveProductButton.click();
     await expect(this.successMessage.first()).toBeVisible();
     saveData("productData", productdata);
     // await this.searchProduct(productdata.name);   /* searching is not working now once the issue is fixed uncomment this line */

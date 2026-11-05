@@ -53,6 +53,65 @@ function localesOf(dir: string): string[] {
         );
 }
 
+/**
+ * The English keys the other shipped locales have not been given yet.
+ *
+ * They are one set, not one set per locale, because the same keys are missing from every locale
+ * listed in `LOCALES_BEHIND_ENGLISH` — all of them added to `en` by the settings work of this epic
+ * (the campaign dialog's own `save-btn`, the data-transfer import states, the activity attributes
+ * and placeholders, the automation entities and events, and the grid's row actions for view and
+ * import).
+ *
+ * This list has two edges, and both fail loudly. It grows only when `en` gains a key, and a failure
+ * naming an unrecorded key is the signal that one arrived: either it needs translating, or it needs
+ * a line here. It shrinks whenever a locale catches one up: a recorded key that is no longer missing
+ * fails until its line is deleted, the same discipline `BACKLOG` below applies to counts. That is
+ * what stops an allowance from quietly becoming the new normal.
+ *
+ * `ar` is absent from `LOCALES_BEHIND_ENGLISH` on purpose. It is the product's first language, it is
+ * expected to ship complete, and it currently does: a key missing from `ar` is a real defect, so the
+ * check below holds it to English exactly rather than letting it inherit this allowance.
+ */
+const UNTRANSLATED_KEYS = [
+    'leads.index.datagrid.view',
+    'settings.data-transfer.imports.index.datagrid.import',
+    'settings.marketing.campaigns.index.create.save-btn',
+    'settings.webforms.index.datagrid.view',
+    'settings.data-transfer.imports.index.datagrid.states.pending',
+    'settings.data-transfer.imports.index.datagrid.states.validated',
+    'settings.data-transfer.imports.index.datagrid.states.processing',
+    'settings.data-transfer.imports.index.datagrid.states.linking',
+    'settings.data-transfer.imports.index.datagrid.states.indexing',
+    'settings.data-transfer.imports.index.datagrid.states.completed',
+    'activities.index.datagrid.not-available',
+    'activities.index.empty-title',
+    'automation.attributes.title',
+    'automation.attributes.type',
+    'automation.attributes.note',
+    'automation.attributes.call',
+    'automation.attributes.meeting',
+    'automation.attributes.lunch',
+    'automation.attributes.file',
+    'automation.attributes.location',
+    'automation.attributes.comment',
+    'automation.attributes.schedule-from',
+    'automation.attributes.schedule-to',
+    'automation.attributes.user',
+    'automation.placeholders.participants',
+    'automation.entities.leads',
+    'automation.entities.activities',
+    'automation.entities.persons',
+    'automation.entities.quotes',
+    'automation.events.created',
+    'automation.events.updated',
+    'automation.events.deleted',
+];
+
+/**
+ * The locales the allowance above applies to. `ar` is deliberately not here — see above.
+ */
+const LOCALES_BEHIND_ENGLISH = new Set(['es', 'fa', 'ja', 'ko', 'pt_BR', 'tr', 'vi', 'zh_CN']);
+
 test('every locale carries the same keys as English', () => {
     const problems: string[] = [];
 
@@ -71,9 +130,28 @@ test('every locale carries the same keys as English', () => {
             const missing = Object.keys(base).filter((key) => ! (key in keys));
             const extra = Object.keys(keys).filter((key) => ! (key in base));
 
-            if (missing.length) {
+            /**
+             * Only the recorded English keys are allowed to be absent, and only where they are
+             * recorded: everything else — `ar` included — has to match English key for key.
+             */
+            const owed = pkg === 'Admin' && LOCALES_BEHIND_ENGLISH.has(locale)
+                ? UNTRANSLATED_KEYS
+                : [];
+
+            const unexpected = missing.filter((key) => ! owed.includes(key));
+
+            if (unexpected.length) {
                 problems.push(
-                    `${pkg}/${locale}: ${missing.length} missing - ${missing.slice(0, 10).join(', ')}`
+                    `${pkg}/${locale}: ${unexpected.length} missing - ${unexpected.slice(0, 10).join(', ')}`
+                );
+            }
+
+            const caughtUp = owed.filter((key) => ! missing.includes(key));
+
+            if (caughtUp.length) {
+                problems.push(
+                    `${pkg}/${locale}: ${caughtUp.length} of the recorded keys are now translated - ` +
+                        `remove them from UNTRANSLATED_KEYS: ${caughtUp.slice(0, 10).join(', ')}`
                 );
             }
 
@@ -92,11 +170,14 @@ test('no locale falls further behind English', () => {
     // These locales already carry phrases that were never translated. The count
     // is recorded so that it can only go down: a locale that gains one fails
     // here, and a locale that is caught up is removed from the list.
+    //
+    // `Admin/ar` left this list: Arabic carries no untranslated English phrase
+    // today, which is what makes it the reference the key-parity check above
+    // holds exactly.
     const BACKLOG: Record<string, number> = {
-        'Admin/ar': 1,
-        'Admin/pt_BR': 46,
+        'Admin/pt_BR': 45,
         'Admin/tr': 23,
-        'Admin/vi': 41,
+        'Admin/vi': 40,
     };
 
     const SHARED = new Set([

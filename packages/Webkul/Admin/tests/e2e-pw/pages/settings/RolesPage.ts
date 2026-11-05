@@ -58,16 +58,16 @@ export class RolesPage extends SettingsPage {
         this.descriptionTextarea = page.locator('textarea[name="description"]');
         this.permissionTypeSelect = page.locator('select[name="permission_type"]');
 
-        this.createSuccessMessage = page.getByText("Role created successfully.");
-        this.updateSuccessMessage = page.getByText("Role updated successfully.");
-        this.deleteSuccessMessage = page.getByText("Role deleted successfully.");
+        this.createSuccessMessage = this.flash("Role created successfully.");
+        this.updateSuccessMessage = this.flash("Role updated successfully.");
+        this.deleteSuccessMessage = this.flash("Role deleted successfully.");
 
         this.permissionsExceedOwnError = page.getByText(
             "You can only create or edit roles whose permissions are the same as or fewer than your own."
         );
         this.currentRoleEditError = page.getByText("Can not edit the role assigned to your own account.");
         this.currentRoleDeleteError = page.getByText("Can not delete role assigned to the current user.");
-        this.beingUsedError = page.getByText("Role can not be deleted, as this is being used in admin user.");
+        this.beingUsedError = this.flash("Role can not be deleted, as this is being used in admin user.");
     }
 
     /**
@@ -170,6 +170,53 @@ export class RolesPage extends SettingsPage {
         await this.searchInputExact.fill(name);
         await this.page.keyboard.press("Enter");
         await this.page.waitForLoadState("networkidle");
+    }
+
+    /**
+     * The name the roles listing shows for a role id.
+     *
+     * The seeded administrator role is named in whichever language the install was seeded in —
+     * `مسؤول` on this Arabic-first fork, `Administrator` upstream — because the installer names it
+     * with `installer::app.seeders.user.role.administrator` in the install's own locale. A spec
+     * that searched for the English name therefore landed on an empty listing and then clicked
+     * whichever edit or delete icon happened to be first, which is why the "refuses to delete"
+     * case reported a success it never earned.
+     *
+     * The name comes back from the listing endpoint the grid itself calls, and the record is found
+     * through the id in its own action URLs rather than by name, so nothing here is language
+     * dependent. Callers then search the grid by that name, which keeps the behaviour under test —
+     * deleting or editing the role the signed-in account holds — exactly the same as before.
+     */
+    async roleNameById(roleId: number): Promise<string> {
+        const name = await this.page.evaluate(async (id: number) => {
+            const response = await fetch(`/admin/settings/roles?pagination[per_page]=100`, {
+                headers: { "X-Requested-With": "XMLHttpRequest" },
+                credentials: "same-origin",
+            });
+
+            if (! response.ok) {
+                throw new Error(`the roles listing answered HTTP ${ response.status }`);
+            }
+
+            const body = await response.json();
+
+            /**
+             * Matched on the id its action URLs end with (`…/roles/edit/1` for the edit form,
+             * `…/roles/1` for the delete route) rather than on a shape those routes could change:
+             * the id is the last path segment of both.
+             */
+            const record = (body.records ?? []).find((row: any) =>
+                (row.actions ?? []).some(
+                    (action: any) => Number(/(\d+)$/.exec(action.url ?? "")?.[1]) === id
+                )
+            );
+
+            return record?.name ?? null;
+        }, roleId);
+
+        expect(name, `the roles listing should offer role ${ roleId }`).toBeTruthy();
+
+        return name as string;
     }
 
     /**

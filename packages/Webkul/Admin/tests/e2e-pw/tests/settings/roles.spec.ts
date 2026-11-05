@@ -87,10 +87,15 @@ test.describe.serial("role management", () => {
         const rolesPage = new RolesPage(adminPage);
 
         /**
-         * The seeded Administrator role is assigned to the signed-in account, so it is covered by
-         * both the "in use" guard and the "your own role" guard.
+         * The seeded administrator role — id 1 — is assigned to the signed-in account, so it is
+         * covered by both the "in use" guard and the "your own role" guard.
+         *
+         * Its name is resolved from the listing instead of written here: the installer seeds it in
+         * the install's own locale, so on this Arabic-first fork it is `مسؤول`, and searching for
+         * the English name found an empty listing and left the delete icon pointing at whichever
+         * role happened to be first.
          */
-        await rolesPage.deleteRole("Administrator");
+        await rolesPage.deleteRole(await rolesPage.roleNameById(1));
 
         await expect(rolesPage.deleteSuccessMessage).toHaveCount(0);
     });
@@ -98,7 +103,7 @@ test.describe.serial("role management", () => {
     test("refuses to edit the role assigned to the current account", async ({ adminPage }) => {
         const rolesPage = new RolesPage(adminPage);
 
-        await rolesPage.openRoleForEdit("Administrator");
+        await rolesPage.openRoleForEdit(await rolesPage.roleNameById(1));
 
         /**
          * The guard redirects back to the listing with a flash rather than opening the form, so a

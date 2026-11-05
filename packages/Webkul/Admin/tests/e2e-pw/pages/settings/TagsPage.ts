@@ -26,9 +26,9 @@ export class TagsPage extends SettingsPage {
     this.createTagButton = page.getByRole('button', { name: 'Create Tag' });
     this.tagNameInput = page.getByRole('textbox', { name: 'Name' });
     this.saveTagButton = page.getByRole('button', { name: 'Save Tag' });
-    this.tagsCreatedMessage = page.getByText(/Tag created successfully\./);
-    this.tagsUpdatedMessage = page.getByText(/Tag updated successfully\./);
-    this.tagsDeletedMessage = page.getByText(/Tag deleted successfully\./);
+    this.tagsCreatedMessage = this.flash(/Tag created successfully\./);
+    this.tagsUpdatedMessage = this.flash(/Tag updated successfully\./);
+    this.tagsDeletedMessage = this.flash(/Tag deleted successfully\./);
 
     this.firstEditButton = page.locator('//span[@class="icon-edit cursor-pointer rounded-md p-1.5 text-2xl transition-all hover:bg-gray-200 dark:hover:bg-gray-800 max-sm:place-self-center"]').first();
     this.firstDeleteButton = page.locator('//span[@class="icon-delete cursor-pointer rounded-md p-1.5 text-2xl transition-all hover:bg-gray-200 dark:hover:bg-gray-800 max-sm:place-self-center"]').first();

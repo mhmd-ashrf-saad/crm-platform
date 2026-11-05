@@ -10,8 +10,9 @@ test.describe('warehouse management', () => {
             contactName: generateLastName(),
             contactEmail:generateEmail(),
             contactAddress: 'Plot 123, Industrial Area, Meerut, UP 250001',
-            country: 'India',
-            state: 'Uttar Pradesh',
+            /** ISO codes, not labels: the country list is translated, the option values are not. */
+            country: 'IN',
+            state: 'UP',
             city: 'Meerut',
             zipcode: '250001',
             phone: generatePhoneNumber(),

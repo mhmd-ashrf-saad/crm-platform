@@ -1,4 +1,3 @@
-import { LegacyCharacterEncoding } from "crypto";
 import { expect, FrameLocator, Locator, Page } from "playwright/test";
 
 type ElementType = "button" | "textbox" | "link";
@@ -32,7 +31,7 @@ export default class CoreLocators {
 
     // Buttons
     readonly saveQuoteButton: Locator;
-    readonly saveProductsButton: Locator;
+    readonly saveProductButton: Locator;
     readonly confirmDeleteButton: Locator;
     readonly saveLeadButton: Locator;
     readonly sendEmailButton: Locator;
@@ -168,8 +167,6 @@ export default class CoreLocators {
     readonly passwordPlaceholderInput: Locator;
     readonly megaSearchPlaceholder: Locator;
 
-    // Profile and logout buttons
-    readonly profileButton: Locator;
     // Lead
     readonly createLeadButton: Locator;
 
@@ -275,16 +272,45 @@ export default class CoreLocators {
     constructor(page: Page) {
         this.page = page;
 
+        /**
+         * The Vue application root — the whole of the product's own markup, and nothing else.
+         *
+         * It is assigned first because the flash-message locators below are scoped to it. With
+         * `APP_DEBUG=true` the Laravel DebugBar sits in the same document, and its AJAX panel dumps
+         * a response body as `sf-dump-str` text: a flash the product shows once then appears a second
+         * time inside the debug bar, `getByText("Campaign deleted successfully.")` matches two
+         * elements, and a strict-mode assertion fails. The debug bar is injected before `</body>`,
+         * outside `#app`, so scoping to this root cannot see it. That is what makes the flash
+         * assertions independent of the instance's `APP_DEBUG`, which they have to be: they must
+         * hold whichever way that flag is set.
+         */
+        this.appLocator = page.locator("#app");
+
         // Buttons
         this.saveQuoteButton = page.getByRole("button", { name: "Save Quote" });
-        this.saveProductsButton = page.getByRole("button", { name: "Save Products" });
+        /**
+         * `Save Product`, not `Save Products`.
+         *
+         * The product form's create and edit buttons were both reworded to the singular in `en`
+         * (`products.create.save-btn` / `products.edit.save-btn`), so the plural locator waited for
+         * a button that no longer exists — and it is the same button the lead and quote specs drive
+         * when they build the product they attach, which is why one stale label failed seven cases
+         * across three files.
+         */
+        this.saveProductButton = page.getByRole("button", { name: "Save Product" });
         this.confirmDeleteButton = page.locator("button.transparent-button + button.primary-button:visible");
         this.saveLeadButton = page.getByRole("button", { name: "Save" });
         this.sendEmailButton = page.getByRole("button", { name: "Send" });
         this.saveFileButton = page.getByRole("button", { name: "Save File" });
         this.saveNoteButton = page.getByRole("button", { name: "Save Note" });
         this.saveActivityButton = page.getByRole("button", { name: "Save Activity" });
-        this.signInButton = page.getByRole("button", { name: "Sign In" });
+        /**
+         * Sign-in is matched on structure, not text: every string on the login page is translated
+         * (`admin::app.users.login.*`). See `pages/AdminPage.ts`, which owns the login flow and
+         * overrides these; the names are the contract with `LoginRequest`, the class is the design
+         * system's, and `v-form` is the wrapper before Vue mounts it as a real `<form>`.
+         */
+        this.signInButton = page.locator("form button.primary-button, v-form button.primary-button").first();
         this.createEventButton = page.getByRole("button", { name: "Create Event" });
         this.saveEventButton = page.getByRole("button", { name: "Save Event" });
         this.agreeButton = page.getByRole("button", { name: "Agree", exact: true });
@@ -410,13 +436,10 @@ export default class CoreLocators {
         this.activityMeetingOption = page.getByText("Meeting", { exact: true });
         this.activityLunchOption = page.getByText("Lunch", { exact: true });
 
-        // Login fields
-        this.emailPlaceholderInput = page.getByPlaceholder("Email Address");
-        this.passwordPlaceholderInput = page.getByPlaceholder("Password");
+        // Login fields — by name and type, for the same reason as `signInButton` above.
+        this.emailPlaceholderInput = page.locator('input[name="email"][type="email"]');
+        this.passwordPlaceholderInput = page.locator('input[name="password"]');
         this.megaSearchPlaceholder = page.getByPlaceholder("Mega Search").first();
-
-        // Profile and logout buttons
-        this.profileButton = page.getByRole('button', { name: "E" });
 
         // Organization Locators Initialization
         this.createOrgLink = page.getByRole('link', { name: 'Create Organization' });
@@ -460,16 +483,22 @@ export default class CoreLocators {
   
         this.personEmailInput = page.locator('input[name="person[emails][0][value]"]');
         this.personPhoneInput = page.locator('input[name="person[contact_numbers][0][value]"]');
-        this.successMessage = page.getByText('Success');
+        /**
+         * A flash, through `flash()` rather than a whole-document `getByText`: `getByText` matches a
+         * substring case-insensitively, so "Success" also matched the debug bar's dump of the AJAX
+         * response that carried `... deleted successfully.` — two elements, and it only passed
+         * because `.first()` happened to pick the toast. See `appLocator`.
+         */
+        this.successMessage = this.flash('Success');
 
         // Add organization
         this.addOrganizationButton = page.locator('div', { hasText: /^Click to add$/ }).nth(2);
 
         this.saveLeadButton = page.getByRole('button', { name: 'Save' });
-        this.organizationCreateSuccessMessage = page.getByText('Organization created successfully');
+        this.organizationCreateSuccessMessage = this.flash('Organization created successfully');
 
         // General
-        this.leadSuccessToast = page.getByText('Success', { exact: true });
+        this.leadSuccessToast = this.flash('Success', { exact: true });
         this.editLeadButton = page.getByRole('link', { name: '' }).first();
         this.listViewButton = page.getByRole('link', { name: '' });
         this.agreeButton = page.getByRole('button', { name: 'Agree', exact: true });
@@ -512,9 +541,6 @@ export default class CoreLocators {
         // Validation message
         this.expectedCloseDateMustBeDateAfter = page.getByText('The expected close date must be a date after');
 
-        // Other
-        this.appLocator = page.locator("#app");
-        
         // Quick Add
         this.quickAddTrigger = page.locator("header button.bg-brandColor").first();
         this.quickAddModalTitle = page.locator("p").filter({ hasText: "Quick Add" });
@@ -550,12 +576,23 @@ export default class CoreLocators {
         this.quickAddMailSubjectInput = this.quickAddMailForm.locator('input[name="subject"]');
         this.quickAddMailEditorFrame = this.quickAddMailForm.frameLocator('iframe.tox-edit-area__iframe');
 
-        this.quickAddLeadSuccessMsg = page.getByText("Lead created successfully.");
-        this.quickAddPersonSuccessMsg = page.getByText("Person created successfully.");
-        this.quickAddOrgSuccessMsg = page.getByText("Organization created successfully.");
-        this.quickAddProductSuccessMsg = page.getByText("Product created successfully.");
-        this.quickAddMailSuccessMsg = page.getByText("Email sent successfully.");
+        this.quickAddLeadSuccessMsg = this.flash("Lead created successfully.");
+        this.quickAddPersonSuccessMsg = this.flash("Person created successfully.");
+        this.quickAddOrgSuccessMsg = this.flash("Organization created successfully.");
+        this.quickAddProductSuccessMsg = this.flash("Product created successfully.");
+        this.quickAddMailSuccessMsg = this.flash("Email sent successfully.");
     }
+
+    /**
+     * A flash (session) message: the toast the product renders inside `#app`.
+     *
+     * Every assertion about "... created/updated/deleted successfully" goes through this, so none of
+     * them can be satisfied by the debug bar's dump of the response that carried the same sentence.
+     */
+    flash(text: string | RegExp, options?: { exact?: boolean }): Locator {
+        return this.appLocator.getByText(text, options);
+    }
+
     async searchByName(name: string) {
         (await this.getElementByTypeAndName('textbox', 'Search')).fill(name);
         
@@ -598,13 +635,110 @@ export default class CoreLocators {
         return this.lookupRoot(name).getByRole("listitem").filter({ hasText: text });
     }
 
-    async massDelete() {
-        await this.multiSelectCheckbox.click();
-        if(await this.deleteButton.isVisible())  {
-            await this.deleteButton.click();
-            await this.agreeButton.click();
+    /**
+     * The display name of the account this session is signed in as, read from its own account screen.
+     *
+     * The person and organization forms need a Sales Owner, and the suite used to type the literal
+     * "Example" into that lookup. That only ever matched because `tests/account.spec.ts` renames the
+     * signed-in administrator to `Example <suffix>` earlier in the same run: run the lead, quote or
+     * organization specs alone on an instance whose administrator still has the name the installer
+     * gave them and the picker offered no such user, so every case that creates a person or an
+     * organization failed — five cases failing on their own but passing in a full run. Reading the
+     * name instead of assuming it makes the choice depend on nothing but the session, which is the
+     * one user that provably exists at any point in the run.
+     */
+    async currentUserName(): Promise<string> {
+        await this.page.goto("admin/account");
+
+        const name = (await this.page.locator('input[name="name"]').inputValue()).trim();
+
+        if (! name) {
+            throw new Error("Could not read the signed-in user's name from admin/account.");
         }
 
-        await expect(this.noRecordsAvailable).toBeVisible();
+        return name;
+    }
+
+    /**
+     * Set a `user_id` lookup (the Sales Owner attribute) to the signed-in account.
+     *
+     * The picker is searched by the name rather than picked from whatever it lists first, so the
+     * record is assigned deliberately and the assertion can name the user it chose.
+     */
+    async selectSalesOwner(salesOwner: string) {
+        await this.lookupTrigger("user_id").click();
+        await this.lookupSearch("user_id").fill(salesOwner);
+        await this.lookupOption("user_id", salesOwner).click();
+    }
+
+    /**
+     * Mass-delete exactly one record, named by the caller.
+     *
+     * Two things were wrong with asserting "the grid is now empty". It is only true when the listing
+     * held exactly one row — this instance seeds eight organizations, and the spec creates three more
+     * before it runs — and reaching that state meant deleting every row on the page rather than one:
+     * the header's select-all checkbox is what the old code ticked, and in this version of the grid
+     * the mass action posts the list of selected ids it accumulated, so selecting everything on the
+     * page deletes everything on the page. Measured on a scratch copy: eleven organizations before the
+     * case, one after it, ten of them not the record under test.
+     *
+     * So the row's own checkbox is ticked here, after the grid has been narrowed to the one record,
+     * and the number of ticked rows is asserted to be one before anything is deleted. The assertion
+     * afterwards is about that record: its row is gone. How many other rows the listing holds is then
+     * irrelevant to both the test and its outcome.
+     */
+    async massDelete(name: string) {
+        await this.searchByName(name);
+
+        const row = this.page.locator("div.row").filter({ hasText: name }).first();
+
+        await expect(row, "the record to mass-delete must be in the filtered listing").toBeVisible();
+
+        /**
+         * Matched by class only, on whatever element carries it, because the grids in this checkout
+         * do not agree on the tag. The organizations and events grids render
+         * `<input class="peer hidden"><span class="icon-checkbox-outline">` inside a label, which is
+         * why this line read `span.icon-checkbox-outline`; the persons grid puts the class on the
+         * `<label>` itself (`<input class="peer hidden"><label class="icon-checkbox-outline ...">`),
+         * so the span-scoped locator matched nothing inside the row and the click waited for an
+         * element that never appeared until the test timeout killed it. Clicking the element that
+         * carries the class toggles the input in both shapes: the input is either inside the label or
+         * bound to it by `for=`.
+         */
+        await row.locator(".icon-checkbox-outline").first().click();
+
+        /**
+         * Exactly one record ticked — the header's select-all would tick every record on the page,
+         * and the mass action posts exactly the records that are ticked. Counted by record id rather
+         * than by checked input, because the grid renders each record twice — a desktop row and a
+         * mobile card, both bound to the same `v-model` — so one selected record is two checked
+         * inputs.
+         */
+        const tickedRecordIds = await this.page
+            .locator('input[name^="mass_action_select_record_"]:checked')
+            .evaluateAll((inputs) => [...new Set(inputs.map((input) => (input as HTMLInputElement).value))]);
+
+        await expect(
+            tickedRecordIds,
+            "the mass action must be scoped to the one record under test"
+        ).toHaveLength(1);
+
+        await this.deleteButton.click();
+        await this.agreeButton.click();
+
+        /**
+         * The confirmation, by its own wording and not through `this.successMessage`.
+         *
+         * `successMessage` is overridable per page object, and a page object that narrows it for its
+         * single-record cases narrows it here too: `EventsPage` asserts
+         * `/Event (created|updated|deleted) successfully./`, which cannot match the flash a mass
+         * delete shows — `mass-delete-success` is "Events deleted successfully", plural and without
+         * the full stop — so the mass delete happened and the assertion failed after it. Every mass
+         * delete in this product reports "... deleted successfully" (`delete-success` for one
+         * organization, `all-delete-success` for persons, `mass-delete-success` for events,
+         * campaigns and users), so that wording is the property the shared helper can rely on.
+         */
+        await expect(this.flash(/deleted successfully/i).first()).toBeVisible();
+        await expect(this.page.getByText(name)).toHaveCount(0);
     }
 }

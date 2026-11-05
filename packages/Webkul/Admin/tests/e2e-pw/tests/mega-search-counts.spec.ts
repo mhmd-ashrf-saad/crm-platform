@@ -23,6 +23,23 @@ test.describe("mega search section counts", () => {
         adminPage.locator(`[data-section-count="${section}"]`);
 
     /**
+     * The panel that owns a section's badge — the dropdown the tabs and the rows are drawn in.
+     *
+     * Found by climbing from the badge itself: the badge sits inside a tab, the tabs sit in a
+     * strip, and the strip is the panel's first child (`components/layouts/header/desktop/
+     * mega-search.blade.php`). Climbing keeps the scope tied to the component rather than to a
+     * class name that a styling change would rename.
+     *
+     * It matters because the page behind the dropdown links to the same person records the panel
+     * lists. An unscoped `a[href*="/admin/contacts/persons/view/"]` counted both — the badge read
+     * thirty-two while thirty-seven links matched — and because the dashboard behind the panel does
+     * not change between runs, the same five-record offset looked like data drift instead of the
+     * selector bug it is.
+     */
+    const resultsPanel = (adminPage: any, section: string) =>
+        badge(adminPage, section).locator("..").locator("..").locator("..");
+
+    /**
      * A term guaranteed to match, and the records that make it so.
      *
      * The tests previously searched for words that happened to exist in a developer's own database
@@ -219,8 +236,12 @@ test.describe("mega search section counts", () => {
         /**
          * The tab fetches its own list, so the rows are waited for rather than counted straight
          * away — reading them mid-request would compare the badge against an empty list.
+         *
+         * Counted inside the panel the badge belongs to, not across the page: the dashboard behind
+         * the dropdown links to person records of its own, and counting those as well is what made
+         * the badge and the rows disagree by the same handful on every run.
          */
-        const rows = adminPage.locator('a[href*="/admin/contacts/persons/view/"]');
+        const rows = resultsPanel(adminPage, "persons").locator('a[href*="/admin/contacts/persons/view/"]');
 
         await expect
             .poll(() => rows.count(), {

@@ -1,6 +1,7 @@
 import { test as base, expect, type Page } from "@playwright/test";
 import fs from "fs";
 import { ADMIN_AUTH_STATE_PATH } from "../playwright.config";
+import { ADMIN_EMAIL, ADMIN_PASSWORD } from "./env";
 
 /**
  * The admin layout mounts the Vue app on the window `load` event:
@@ -156,8 +157,12 @@ export const test = base.extend<AdminFixtures>({
         if (!authExists) {
             /**
             * Authenticate the admin user.
+            *
+            * The credentials are the ones `fixtures/env.ts` resolves, not a second copy of the
+            * installer's defaults: a stored session is only worth keeping if the same administrator
+            * can renew it, and this fixture is the only place one is created.
             */
-            await admin.adminLogin("admin@example.com", "admin123");
+            await admin.adminLogin(ADMIN_EMAIL, ADMIN_PASSWORD);
 
             /**
             * Save authentication state to a file.
@@ -174,7 +179,7 @@ export const test = base.extend<AdminFixtures>({
             /**
             * Authenticate the admin user.
             */
-            await admin.adminLogin("admin@example.com", "admin123");
+            await admin.adminLogin(ADMIN_EMAIL, ADMIN_PASSWORD);
 
             /**
             * Save authentication state to a file.

@@ -1,6 +1,8 @@
 import { expect, test } from "../fixtures/AdminFixtures";
 
+import { AdminPage } from "../pages/AdminPage";
 import { ADMIN_EMAIL, ADMIN_PASSWORD, runSuffix } from "../utils/acl";
+import { flashOf } from "../utils/flash";
 
 /**
  * The signed-in user's own account screen (`/admin/account`).
@@ -17,20 +19,31 @@ import { ADMIN_EMAIL, ADMIN_PASSWORD, runSuffix } from "../utils/acl";
 test.describe.serial("account management", () => {
     const suffix = runSuffix();
 
-    const originalName = "Example";
-
-    async function csrf(adminPage: any): Promise<string> {
-        const cookie = (await adminPage.context().cookies()).find(
-            (candidate: any) => candidate.name === "XSRF-TOKEN"
-        );
-
-        return cookie ? decodeURIComponent(cookie.value) : "";
-    }
+    /**
+     * The name the administrator actually had when the run started, read from their own account
+     * screen in the first case below and put back in `afterAll`.
+     *
+     * It used to be the literal string "Example", which is not a restore: on an instance whose
+     * administrator is named anything else — the installed one is named after the person who
+     * installed it — the cleanup renamed them to "Example", leaving a product-visible change behind
+     * and, worse, making the name a fact other specs could lean on. The lead, quote, person and
+     * organization specs typed exactly that word into the Sales Owner lookup and only found a user
+     * because this file had renamed one; they now read the signed-in account's name instead
+     * (`CoreLocators.currentUserName()`), and this spec no longer changes what that name is.
+     */
+    let originalName = "";
 
     test("the account screen loads with the signed-in user's details", async ({ adminPage }) => {
         await adminPage.goto("admin/account");
 
         await expect(adminPage.locator('input[name="name"]')).toBeVisible();
+
+        originalName = await adminPage.locator('input[name="name"]').inputValue();
+
+        await expect(
+            originalName,
+            "the account screen must show a name, or `afterAll` has nothing to restore"
+        ).not.toBe("");
 
         await expect(adminPage.locator('input[name="email"]')).toHaveValue(ADMIN_EMAIL);
 
@@ -51,7 +64,7 @@ test.describe.serial("account management", () => {
 
         await adminPage.getByRole("button", { name: "Save Account" }).click();
 
-        await expect(adminPage.getByText("Account updated successfully").first()).toBeVisible();
+        await expect(flashOf(adminPage, "Account updated successfully").first()).toBeVisible();
 
         await adminPage.goto("admin/account");
 
@@ -67,7 +80,7 @@ test.describe.serial("account management", () => {
         await adminPage.getByRole("button", { name: "Save Account" }).click();
 
         await expect(
-            adminPage.getByText("The current password you entered is incorrect.").first()
+            flashOf(adminPage, "The current password you entered is incorrect.").first()
         ).toBeVisible();
 
         await adminPage.goto("admin/account");
@@ -116,9 +129,15 @@ test.describe.serial("account management", () => {
 
     test.afterAll(async ({ browser, baseURL }) => {
         /**
-         * Put the admin's name back, so a repeated run starts from the same state it did the first
-         * time and the account is not left carrying a test's value.
+         * Put the admin's name back — the name it had before this file ran, not a guess at one — so a
+         * repeated run starts from the same state it did the first time and the account is not left
+         * carrying a test's value. If the first case never captured it there is nothing to restore,
+         * and inventing a name would be the defect this cleanup had.
          */
+        if (! originalName) {
+            return;
+        }
+
         const context = await browser.newContext({ baseURL, storageState: undefined });
 
         try {
@@ -127,7 +146,12 @@ test.describe.serial("account management", () => {
             await page.goto("admin/login");
             await page.locator('input[name="email"]').fill(ADMIN_EMAIL);
             await page.locator('input[name="password"]').fill(ADMIN_PASSWORD);
-            await page.getByRole("button", { name: "Sign In" }).click();
+
+            /**
+             * Submitted through the page object's locator, so the last way into the panel that this
+             * spec needs is not the one thing still located by its English label.
+             */
+            await new AdminPage(page).signInButton.click();
             await page.waitForURL(/admin\/(dashboard|leads)/);
 
             await page.goto("admin/account");
