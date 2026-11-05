@@ -412,7 +412,7 @@
                             <tr>
                                 <th>@lang('admin::app.dashboard.index.pdf.product')</th>
                                 <th>@lang('admin::app.dashboard.index.pdf.price')</th>
-                                <th>@lang('admin::app.dashboard.index.pdf.total')</th>
+                                <th>@lang('admin::app.dashboard.index.pdf.revenue')</th>
                             </tr>
                         </thead>
 

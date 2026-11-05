@@ -378,6 +378,16 @@
                 </span>
 
                 <div class="flex justify-end">
+                    {{--
+                        The totals are shown through the product's own money formatting -- the same
+                        `$admin.formatPrice()` the line items above use -- because the computed values
+                        are fixed four-decimal strings (`87500.0000`) and printing them as they are
+                        dropped the grouping and the two decimals every other price on the screen and
+                        the PDF carry.
+
+                        The hidden inputs beside each total keep submitting those raw strings
+                        unchanged: only the visible `<p>` is formatted.
+                    --}}
                     <div class="grid w-[348px] gap-4 rounded-lg bg-gray-100 p-4 text-sm dark:bg-gray-950 dark:text-white">
                         <div class="flex w-full justify-between gap-x-5">
                             @lang('admin::app.quotes.create.sub-total', ['symbol' => core()->currencySymbol(config('app.currency'))])
@@ -390,7 +400,7 @@
                                 readonly
                             >
 
-                            <p>@{{ subTotal }}</p>
+                            <p>@{{ $admin.formatPrice(parseFloat(subTotal)) }}</p>
                         </div>
 
                         <div class="flex w-full justify-between gap-x-5">
@@ -402,7 +412,7 @@
                                 :value="discountAmount"
                             >
 
-                            <p>@{{ discountAmount }}</p>
+                            <p>@{{ $admin.formatPrice(parseFloat(discountAmount)) }}</p>
                         </div>
 
                         <div class="flex w-full justify-between gap-x-5">
@@ -414,12 +424,21 @@
                                 :value="taxAmount"
                             >
 
-                            <p>@{{ taxAmount }}</p>
+                            <p>@{{ $admin.formatPrice(parseFloat(taxAmount)) }}</p>
                         </div>
 
                         <div class="flex w-full justify-between gap-x-5">
                             @lang('admin::app.quotes.create.total-adjustment', ['symbol' => core()->currencySymbol(config('app.currency'))])
 
+                            {{--
+                                `adjustmentAmount` is the four-decimal string the form submits
+                                (`0.0000`), and the inline control printed it as-is, so this row was
+                                the only money value on the page not rendered through
+                                `$admin.formatPrice()` -- the sub-total, discount, tax and grand total
+                                rows beside it all use it. Only the visible label is formatted: the
+                                hidden `adjustment_amount` input keeps submitting the same fixed
+                                decimal string it always did.
+                            --}}
                             <x-admin::form.control-group.control
                                 type="inline"
                                 ::name="`adjustment_amount`"
@@ -429,6 +448,7 @@
                                 :label="trans('admin::app.quotes.create.adjustment-amount')"
                                 :placeholder="trans('admin::app.quotes.create.adjustment-amount')"
                                 @on-change="handleAdjustmentAmountChange"
+                                ::value-label="$admin.formatPrice(parseFloat(adjustmentAmount))"
                             />
                         </div>
 
@@ -441,7 +461,7 @@
                                 :value="grandTotal"
                             >
 
-                            <p>@{{ grandTotal }}</p>
+                            <p>@{{ $admin.formatPrice(parseFloat(grandTotal)) }}</p>
                         </div>
                     </div>
                 </div>
@@ -649,7 +669,16 @@
 
                 data() {
                     return {
-                        adjustmentAmount: '0.0000',
+                        /**
+                         * The record's own adjustment, never a fixed `0.0000`. The hidden
+                         * `adjustment_amount` input submits whatever is held here, and the inline
+                         * control beside it only writes on change, so a literal wrote zero over the
+                         * stored adjustment every time the quote was saved without touching the
+                         * field -- quote 3 held `-1500.0000` and came back `0.0000`. The stored
+                         * value is a `decimal(12,4)`, so it already carries the four decimals the
+                         * `decimal:4` rule on that control expects.
+                         */
+                        adjustmentAmount: @json((string) ($quote->adjustment_amount ?? '0.0000')),
 
                         products: @json($initialQuoteItems),
 

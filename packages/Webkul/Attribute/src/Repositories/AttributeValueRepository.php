@@ -291,10 +291,27 @@ class AttributeValueRepository extends Repository
                     break;
                 }
 
+                /**
+                 * A partial address arrives with `state` or `country` missing or null — an import
+                 * column left blank, a form saved without a country. `state_name()` and
+                 * `country_name()` both take a `string`, so a null is a `TypeError` and a missing
+                 * key an undefined-index notice; the line is skipped instead, so the label never
+                 * ends in an empty row under the city.
+                 */
+                $state = $value['state'] ?? null;
+
+                $country = $value['country'] ?? null;
+
                 $label = $value['address'].'<br>'
-                    .$value['postcode'].'  '.$value['city'].'<br>'
-                    .core()->state_name($value['state']).'<br>'
-                    .core()->country_name($value['country']).'<br>';
+                    .$value['postcode'].'  '.$value['city'].'<br>';
+
+                if ($state !== null && $state !== '') {
+                    $label .= core()->state_name((string) $state, $country === null ? null : (string) $country).'<br>';
+                }
+
+                if ($country !== null && $country !== '') {
+                    $label .= core()->country_name((string) $country).'<br>';
+                }
 
                 break;
 

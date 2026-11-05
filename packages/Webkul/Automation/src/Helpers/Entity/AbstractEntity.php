@@ -7,6 +7,15 @@ use Webkul\Attribute\Repositories\AttributeRepository;
 use Webkul\Automation\Repositories\WebhookRepository;
 use Webkul\Automation\Services\WebhookService;
 
+/**
+ * The base every trigger entity helper extends.
+ *
+ * `$entityType` is declared by each concrete helper — `Lead`, `Activity`, `Person`, `Quote` — rather
+ * than here, and they do not agree on its type, so a declaration on this class would be a fatal
+ * error in PHP ("Type of Activity::$entityType must be string (as in class AbstractEntity)").
+ *
+ * @property string $entityType The attribute entity type of the concrete helper.
+ */
 abstract class AbstractEntity
 {
     /**
@@ -119,6 +128,27 @@ abstract class AbstractEntity
     }
 
     /**
+     * What a placeholder shows when the entity has no value for that attribute.
+     *
+     * `$context` is the same one `escapePlaceholderValue()` receives, and it separates the two
+     * audiences a placeholder has:
+     *
+     * - `html` is an email body read by a person, so it gets the interface's own word for an empty
+     *   cell — `غير متاح` under `ar`, `Not available` under `en` — exactly as the activities screen
+     *   renders it. This is the surface where a bare Latin `N/A` beside Arabic text is the defect.
+     * - `url` and `json` are a webhook consumed by another system, where a stable machine-readable
+     *   token matters more than a translated word, so the literal `N/A` stays. A consumer that tests
+     *   for it keeps working under every locale, and the value cannot change shape when an
+     *   administrator switches the interface language.
+     */
+    protected function missingValue(string $context): string
+    {
+        return $context === 'html'
+            ? trans('admin::app.activities.index.datagrid.not-available')
+            : 'N/A';
+    }
+
+    /**
      * Replace placeholders with values.
      *
      * `$context` says how a substituted value is escaped — see `escapePlaceholderValue()`. It
@@ -192,10 +222,28 @@ abstract class AbstractEntity
                         break;
                     }
 
-                    $value = $entity->{$attribute['id']}['address'].'<br>'
-                             .$entity->{$attribute['id']}['postcode'].'  '.$entity->{$attribute['id']}['city'].'<br>'
-                             .core()->state_name($entity->{$attribute['id']}['state']).'<br>'
-                             .core()->country_name($entity->{$attribute['id']}['country']).'<br>';
+                    $address = $entity->{$attribute['id']};
+
+                    /**
+                     * A partial address arrives with `state` or `country` missing or null. Both
+                     * lookups take a `string`, so a null is a `TypeError` and a missing key an
+                     * undefined-index notice; the line is skipped instead, so the placeholder never
+                     * ends in an empty row under the city.
+                     */
+                    $state = $address['state'] ?? null;
+
+                    $country = $address['country'] ?? null;
+
+                    $value = $address['address'].'<br>'
+                             .$address['postcode'].'  '.$address['city'].'<br>';
+
+                    if ($state !== null && $state !== '') {
+                        $value .= core()->state_name((string) $state, $country === null ? null : (string) $country).'<br>';
+                    }
+
+                    if ($country !== null && $country !== '') {
+                        $value .= core()->country_name((string) $country).'<br>';
+                    }
 
                     break;
 
@@ -203,9 +251,9 @@ abstract class AbstractEntity
                     if ($entity->{$attribute['id']}) {
                         $value = ! is_object($entity->{$attribute['id']})
                             ? Carbon::parse($entity->{$attribute['id']})
-                            : $entity->{$attribute['id']}->format('D M d, Y');
+                            : core()->formatDate($entity->{$attribute['id']}, 'D M d, Y');
                     } else {
-                        $value = 'N/A';
+                        $value = $this->missingValue($context);
                     }
 
                     break;
@@ -214,9 +262,9 @@ abstract class AbstractEntity
                     if ($entity->{$attribute['id']}) {
                         $value = ! is_object($entity->{$attribute['id']})
                             ? Carbon::parse($entity->{$attribute['id']})
-                            : $entity->{$attribute['id']}->format('D M d, Y H:i A');
+                            : core()->formatDate($entity->{$attribute['id']}, 'D M d, Y H:i A');
                     } else {
-                        $value = 'N/A';
+                        $value = $this->missingValue($context);
                     }
 
                     break;

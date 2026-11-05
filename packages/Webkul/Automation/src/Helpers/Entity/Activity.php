@@ -47,60 +47,60 @@ class Activity extends AbstractEntity
             [
                 'id' => 'title',
                 'type' => 'text',
-                'name' => 'Title',
+                'name' => trans('admin::app.automation.attributes.title'),
                 'lookup_type' => null,
                 'options' => collect(),
             ], [
                 'id' => 'type',
                 'type' => 'multiselect',
-                'name' => 'Type',
+                'name' => trans('admin::app.automation.attributes.type'),
                 'lookup_type' => null,
                 'options' => collect([
                     (object) [
                         'id' => 'note',
-                        'name' => 'Note',
+                        'name' => trans('admin::app.automation.attributes.note'),
                     ], (object) [
                         'id' => 'call',
-                        'name' => 'Call',
+                        'name' => trans('admin::app.automation.attributes.call'),
                     ], (object) [
                         'id' => 'meeting',
-                        'name' => 'Meeting',
+                        'name' => trans('admin::app.automation.attributes.meeting'),
                     ], (object) [
                         'id' => 'lunch',
-                        'name' => 'Lunch',
+                        'name' => trans('admin::app.automation.attributes.lunch'),
                     ], (object) [
                         'id' => 'file',
-                        'name' => 'File',
+                        'name' => trans('admin::app.automation.attributes.file'),
                     ],
                 ]),
             ], [
                 'id' => 'location',
                 'type' => 'text',
-                'name' => 'Location',
+                'name' => trans('admin::app.automation.attributes.location'),
                 'lookup_type' => null,
                 'options' => collect(),
             ], [
                 'id' => 'comment',
                 'type' => 'textarea',
-                'name' => 'Comment',
+                'name' => trans('admin::app.automation.attributes.comment'),
                 'lookup_type' => null,
                 'options' => collect(),
             ], [
                 'id' => 'schedule_from',
                 'type' => 'datetime',
-                'name' => 'Schedule From',
+                'name' => trans('admin::app.automation.attributes.schedule-from'),
                 'lookup_type' => null,
                 'options' => collect(),
             ], [
                 'id' => 'schedule_to',
                 'type' => 'datetime',
-                'name' => 'Schedule To',
+                'name' => trans('admin::app.automation.attributes.schedule-to'),
                 'lookup_type' => null,
                 'options' => collect(),
             ], [
                 'id' => 'user_id',
                 'type' => 'select',
-                'name' => 'User',
+                'name' => trans('admin::app.automation.attributes.user'),
                 'lookup_type' => 'users',
                 'options' => $this->attributeRepository->getLookUpOptions('users'),
             ],
@@ -117,7 +117,7 @@ class Activity extends AbstractEntity
         $emailTemplates = parent::getEmailTemplatePlaceholders($entity);
 
         $emailTemplates['menu'][] = [
-            'text' => 'Participants',
+            'text' => trans('admin::app.automation.placeholders.participants'),
             'value' => '{%activities.participants%}',
         ];
 
