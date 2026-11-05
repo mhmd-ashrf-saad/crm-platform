@@ -48,7 +48,7 @@ class DataGridExport implements FromQuery, ShouldAutoSize, WithHeadings, WithMap
                 $value = $record->{$index};
 
                 if (
-                    in_array($index, ['emails', 'contact_numbers'])
+                    in_array($index, ['emails', 'contact_emails', 'contact_numbers'])
                     && is_string($value)
                 ) {
                     return $this->extractValuesFromJson($value);
@@ -60,19 +60,41 @@ class DataGridExport implements FromQuery, ShouldAutoSize, WithHeadings, WithMap
     }
 
     /**
-     * Extract 'value' fields from a JSON string.
+     * Extract readable text from a JSON encoded column value.
+     *
+     * Such a column holds either pairs (`[{"value": "...", "label": "..."}]`, as the person
+     * grid does) or bare scalars (`["..."]`, as the warehouse grid does), so both shapes are
+     * handled rather than assuming the pair.
      */
     protected function extractValuesFromJson(string $json): string
     {
         $items = json_decode($json, true);
 
         if (
-            json_last_error() === JSON_ERROR_NONE
-            && is_array($items)
+            json_last_error() !== JSON_ERROR_NONE
+            || ! is_array($items)
         ) {
-            return collect($items)->map(fn ($item) => "{$item['value']} ({$item['label']})")->implode(', ');
+            return $json;
         }
 
-        return $json;
+        return collect($items)
+            ->map(function ($item) {
+                if (! is_array($item)) {
+                    return is_scalar($item) ? (string) $item : '';
+                }
+
+                $value = $item['value'] ?? '';
+
+                if (! is_scalar($value)) {
+                    return '';
+                }
+
+                $label = $item['label'] ?? null;
+
+                return is_scalar($label) && $label !== ''
+                    ? "{$value} ({$label})"
+                    : (string) $value;
+            })
+            ->implode(', ');
     }
 }

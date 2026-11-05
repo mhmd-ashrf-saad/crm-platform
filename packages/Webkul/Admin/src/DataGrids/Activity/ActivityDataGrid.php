@@ -128,7 +128,7 @@ class ActivityDataGrid extends DataGrid
             ],
             'closure' => function ($row) {
                 if ($row->lead_title == null) {
-                    return "<span class='text-gray-800 dark:text-gray-300'>N/A</span>";
+                    return "<span class='text-gray-800 dark:text-gray-300'>".trans('admin::app.activities.index.datagrid.not-available').'</span>';
                 }
 
                 $route = urldecode(route('admin.leads.view', $row->lead_id));
@@ -155,7 +155,13 @@ class ActivityDataGrid extends DataGrid
             'searchable' => true,
             'filterable' => true,
             'filterable_type' => 'date_range',
-            'closure' => fn ($row) => core()->formatDate($row->schedule_from),
+            /**
+             * `schedule_from` and `schedule_to` are nullable on `activities`, and
+             * `core()->formatDate(null)` parses to *now*, so an unguarded closure
+             * shows a schedule time for an activity that has none. `--` is the
+             * empty-cell marker the imports and leads grids already use.
+             */
+            'closure' => fn ($row) => $row->schedule_from ? core()->formatDate($row->schedule_from) : '--',
         ]);
 
         $this->addColumn([
@@ -166,7 +172,7 @@ class ActivityDataGrid extends DataGrid
             'searchable' => true,
             'filterable' => true,
             'filterable_type' => 'date_range',
-            'closure' => fn ($row) => core()->formatDate($row->schedule_to),
+            'closure' => fn ($row) => $row->schedule_to ? core()->formatDate($row->schedule_to) : '--',
         ]);
 
         $this->addColumn([

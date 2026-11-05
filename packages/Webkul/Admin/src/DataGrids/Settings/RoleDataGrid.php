@@ -47,6 +47,16 @@ class RoleDataGrid extends DataGrid
      */
     public function prepareColumns(): void
     {
+        /**
+         * The permission types the form offers, keyed by the identifier `roles.permission_type`
+         * stores. The filter dropdown and the rendered cell share this one map, so the label a list
+         * shows and the value it filters on cannot drift apart.
+         */
+        $permissionTypes = [
+            'custom' => trans('admin::app.settings.roles.index.datagrid.custom'),
+            'all' => trans('admin::app.settings.roles.index.datagrid.all'),
+        ];
+
         $this->addColumn([
             'index' => 'id',
             'label' => trans('admin::app.settings.roles.index.datagrid.id'),
@@ -80,17 +90,12 @@ class RoleDataGrid extends DataGrid
             'searchable' => true,
             'filterable' => true,
             'filterable_type' => 'dropdown',
-            'filterable_options' => [
-                [
-                    'label' => trans('admin::app.settings.roles.index.datagrid.custom'),
-                    'value' => 'custom',
-                ],
-                [
-                    'label' => trans('admin::app.settings.roles.index.datagrid.all'),
-                    'value' => 'all',
-                ],
-            ],
+            'filterable_options' => collect($permissionTypes)
+                ->map(fn ($label, $value) => ['label' => $label, 'value' => $value])
+                ->values()
+                ->all(),
             'sortable' => true,
+            'closure' => fn ($row) => $permissionTypes[$row->permission_type] ?? $row->permission_type,
         ]);
     }
 

@@ -4,12 +4,15 @@ namespace Webkul\Admin\DataGrids\Quote;
 
 use Illuminate\Database\Query\Builder;
 use Illuminate\Support\Facades\DB;
+use Webkul\Admin\DataGrids\Concerns\FormatsMoneyCells;
 use Webkul\Contact\Repositories\PersonRepository;
 use Webkul\DataGrid\DataGrid;
 use Webkul\User\Repositories\UserRepository;
 
 class QuoteDataGrid extends DataGrid
 {
+    use FormatsMoneyCells;
+
     /**
      * Prepare query builder.
      */
@@ -116,7 +119,7 @@ class QuoteDataGrid extends DataGrid
             'type' => 'string',
             'sortable' => true,
             'filterable' => true,
-            'closure' => fn ($row) => core()->formatBasePrice($row->sub_total, 2),
+            'closure' => fn ($row) => $this->formatMoneyCell($row->sub_total),
         ]);
 
         $this->addColumn([
@@ -125,7 +128,7 @@ class QuoteDataGrid extends DataGrid
             'type' => 'string',
             'sortable' => true,
             'filterable' => true,
-            'closure' => fn ($row) => core()->formatBasePrice($row->discount_amount, 2),
+            'closure' => fn ($row) => $this->formatMoneyCell($row->discount_amount),
         ]);
 
         $this->addColumn([
@@ -134,7 +137,7 @@ class QuoteDataGrid extends DataGrid
             'type' => 'string',
             'filterable' => true,
             'sortable' => true,
-            'closure' => fn ($row) => core()->formatBasePrice($row->tax_amount, 2),
+            'closure' => fn ($row) => $this->formatMoneyCell($row->tax_amount),
         ]);
 
         $this->addColumn([
@@ -143,7 +146,7 @@ class QuoteDataGrid extends DataGrid
             'type' => 'string',
             'sortable' => true,
             'filterable' => false,
-            'closure' => fn ($row) => core()->formatBasePrice($row->adjustment_amount, 2),
+            'closure' => fn ($row) => $this->formatMoneyCell($row->adjustment_amount),
         ]);
 
         $this->addColumn([
@@ -152,7 +155,7 @@ class QuoteDataGrid extends DataGrid
             'type' => 'string',
             'sortable' => true,
             'filterable' => true,
-            'closure' => fn ($row) => core()->formatBasePrice($row->grand_total, 2),
+            'closure' => fn ($row) => $this->formatMoneyCell($row->grand_total),
         ]);
 
         $this->addColumn([

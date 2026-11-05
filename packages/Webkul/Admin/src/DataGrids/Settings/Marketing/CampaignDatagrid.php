@@ -62,6 +62,7 @@ class CampaignDatagrid extends DataGrid
             'label' => trans('admin::app.settings.marketing.campaigns.index.datagrid.status'),
             'type' => 'string',
             'sortable' => true,
+            'closure' => fn ($row) => trans('admin::app.settings.marketing.campaigns.index.datagrid.'.($row->status ? 'active' : 'inactive')),
         ]);
     }
 

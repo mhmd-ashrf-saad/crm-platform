@@ -71,13 +71,7 @@ class WarehouseDataGrid extends DataGrid
             'searchable' => true,
             'filterable' => true,
             'sortable' => true,
-            'closure' => function ($row) {
-                $emails = json_decode($row->contact_emails, true);
-
-                if ($emails) {
-                    return collect($emails)->pluck('value')->join(', ');
-                }
-            },
+            'closure' => fn ($row) => $this->formatContactColumn($row->contact_emails),
         ]);
 
         $this->addColumn([
@@ -85,13 +79,7 @@ class WarehouseDataGrid extends DataGrid
             'label' => trans('admin::app.settings.warehouses.index.datagrid.contact-numbers'),
             'type' => 'string',
             'sortable' => false,
-            'closure' => function ($row) {
-                $numbers = json_decode($row->contact_numbers, true);
-
-                if ($numbers) {
-                    return collect($numbers)->pluck('value')->join(', ');
-                }
-            },
+            'closure' => fn ($row) => $this->formatContactColumn($row->contact_numbers),
         ]);
 
         $this->addColumn([
@@ -155,5 +143,39 @@ class WarehouseDataGrid extends DataGrid
                 },
             ]);
         }
+    }
+
+    /**
+     * Render a JSON contact column (`contact_emails`, `contact_numbers`) for a grid cell.
+     *
+     * A warehouse stores these as a list of bare scalars -- `["audit@example.test"]`,
+     * `["+966500000000"]` -- while a person stores a list of `{"value": ..., "label": ...}` pairs.
+     * The previous `collect($items)->pluck('value')` read each element through `data_get()`, which
+     * returns null for a scalar, so a warehouse row plucked to `[null]` and rendered an empty cell in
+     * every row. Both shapes are therefore read explicitly, and the value alone is shown, which is
+     * what the rest of the grid does with a labelled entry; the label stays in the exported file.
+     *
+     * The value is returned as plain text: the datagrid gives it bidi isolation itself, so a phone
+     * number keeps its `+` on the left in an `ar` interface. Sorting and filtering resolve against
+     * the database column, never against this rendered value, so neither is affected.
+     */
+    protected function formatContactColumn(mixed $value): string
+    {
+        $items = json_decode((string) $value, true);
+
+        if (json_last_error() !== JSON_ERROR_NONE || ! is_array($items)) {
+            return '';
+        }
+
+        return collect($items)
+            ->map(function ($item) {
+                if (! is_array($item)) {
+                    return is_scalar($item) ? (string) $item : '';
+                }
+
+                return is_scalar($item['value'] ?? null) ? (string) $item['value'] : '';
+            })
+            ->filter(fn (string $item) => $item !== '')
+            ->implode(', ');
     }
 }

@@ -88,12 +88,12 @@ class AttributeDataGrid extends DataGrid
                 ->distinct()
                 ->get()
                 ->map(function ($item) {
-                    $item->label = trans('admin::app.settings.attributes.index.datagrid.entity-types.'.$item->label);
+                    $item->label = $this->entityTypeLabel($item->label);
 
                     return $item;
                 })
                 ->toArray(),
-            'closure' => fn ($row) => ucfirst($row->entity_type),
+            'closure' => fn ($row) => $this->entityTypeLabel($row->entity_type),
         ]);
 
         $this->addColumn([
@@ -108,11 +108,12 @@ class AttributeDataGrid extends DataGrid
                 ->distinct()
                 ->get()
                 ->map(function ($item) {
-                    $item->label = trans('admin::app.settings.attributes.index.datagrid.types.'.$item->label);
+                    $item->label = $this->attributeTypeLabel($item->label);
 
                     return $item;
                 })
                 ->toArray(),
+            'closure' => fn ($row) => $this->attributeTypeLabel($row->type),
         ]);
 
         $this->addColumn([
@@ -124,6 +125,40 @@ class AttributeDataGrid extends DataGrid
             'sortable' => true,
             'closure' => fn ($value) => trans('admin::app.settings.attributes.index.datagrid.'.($value->attribute_type ? 'no' : 'yes')),
         ]);
+    }
+
+    /**
+     * The label for an attribute `entity_type`, or the stored identifier when the locale has none.
+     *
+     * The rendered cell and the filter dropdown both come through here, so a filtered list and the
+     * label on the row it keeps can never disagree. Only the label moves: the dropdown still submits
+     * the identifier as its `value`, so filtering keeps matching `attributes.entity_type`.
+     */
+    protected function entityTypeLabel(string $entityType): string
+    {
+        return $this->attributeDatagridLabel('entity-types', $entityType);
+    }
+
+    /**
+     * The label for an attribute storage `type`, with the same guard and the same reasoning.
+     */
+    protected function attributeTypeLabel(string $type): string
+    {
+        return $this->attributeDatagridLabel('types', $type);
+    }
+
+    /**
+     * Resolve one label from the attribute listing's `datagrid` group.
+     *
+     * A key the active locale has not translated falls back to the identifier rather than to the
+     * raw translation key, so a type that arrives ahead of its translation still reads as a machine
+     * value instead of `admin::app.settings.attributes.index.datagrid.types.foo`.
+     */
+    protected function attributeDatagridLabel(string $group, string $identifier): string
+    {
+        $key = 'admin::app.settings.attributes.index.datagrid.'.$group.'.'.$identifier;
+
+        return app('translator')->has($key) ? trans($key) : $identifier;
     }
 
     /**

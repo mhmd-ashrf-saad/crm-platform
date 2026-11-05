@@ -148,10 +148,21 @@ class EmailDataGrid extends DataGrid
                  * `format()` prints English month names and meridiem whatever the locale is, so a
                  * date in the Arabic interface read "Oct 30". `core()->formatDate()` translates the
                  * format with the active locale and stays English for `en`.
+                 *
+                 * The year is dropped only where it is redundant: today shows the time, and the rest
+                 * of the current year shows the day and month. A message from an earlier year keeps
+                 * it, because a list that is filtered to a date range can hold messages from two
+                 * different years and "30 أكتوبر" would then name two different days.
                  */
-                return Carbon::parse($row->created_at)->isToday()
-                    ? core()->formatDate($row->created_at, 'h:i A')
-                    : core()->formatDate($row->created_at, 'd M');
+                $createdAt = Carbon::parse($row->created_at);
+
+                if ($createdAt->isToday()) {
+                    return core()->formatDate($row->created_at, 'h:i A');
+                }
+
+                return $createdAt->isCurrentYear()
+                    ? core()->formatDate($row->created_at, 'd M')
+                    : core()->formatDate($row->created_at, 'd M Y');
             },
         ]);
     }

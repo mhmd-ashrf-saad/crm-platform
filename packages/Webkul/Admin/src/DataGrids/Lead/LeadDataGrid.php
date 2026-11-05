@@ -5,6 +5,7 @@ namespace Webkul\Admin\DataGrids\Lead;
 use Illuminate\Contracts\Database\Query\Builder;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
+use Webkul\Admin\DataGrids\Concerns\FormatsMoneyCells;
 use Webkul\Attribute\Models\Attribute;
 use Webkul\Attribute\Models\AttributeValue;
 use Webkul\Contact\Repositories\PersonRepository;
@@ -19,6 +20,8 @@ use Webkul\User\Repositories\UserRepository;
 
 class LeadDataGrid extends DataGrid
 {
+    use FormatsMoneyCells;
+
     /**
      * Pipeline instance.
      *
@@ -137,14 +140,6 @@ class LeadDataGrid extends DataGrid
     public function prepareColumns(): void
     {
         $this->addColumn([
-            'index' => 'id',
-            'label' => trans('admin::app.leads.index.datagrid.id'),
-            'type' => 'integer',
-            'sortable' => true,
-            'filterable' => true,
-        ]);
-
-        $this->addColumn([
             'index' => 'sales_person',
             'label' => trans('admin::app.leads.index.datagrid.sales-person'),
             'type' => 'string',
@@ -187,7 +182,7 @@ class LeadDataGrid extends DataGrid
             'sortable' => true,
             'searchable' => false,
             'filterable' => true,
-            'closure' => fn ($row) => core()->formatBasePrice($row->lead_value, 2),
+            'closure' => fn ($row) => $this->formatMoneyCell($row->lead_value),
         ]);
 
         $this->addColumn([
@@ -293,7 +288,13 @@ class LeadDataGrid extends DataGrid
                     return '--';
                 }
 
-                return $row->expected_close_date;
+                /**
+                 * `expected_close_date` is a `date` column, so it is rendered without a time of
+                 * day: the stored value has none and the default `d M Y h:i A` format would print
+                 * a misleading `12:00 AM` next to it. This is the same date-only format the
+                 * quotes grid uses for `expired_at`, which is the same kind of column.
+                 */
+                return core()->formatDate($row->expected_close_date, 'd M Y');
             },
         ]);
 
@@ -305,6 +306,33 @@ class LeadDataGrid extends DataGrid
             'sortable' => true,
             'filterable' => true,
             'filterable_type' => 'date_range',
+            /**
+             * Without a closure this column sent the raw stored value, so the grid printed
+             * `2026-10-23 00:00:00` in an otherwise Arabic table while the organizations, tags,
+             * warehouses, activities and quotes grids print `23 أكتوبر 2026 12:00 ص` for the very
+             * same field. The default format keeps this column consistent with those grids.
+             */
+            'closure' => fn ($row) => core()->formatDate($row->created_at),
+        ]);
+
+        /**
+         * The raw database key is the last column, not the first.
+         *
+         * It is an internal identifier a salesperson cannot act on -- the record header already shows
+         * it as `#2` -- so it must not hold the leading, most prominent position of the grid. It is kept
+         * rather than dropped because it stays useful for support and for correlating an exported row
+         * with the database, and because removing a column would silently change what an export
+         * contains. Column order here is purely presentational: the default sort resolves to
+         * `$this->primaryColumn` through `DataGrid::processRequestedSorting()`, the filters are keyed
+         * by column `index` through `addFilter()`, and a saved per-user visibility override is keyed by
+         * `column.index` as well, so none of the three depends on this position.
+         */
+        $this->addColumn([
+            'index' => 'id',
+            'label' => trans('admin::app.leads.index.datagrid.id'),
+            'type' => 'integer',
+            'sortable' => true,
+            'filterable' => true,
         ]);
 
         /**

@@ -4,11 +4,14 @@ namespace Webkul\Admin\DataGrids\Product;
 
 use Illuminate\Database\Query\Builder;
 use Illuminate\Support\Facades\DB;
+use Webkul\Admin\DataGrids\Concerns\FormatsMoneyCells;
 use Webkul\DataGrid\DataGrid;
 use Webkul\Tag\Repositories\TagRepository;
 
 class ProductDataGrid extends DataGrid
 {
+    use FormatsMoneyCells;
+
     /**
      * Prepare query builder.
      */
@@ -78,9 +81,7 @@ class ProductDataGrid extends DataGrid
             'sortable' => true,
             'searchable' => true,
             'filterable' => true,
-            'closure' => function ($row) {
-                return core()->formatBasePrice($row->price, 2);
-            },
+            'closure' => fn ($row) => $this->formatMoneyCell($row->price),
         ]);
 
         $this->addColumn([

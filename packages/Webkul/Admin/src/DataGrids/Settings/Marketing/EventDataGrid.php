@@ -62,6 +62,12 @@ class EventDataGrid extends DataGrid
             'label' => trans('admin::app.settings.marketing.events.index.datagrid.date'),
             'type' => 'string',
             'sortable' => true,
+            /**
+             * The underlying column is a `date`, so without a closure the cell printed the stored
+             * `2026-12-17` inside an Arabic interface. Date-only, so the format has no time part --
+             * the same `d M Y` the quotes grid uses for its date-only `expired_at` column.
+             */
+            'closure' => fn ($row) => core()->formatDate($row->date, 'd M Y'),
         ]);
     }
 

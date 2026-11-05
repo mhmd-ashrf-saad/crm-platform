@@ -130,6 +130,12 @@ class UserDataGrid extends DataGrid
             'searchable' => true,
             'filterable_type' => 'date_range',
             'filterable' => true,
+            /**
+             * Formatted like every other `created_at` grid column. Without this closure the cell
+             * printed the raw stored value (`2026-11-05 12:32:03`) while the rest of the interface
+             * is Arabic.
+             */
+            'closure' => fn ($row) => core()->formatDate($row->created_at),
         ]);
     }
 

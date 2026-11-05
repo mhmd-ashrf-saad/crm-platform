@@ -54,7 +54,38 @@ class EmailTemplateDataGrid extends DataGrid
             'label' => trans('admin::app.settings.email-template.index.datagrid.subject'),
             'type' => 'string',
             'sortable' => true,
+            'closure' => fn ($row) => $this->displaySubject($row->subject),
         ]);
+    }
+
+    /**
+     * Render a stored subject for the listing.
+     *
+     * The seeded subjects carry automation placeholders such as `{%activities.title%}`. Printed as
+     * they are stored, the English namespace sits beside Arabic chrome and reads as a leftover that
+     * was never translated, so the listing swaps each placeholder for the label of the field it
+     * stands for, in brackets.
+     *
+     * Only the listing is changed. The stored subject, and with it the string the automation engine
+     * substitutes into at send time, stays byte for byte as it was; both the `{%entity.attribute%}`
+     * and `{% entity.attribute %}` spellings the engine accepts are matched here. A placeholder the
+     * locale has no label for is printed as it stands rather than replaced with a guess.
+     */
+    protected function displaySubject(string $subject): string
+    {
+        return preg_replace_callback(
+            '/\{%\s*([a-zA-Z_][a-zA-Z0-9_]*)\.([a-zA-Z0-9_]+)\s*%\}/',
+            function (array $matches): string {
+                foreach (['attributes.'.$matches[2], 'entities.'.$matches[1]] as $labelKey) {
+                    if (trans()->has('admin::app.automation.'.$labelKey)) {
+                        return '['.trans('admin::app.automation.'.$labelKey).']';
+                    }
+                }
+
+                return $matches[0];
+            },
+            $subject
+        ) ?? $subject;
     }
 
     /**

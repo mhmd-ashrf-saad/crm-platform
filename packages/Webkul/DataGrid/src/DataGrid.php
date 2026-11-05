@@ -274,13 +274,37 @@ abstract class DataGrid
      */
     public function setExportFile($format = 'csv')
     {
+        $format = $format ?: 'csv';
+
         $this->dispatchEvent('export_file.set.before', [$this, $format]);
 
         $this->setExportable(true);
 
-        $this->exportFile = Excel::download(new DataGridExport($this), Str::random(36).'.'.$format);
+        /**
+         * The content type is passed explicitly. Without it Symfony derives the mime type from the
+         * bytes of the generated file, so a short CSV is served as `text/plain` while a longer one
+         * is served as `text/csv`.
+         */
+        $this->exportFile = Excel::download(
+            new DataGridExport($this),
+            Str::random(36).'.'.$format,
+            null,
+            ['Content-Type' => $this->getExportContentType($format)]
+        );
 
         $this->dispatchEvent('export_file.set.after', $this);
+    }
+
+    /**
+     * Content type of the export file for the requested format.
+     */
+    protected function getExportContentType(string $format): string
+    {
+        return match ($format) {
+            'xls' => 'application/vnd.ms-excel',
+            'xlsx' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+            default => 'text/csv',
+        };
     }
 
     /**
@@ -419,7 +443,7 @@ abstract class DataGrid
     {
         $this->dispatchEvent('process_request.export.before', $this);
 
-        $this->setExportFile($requestedParams['format']);
+        $this->setExportFile($requestedParams['format'] ?? 'csv');
 
         $this->dispatchEvent('process_request.export.after', $this);
     }
