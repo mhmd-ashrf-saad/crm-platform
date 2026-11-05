@@ -53,7 +53,7 @@ return [
         'sort' => 1,
     ], [
         'key' => 'quotes.mail',
-        'name' => 'admin::app.acl.mail',
+        'name' => 'admin::app.acl.quote-mail',
         'route' => ['admin.quotes.mail', 'admin.leads.quotes.mail'],
         'sort' => 2,
     ], [

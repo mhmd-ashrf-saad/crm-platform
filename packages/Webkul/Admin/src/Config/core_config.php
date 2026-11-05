@@ -25,7 +25,33 @@ return [
                 'name' => 'locale',
                 'title' => 'admin::app.configuration.index.general.general.locale-settings.title',
                 'type' => 'select',
-                'default' => 'en',
+                /**
+                 * The installation's admin language follows the application locale this copy was
+                 * configured with, instead of a hardcoded `en`.
+                 *
+                 * `SystemConfig::getConfigData()` answers this field's `default` whenever no
+                 * `core_config` row carries the key, and the `admin_locale` middleware takes its
+                 * language from exactly that answer. A hardcoded `en` therefore made a database with
+                 * no row — which is every fresh install, since nothing wrote one — render English
+                 * chrome over the Arabic data this fork seeds, whatever `APP_LOCALE` said.
+                 *
+                 * The default is the configured application locale, not the string `'ar'`: this
+                 * fork's `.env` and `config/app.php` default to Arabic, but an operator who sets
+                 * `APP_LOCALE=en` must still get an English install, and a per-deployment decision
+                 * belongs in the environment, not in a shared config file. `APP_LOCALE` is read at
+                 * boot, so a `config:cache` freezes whatever it was then — clear the cache after
+                 * changing it. Reading `env('APP_LOCALE')` directly here would be worse: it would
+                 * bypass the `'ar'` fallback `config/app.php` already carries and break under
+                 * `config:cache`.
+                 *
+                 * The installer writes this same value into `core_config` on a fresh install
+                 * (`Installer\Database\Seeders\Core\DatabaseSeeder`), so this default is the answer
+                 * for the window before that row exists and for installs that lost it. It is
+                 * deliberately *not* resolved in `Core::getConfigData()`: that method is the generic
+                 * reader every configuration field shares, and one field's meaning does not belong
+                 * in it.
+                 */
+                'default' => config('app.locale'),
                 'options' => 'Webkul\Core\Core@locales',
             ],
         ],

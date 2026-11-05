@@ -1,5 +1,26 @@
 <?php
 
+/*
+ * Every supported locale, named in its own language: a reader picking their interface language
+ * is looking for `العربية`, not `Arabic`. The names come from ICU's own locale data
+ * (`\Locale::getDisplayName($code, $code)`) instead of a hand-kept list of English labels, so
+ * a locale added below is named correctly without a second edit and no translation pass is
+ * needed. `pt_BR` and `zh_CN` resolve to their region-qualified names (`português (Brasil)`,
+ * `中文（中国）`), which is the name a reader of those locales expects. An install without
+ * ext-intl falls back to the bare locale code rather than to an English name.
+ *
+ * The map is code => native name -- the shape `Core::locales()` and the installer both read.
+ */
+$availableLocaleCodes = ['ar', 'en', 'es', 'fa', 'ja', 'ko', 'pt_BR', 'tr', 'vi', 'zh_CN'];
+
+$availableLocaleNames = [];
+
+foreach ($availableLocaleCodes as $localeCode) {
+    $availableLocaleNames[$localeCode] = class_exists(Locale::class)
+        ? Locale::getDisplayName($localeCode, $localeCode)
+        : $localeCode;
+}
+
 return [
 
     /*
@@ -79,7 +100,7 @@ return [
     |
      */
 
-    'timezone' => env('APP_TIMEZONE', 'Asia/Kolkata'),
+    'timezone' => env('APP_TIMEZONE', 'Africa/Cairo'),
 
     /*
     |--------------------------------------------------------------------------
@@ -92,7 +113,8 @@ return [
     |
      */
 
-    'locale' => env('APP_LOCALE', 'en'),
+    /* Sijilna is Arabic-first, so an install that sets no APP_LOCALE still starts in Arabic. */
+    'locale' => env('APP_LOCALE', 'ar'),
 
     /*
     |--------------------------------------------------------------------------
@@ -104,18 +126,7 @@ return [
     |
      */
 
-    'available_locales' => [
-        'ar' => 'Arabic',
-        'en' => 'English',
-        'es' => 'Español',
-        'fa' => 'Persian',
-        'ja' => '日本語',
-        'ko' => '한국어',
-        'pt_BR' => 'Portuguese',
-        'tr' => 'Türkçe',
-        'vi' => 'Vietnamese',
-        'zh_CN' => '简体中文',
-    ],
+    'available_locales' => $availableLocaleNames,
 
     /*
     |--------------------------------------------------------------------------

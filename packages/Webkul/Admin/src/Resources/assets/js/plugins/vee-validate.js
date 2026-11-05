@@ -102,7 +102,21 @@ export default {
             return true;
         });
 
-        defineRule("decimal", (value, { decimals = '*', separator = '.' } = {}) => {
+        /**
+         * A decimal, with or without a leading sign -- one expression behind both rule names.
+         *
+         * The browser-side rule has always accepted a leading `-` or `+`: `SignedDecimal` on the
+         * server exists precisely because `Decimal` refused one while this rule allowed it, and a
+         * quote whose saved `adjustment_amount` was negative could not be re-saved untouched.
+         * `AttributeForm` maps such a `price` attribute to `SignedDecimal`, and
+         * `components/attributes/index.blade.php` writes the attribute's `validation` column into
+         * the rules string next to `decimal`, so a quick-add modal would render
+         * `required|decimal|signed_decimal` and vee-validate would throw "No such validator".
+         *
+         * Both names are therefore registered from this one function, so the two rules can never
+         * disagree about what a decimal is.
+         */
+        const decimalValue = (value, { decimals = '*', separator = '.' } = {}) => {
             if (value === null || value === undefined || value === '') {
                 return true;
             }
@@ -115,7 +129,11 @@ export default {
             const regex = new RegExp(`^[-+]?\\d*(\\${separator}\\d${regexPart})?([eE]{1}[-]?\\d+)?$`);
 
             return regex.test(value);
-        });
+        };
+
+        defineRule("decimal", decimalValue);
+
+        defineRule("signed_decimal", decimalValue);
 
         defineRule("required_if", (value, { condition = true } = {}) => {
             if (condition) {
