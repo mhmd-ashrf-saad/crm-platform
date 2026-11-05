@@ -6,6 +6,7 @@ return [
         'leads' => 'Leads',
         'lead' => 'Lead',
         'quotes' => 'Quotes',
+        'quote-mail' => 'Email Quote',
         'mail' => 'Mail',
         'inbox' => 'Inbox',
         'draft' => 'Draft',
@@ -44,7 +45,7 @@ return [
         'data-transfer' => 'Data Transfer',
         'imports' => 'Imports',
         'import' => 'Import',
-        'event' => 'Event',
+        'event' => 'Events',
         'campaigns' => 'Campaigns',
         'warehouses' => 'Warehouses',
         'inventory' => 'Inventory',
@@ -150,10 +151,10 @@ return [
             ],
             'index' => [
                 'all' => 'All',
-                'bcc' => 'Bcc',
+                'bcc' => 'BCC',
                 'by-user' => 'By :user',
                 'calls' => 'Calls',
-                'cc' => 'Cc',
+                'cc' => 'CC',
                 'change-log' => 'Changelogs',
                 'delete' => 'Delete',
                 'edit' => 'Edit',
@@ -654,14 +655,14 @@ return [
             ],
         ],
         'create' => [
-            'save-btn' => 'Save Products',
-            'title' => 'Create Products',
+            'save-btn' => 'Save Product',
+            'title' => 'Create Product',
             'general' => 'General',
             'price' => 'Price',
         ],
         'edit' => [
-            'title' => 'Edit Products',
-            'save-btn' => 'Save Products',
+            'title' => 'Edit Product',
+            'save-btn' => 'Save Product',
             'general' => 'General',
             'price' => 'Price',
         ],
@@ -748,7 +749,7 @@ return [
         'roles' => [
             'index' => [
                 'being-used' => 'Role can not be deleted, as this is being used in admin user.',
-                'create-btn' => 'Create Roles',
+                'create-btn' => 'Create Role',
                 'create-success' => 'Role created successfully.',
                 'current-role-delete-error' => 'Can not delete role assigned to the current user.',
                 'current-role-edit-error' => 'Can not edit the role assigned to your own account.',
@@ -969,13 +970,14 @@ return [
                 'datagrid' => [
                     'id' => 'ID',
                     'title' => 'Title',
+                    'view' => 'View',
                     'edit' => 'Edit',
                     'delete' => 'Delete',
                 ],
             ],
             'create' => [
                 'title' => 'Create Webform',
-                'add-attribute-btn' => 'Add Attribute Button',
+                'add-attribute-btn' => 'Add Attribute',
                 'attribute-label-color' => 'Attribute Label Color',
                 'attributes' => 'Attributes',
                 'attributes-info' => 'Add custom attributes to the form.',
@@ -1003,7 +1005,7 @@ return [
                 'enter-value' => 'Enter Value',
             ],
             'edit' => [
-                'add-attribute-btn' => 'Add Attribute Button',
+                'add-attribute-btn' => 'Add Attribute',
                 'attribute-label-color' => 'Attribute Label Color',
                 'attributes' => 'Attributes',
                 'attributes-info' => 'Add custom attributes to the form.',
@@ -1108,7 +1110,7 @@ return [
             ],
             'campaigns' => [
                 'index' => [
-                    'create-btn' => 'Create Campaigns',
+                    'create-btn' => 'Create Campaign',
                     'title' => 'Campaigns',
                     'create-success' => 'Campaign created successfully.',
                     'update-success' => 'Campaign updated successfully.',
@@ -1133,6 +1135,7 @@ return [
                         'event' => 'Event',
                         'email-template' => 'Email Template',
                         'status' => 'Status',
+                        'save-btn' => 'Save Campaign',
                     ],
                     'edit' => [
                         'title' => 'Edit Campaign',
@@ -1434,7 +1437,7 @@ return [
                     'is-default' => 'Is Default',
                     'edit' => 'Edit',
                     'delete' => 'Delete',
-                    'quick-add' => 'Quick Add',
+                    'quick-add' => 'Available in Quick Add',
                     'entity-types' => [
                         'leads' => 'Leads',
                         'organizations' => 'Organizations',
@@ -1651,8 +1654,17 @@ return [
                         'edit' => 'Edit',
                         'error-file' => 'Error File',
                         'id' => 'ID',
+                        'import' => 'Import',
                         'started-at' => 'Started At',
                         'state' => 'State',
+                        'states' => [
+                            'pending' => 'Pending',
+                            'validated' => 'Validated',
+                            'processing' => 'Processing',
+                            'linking' => 'Linking',
+                            'indexing' => 'Indexing',
+                            'completed' => 'Completed',
+                        ],
                         'summary' => 'Summary',
                         'type' => 'Type',
                         'updated' => 'Updated',
@@ -1698,6 +1710,7 @@ return [
     'activities' => [
         'index' => [
             'title' => 'Activities',
+            'empty-title' => 'No activities',
             'datagrid' => [
                 'comment' => 'Comment',
                 'created_at' => 'Created At',
@@ -1720,6 +1733,7 @@ return [
                 'call' => 'Call',
                 'meeting' => 'Meeting',
                 'lunch' => 'Lunch',
+                'not-available' => 'Not available',
             ],
         ],
         'edit' => [
@@ -1752,6 +1766,36 @@ return [
         'mass-update-success' => 'Activities updated successfully.',
         'mass-destroy-success' => 'Activities deleted successfully.',
         'mass-delete-failed' => 'Activities can not be deleted.',
+    ],
+    'automation' => [
+        'attributes' => [
+            'title' => 'Title',
+            'type' => 'Type',
+            'note' => 'Note',
+            'call' => 'Call',
+            'meeting' => 'Meeting',
+            'lunch' => 'Lunch',
+            'file' => 'File',
+            'location' => 'Location',
+            'comment' => 'Comment',
+            'schedule-from' => 'Schedule From',
+            'schedule-to' => 'Schedule To',
+            'user' => 'User',
+        ],
+        'placeholders' => [
+            'participants' => 'Participants',
+        ],
+        'entities' => [
+            'leads' => 'Leads',
+            'activities' => 'Activities',
+            'persons' => 'Persons',
+            'quotes' => 'Quotes',
+        ],
+        'events' => [
+            'created' => 'Created',
+            'updated' => 'Updated',
+            'deleted' => 'Deleted',
+        ],
     ],
     'mail' => [
         'index' => [
@@ -1890,10 +1934,11 @@ return [
                 'contact-person' => 'Contact Person',
                 'stage' => 'Stage',
                 'rotten-lead' => 'Rotten Lead',
-                'date-to' => 'Date To',
+                'date-to' => 'Expected Close Date',
                 'created-at' => 'Created At',
                 'no' => 'No',
                 'yes' => 'Yes',
+                'view' => 'View',
                 'delete' => 'Delete',
                 'mass-delete' => 'Mass Delete',
                 'mass-update' => 'Mass Update',
@@ -1913,7 +1958,7 @@ return [
                     'title' => 'Title',
                     'tags' => 'Tags',
                     'expected-close-date' => 'Expected Close Date',
-                    'date-to' => 'Date To',
+                    'date-to' => 'Expected Close Date',
                     'created-at' => 'Created At',
                 ],
                 'toolbar' => [
@@ -2048,7 +2093,7 @@ return [
                 'add-product' => 'Add Product',
             ],
             'persons' => [
-                'title' => 'About Persons',
+                'title' => 'About Contact Person',
                 'job-title' => ':job_title at :organization',
                 'no-person' => 'No contact person is allocated to this lead.',
                 'attach-btn' => 'Attach Contact Person',
@@ -2086,8 +2131,8 @@ return [
                 'title' => 'General',
                 'info' => 'General Configuration',
                 'general' => [
-                    'title' => 'General',
-                    'info' => 'Update your general settings here.',
+                    'title' => 'Language and Logo',
+                    'info' => 'Configure the language and the logo image.',
                     'locale-settings' => [
                         'title' => 'Locale Settings',
                         'title-info' => 'Defines the language used in the admin panel interface. The dropdown lists every locale available in your installation.',
@@ -2101,8 +2146,8 @@ return [
                     ],
                 ],
                 'settings' => [
-                    'title' => 'Settings',
-                    'info' => 'Update your settings here.',
+                    'title' => 'Interface and Notifications',
+                    'info' => 'Configure the "Powered by" bar, menu items, dashboard and notifications.',
                     'footer' => [
                         'show' => 'Show Powered By',
                         'show-info' => 'Show or hide the "Powered by" bar at the bottom of the admin panel.',
@@ -2498,6 +2543,7 @@ return [
         'message' => [
             'code' => 'The field must be a valid code.',
             'decimal' => 'The :attribute must be a decimal.',
+            'signed_decimal' => 'The :attribute must be a decimal, which may carry a minus sign.',
         ],
     ],
     'errors' => [
@@ -2523,6 +2569,14 @@ return [
         '403' => [
             'description' => 'Oops! This page is off-limits. It appears you don\'t have the required permissions to view this content.',
             'title' => '403 Forbidden',
+        ],
+        '419' => [
+            'description' => 'Oops! This page expired while it was open. Go back, reload the page and submit the form again.',
+            'title' => '419 Page Expired',
+        ],
+        '429' => [
+            'description' => 'Oops! You are sending requests faster than we can handle them. Please wait a moment and try again.',
+            'title' => '429 Too Many Requests',
         ],
         '500' => [
             'description' => 'Oops! Something went wrong. It seems we\'re having trouble loading the page you\'re looking for.',

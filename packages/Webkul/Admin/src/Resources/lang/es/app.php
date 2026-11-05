@@ -6,6 +6,7 @@ return [
         'leads' => 'Clientes potenciales',
         'lead' => 'Cliente potencial',
         'quotes' => 'Cotizaciones',
+        'quote-mail' => 'Enviar cotización por correo',
         'mail' => 'Correo',
         'inbox' => 'Bandeja de entrada',
         'draft' => 'Borradores',
@@ -2511,6 +2512,14 @@ return [
         '403' => [
             'description' => '¡Ups! Esta página está fuera de límites. Parece que no tienes los permisos necesarios para ver este contenido.',
             'title' => '403 Prohibido',
+        ],
+        '419' => [
+            'description' => '¡Ups! Esta página expiró mientras estaba abierta. Vuelve atrás, recarga la página y envía el formulario de nuevo.',
+            'title' => '419 Página Expirada',
+        ],
+        '429' => [
+            'description' => '¡Ups! Estás enviando solicitudes más rápido de lo que podemos procesarlas. Espera un momento e inténtalo de nuevo.',
+            'title' => '429 Demasiadas Solicitudes',
         ],
         '500' => [
             'description' => '¡Ups! Algo salió mal. Parece que tenemos problemas para cargar la página que estás buscando.',

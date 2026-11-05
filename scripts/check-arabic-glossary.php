@@ -93,6 +93,16 @@ const DOC_GLOBS = [
  * misfire on (`القيادة` inside `لوحة القيادة`, `الوارد` inside `البريد الوارد`).
  *
  * `scope`: 'locale' (the ar PHP files), 'docs' (the markdown surfaces) or 'both'.
+ *
+ * `files` (optional): an allowlist of repo-relative paths the rule applies to. Absent means every file
+ * the scope covers, which is what every rule relies on today. It was added on 2026-11-04 v1.7 for one
+ * rule that was only sound on the Admin `ar` file while the *same* rejected rendering still shipped
+ * legally in the Installer's seeded attribute label — a string another lane owned. Narrowing to the
+ * file that was actually fixed kept the rule enforcing a real invariant instead of demanding an edit
+ * that lane could not make. The Installer's seeded label and the pending migration have since moved,
+ * so that rule is back to full `locale` scope and no entry names `files`: the mechanism stays because
+ * it is cheap and a future narrowing should not have to re-add the runner support, but anything that
+ * uses it is a narrowing, never a widening — an entry that names `files` checks a subset of its scope.
  */
 const RULES = [
     [
@@ -149,9 +159,12 @@ const RULES = [
         ],
     ],
     [
+        // Two slots, two approved forms (§4.7.5): the *label* is the short state adjective `مهمل`, and
+        // the noun phrase `عميل مهمل` belongs in a sentence. The violation message names both, so a later
+        // lane reading it is not told to replace a column header with the phrase.
         'concept' => 'rotten lead',
-        'approved' => 'عميل مهمل',
-        'row' => '§4.1 rotten lead — 26-row table row 3',
+        'approved' => 'مهمل (عنوان العمود) / عميل مهمل (داخل جملة)',
+        'row' => '§4.1 rotten lead — 26-row table row 3 / §4.7.5 (label vs sentence, two slots)',
         'scope' => 'both',
         'rejected' => [
             ['text' => 'متعفن'],
@@ -259,11 +272,23 @@ const RULES = [
     [
         'concept' => 'configuration',
         'approved' => 'التهيئة',
-        'row' => '§4.5 configuration — 26-row table row 15',
+        'row' => '§4.5 configuration — 26-row table row 15 (the row rejects the bare noun and its verbal forms too)',
         'scope' => 'both',
+        // The definite forms are their own tokens because Arabic boundaries hide them from the bare
+        // one: in `التكوين` the `تكوين` occurrence is preceded by `ل`, an Arabic letter, so the
+        // whole-word check below skips it — which is also why `تكوين` can never fire inside it.
+        // The proclitic forms are separate tokens for the same reason: `بتكوين`'s `تكوين` is preceded
+        // by `ب`, so only the written form can be matched. Each definite form's bare twin is listed
+        // beside it, so rejecting `التكوينات` cannot leave `تكوينات` legal. `unless_quoted` is the
+        // script's usual verbatim-quotation guard: the client guide reproduces the old screen string
+        // inside «…», and prose around a quotation is still checked.
         'rejected' => [
             ['text' => 'التكوين'],
             ['text' => 'التكوينات'],
+            ['text' => 'تكوين', 'unless_quoted' => true],
+            ['text' => 'تكوينات', 'unless_quoted' => true],
+            ['text' => 'بتكوين', 'unless_quoted' => true],
+            ['text' => 'لتكوين', 'unless_quoted' => true],
         ],
     ],
     [
@@ -385,6 +410,36 @@ const RULES = [
         ],
     ],
     [
+        // The row already rejected this plural, but nothing enforced it: `الويب هوكس` shipped as the
+        // screen title, its breadcrumb (same key) and both form hints. The approved transliteration
+        // is singular and plural alike, so `الويب هوك` (17 shipped occurrences) must stay clean.
+        'concept' => 'webhook',
+        'approved' => 'ويب هوك / الويب هوك',
+        'row' => '§4.5 webhook (the `webhook` row of the settings table)',
+        'scope' => 'both',
+        'rejected' => [
+            ['text' => 'الويب هوكس'],
+        ],
+    ],
+    [
+        // Operator decision 7 protects three renderings of ONE word (`نموذج الويب`, `نموذج ويب`,
+        // `نماذج الويب`) and forbids merging them; `استمارة` is a *fourth* name for the same object,
+        // which is the class of defect that row exists to prevent. The family regex catches the
+        // proclitics and the plurals (`والاستمارة`, `استمارات`) that a fixed list of forms would miss.
+        // Locale-only: the client guide still records the old title by name, and this lane may not
+        // edit prose surfaces — reported, not exempted.
+        'concept' => 'web form',
+        'approved' => 'نموذج الويب / نماذج الويب / نموذج ويب',
+        'row' => '§4.5 web form (operator decision 7 — the three protected renderings, and no fourth)',
+        'scope' => 'locale',
+        'rejected' => [
+            [
+                'text' => 'استمار',
+                'regex' => '/(?<![\p{Arabic}])[\p{Arabic}]*استمار[\p{Arabic}]*(?![\p{Arabic}])/u',
+            ],
+        ],
+    ],
+    [
         'concept' => 'email template',
         'approved' => 'قالب البريد الإلكتروني',
         'row' => '§4.5 email template',
@@ -430,6 +485,95 @@ const RULES = [
         ],
     ],
     [
+        // The `ID` rule the §4.7.1 row decided, encoded at last: the imports grid header shipped
+        // `الرقم التعريفي` beside the 23 keys that already read `المعرف`. §3's kept-in-Latin rule and
+        // §4.7.1 both pick one word for a column header, so the second name is rejected wherever it
+        // appears.
+        'concept' => 'ID (column header)',
+        'approved' => 'المعرف',
+        'row' => '§4.7.1 (`ID` as a column header) + §3 the kept-in-Latin rule',
+        'scope' => 'both',
+        'rejected' => [
+            ['text' => 'الرقم التعريفي'],
+        ],
+    ],
+    [
+        // §4.7.3's decision: one screen shipped both `مدعوم بواسطة` and `تم تطويره بواسطة` for the
+        // same footer field. The English source (`general.settings.footer.label`'s own labels —
+        // `footer.show`, `.show-info`, `.info`, `.powered-by`, `.title`) says "Powered by" in all
+        // five, so `مدعوم بواسطة` is the approved one and the other verb is rejected. Locale-only:
+        // four client-guide lines still quote the old label, and this lane may not edit prose.
+        'concept' => 'footer credit',
+        'approved' => 'مدعوم بواسطة',
+        'row' => '§4.7.3 (the footer labels — the English source says "Powered by" in every key)',
+        'scope' => 'locale',
+        'rejected' => [
+            ['text' => 'تم تطويره بواسطة'],
+            ['text' => 'تمطويره بواسطة'],
+        ],
+    ],
+    [
+        // A live sales-screen verification found the lead grid's expected-close-date column labelled
+        // `تاريخ إلى` — a word-for-word "Date To" — beside the create form's `تاريخ الإغلاق المتوقع`,
+        // for the field whose code is `expected_close_date` (LeadDataGrid.php:284-285,
+        // LeadController.php:670-671). The filter range in the same toolbar keeps its own `من` / `إلى`
+        // pair (`leads.index.kanban.toolbar.filters.from` / `.to`), which is a range, not this field, so
+        // it is untouched. Locale-only: `docs/client-guide/ar/04-leads-pipeline.md:60` still lists the
+        // old column name and this lane may not edit prose — reported, not exempted.
+        'concept' => 'expected close date (the lead grid and kanban column)',
+        'approved' => 'تاريخ الإغلاق المتوقع',
+        'row' => '§4.1 expected close date (the lead column — one field, one name; added 2026-11-04 v1.7)',
+        'scope' => 'locale',
+        'rejected' => [
+            ['text' => 'تاريخ إلى'],
+        ],
+    ],
+    [
+        // The heading above a *single* attached contact read `حول الأشخاص` (About Persons) while the
+        // panel's own buttons in the same block already said `إرفاق جهة اتصال` / `تغيير جهة الاتصال`.
+        // §4.2 approves `جهة الاتصال` for the contact person; the key is rendered twice
+        // (leads/view/person.blade.php:8 and :111), both times over one record. Locale-only: the client
+        // guide still names the section `حول الأشخاص` in four lines this lane may not edit.
+        'concept' => 'contact person (the lead record\'s panel heading)',
+        'approved' => 'حول جهة الاتصال',
+        'row' => '§4.2 contact person — 26-row table row 10 (applied to the panel heading, 2026-11-04 v1.7)',
+        'scope' => 'locale',
+        'rejected' => [
+            ['text' => 'حول الأشخاص'],
+        ],
+    ],
+    [
+        // §4.3's `expired at` row, and the two shipped forms it left standing. The English source is
+        // `Expired At` (`en`:408/427/2038) and every sibling date label in the file is a `تاريخ …` noun
+        // (`تاريخ الإنشاء`, `تاريخ الإغلاق المتوقع`, `تاريخ الانتهاء`), while `منتهي في` / `تنتهي في` are
+        // past-tense sentences used as field labels — the same class §4.6 rejects for `تم الإرسال`.
+        // This used to be narrowed to the Admin file because the third form, `منتهي في`, still shipped
+        // as the Installer's seeded attribute label (`I`:55) and in the pending migration
+        // `2026_11_05_120000_rename_seeded_reference_rows_to_arabic`. Both moved to `تاريخ الانتهاء` on
+        // 2026-11-04, so the rule is back to its proper scope: every `ar` locale file, no `files`.
+        'concept' => 'expired at (the quote date field)',
+        'approved' => 'تاريخ الانتهاء',
+        'row' => '§4.3 expired at (added 2026-11-04 v1.7 — the English source is `Expired At`)',
+        'scope' => 'locale',
+        'rejected' => [
+            ['text' => 'منتهي في'],
+            ['text' => 'تنتهي في'],
+        ],
+    ],
+    [
+        // The activities screen rendered a bare Latin `N/A` as a value (three hardcoded literals, not a
+        // key — see §4.4). No locale file ever shipped it; the rule exists so the placeholder cannot
+        // enter one, and so the approved Arabic is on record where the fix will read it. Locale-only:
+        // `docs/` carries no `N/A`, and prose is out of this lane anyway.
+        'concept' => 'empty value placeholder (N/A)',
+        'approved' => 'غير متاح',
+        'row' => '§4.4 empty value placeholder (added 2026-11-04 v1.7)',
+        'scope' => 'locale',
+        'rejected' => [
+            ['text' => 'N/A'],
+        ],
+    ],
+    [
         'concept' => 'one written form per word (shadda)',
         'approved' => 'تعذّر',
         'row' => '§2 "One written form per word — shadda included" (glossary §2, in the file since v1.3)',
@@ -439,6 +583,32 @@ const RULES = [
         // declined-rules list for why a mechanical shadda-grouping check is unsound.
         'rejected' => [
             ['text' => 'تعذر'],
+        ],
+    ],
+    [
+        // The address component's region field. Its label said `الولاية` while the picker under it
+        // lists Egypt's 27 **governorates** (`القاهرة … مطروح`), so the label contradicted its own
+        // data. Applied to every occurrence, not only to the Egypt-specific copy: the field is one
+        // key rendered for every country, so a mixed scope would need per-country wording the
+        // component does not have (`components/attributes/edit/address.blade.php`:65/68/89/90 — the
+        // same `state` key labels both the list-backed select and the free-text input) — and the
+        // only Arabic state names in the database are Egypt's 27 (measured 2026-11-05 in
+        // `country_states`: 27 Arabic rows, all `EG`, `0` for the other 15 countries), so
+        // `المحافظة` is the one Arabic word this label is ever read above. Saudi Arabia and the
+        // Emirates have no list at all and fall back to free text, where the label contradicts
+        // nothing. See §4.9 decision 11 for the whole argument, including what it costs a US
+        // address in an Arabic interface.
+        'concept' => 'state / province field (the address component\'s region field)',
+        'approved' => 'المحافظة / المحافظات',
+        'row' => '§4.9 state / province field (operator decision 11, 2026-11-05)',
+        'scope' => 'both',
+        // `الولايات المتحدة` is the country name, not this field: the `unless_followed` guard keeps
+        // the whole family honest without exempting the file that lists the countries. Both forms
+        // carry `unless_quoted`, because a glossary or change-log line records a rejected term by
+        // quoting it in «…» — the same convention the صفقة documents rule uses.
+        'rejected' => [
+            ['text' => 'الولاية', 'unless_quoted' => true],
+            ['text' => 'الولايات', 'unless_followed' => [' المتحدة'], 'unless_quoted' => true],
         ],
     ],
 ];
@@ -479,6 +649,15 @@ const KEY_RULES = [
         'key' => 'leads.index.kanban.columns.id',
         'must_equal' => 'المعرف',
         'row' => '§4.7.1 (bare Latin `ID` as a column header)',
+    ],
+    [
+        // §4.7.5 pins the label slot itself: the leads-grid header is the short state adjective. Without
+        // this, replacing it with the sentence form `عميل مهمل` passes every rule — the phrase is legal
+        // prose, so no token rule rejects it. The grid renders this header from `LeadDataGrid.php`:266.
+        'file' => 'packages/Webkul/Admin/src/Resources/lang/ar/app.php',
+        'key' => 'leads.index.datagrid.rotten-lead',
+        'must_equal' => 'مهمل',
+        'row' => '§4.7.5 (the short state label — the column header, not the sentence form)',
     ],
     [
         'file' => 'packages/Webkul/Admin/src/Resources/lang/ar/app.php',
@@ -547,10 +726,99 @@ const KEY_RULES = [
         'row' => '§4.3 warehouse — 26-row table row 26 (the key beside `products.view.inventory.warehouse` = المخزن)',
     ],
     [
+        // The quote's `person` is the contact person (`persons.name` through `quotes.person_id`,
+        // QuoteDataGrid.php:32-38), and the section shipped it as two different Arabic nouns in two
+        // surfaces: the grid said `الشخص` and the PDF said `شخص`, while the lead grid calls the same
+        // object `جهة الاتصال` (§4.2 contact person). A bare-`شخص` text rule cannot be written —
+        // `الشخص` is the approved name of the person *entity* in the web-form field list, the layouts
+        // fallback and the report metric — so the assertion is by key.
+        'file' => 'packages/Webkul/Admin/src/Resources/lang/ar/app.php',
+        'key' => 'quotes.index.datagrid.person',
+        'must_equal' => 'جهة الاتصال',
+        'row' => '§4.2 contact person — 26-row table row 10 (added 2026-11-04 v1.7, the quote grid)',
+    ],
+    [
+        'file' => 'packages/Webkul/Admin/src/Resources/lang/ar/app.php',
+        'key' => 'quotes.index.pdf.person',
+        'must_equal' => 'جهة الاتصال',
+        'row' => '§4.2 contact person — 26-row table row 10 (added 2026-11-04 v1.7, the quote PDF)',
+    ],
+    [
+        // A column header, so it has to be a noun: the shipped `تم` is the bare past-tense verb, and
+        // the sibling mass-action options (`activities.index.datagrid.done` / `.not-done`, `تم` / `لم يتم`)
+        // stay as they are — those are values in a dropdown, not a header. See §4.4.
+        'file' => 'packages/Webkul/Admin/src/Resources/lang/ar/app.php',
+        'key' => 'activities.index.datagrid.is_done',
+        'must_equal' => 'حالة الإنجاز',
+        'row' => '§4.4 activity done state (added 2026-11-04 v1.7 — a header is a noun, §1)',
+    ],
+    [
         'file' => 'packages/Webkul/Admin/src/Resources/lang/ar/app.php',
         'key' => 'settings.data-transfer.validation.errors.invalid-attribute',
         'must_equal' => 'اسم العمود "%s" غير صالح.',
         'row' => '§4.7.2 (the import header error named `سمة`)',
+    ],
+
+    /*
+     * §4.9 decision 11 — the three keys of the address region field. The token rule above rejects
+     * `الولاية`; these pin the approved word, so a third name (`المنطقة`, `الإقليم`) fails too.
+     */
+    [
+        'file' => 'packages/Webkul/Admin/src/Resources/lang/ar/app.php',
+        'key' => 'common.custom-attributes.state',
+        'must_equal' => 'المحافظة',
+        'row' => '§4.9 state / province field (operator decision 11, 2026-11-05)',
+    ],
+    [
+        'file' => 'packages/Webkul/Admin/src/Resources/lang/ar/app.php',
+        'key' => 'common.custom-attributes.select-state',
+        'must_equal' => 'اختر المحافظة',
+        'row' => '§4.9 state / province field (operator decision 11, 2026-11-05)',
+    ],
+    [
+        'file' => 'packages/Webkul/Admin/src/Resources/lang/ar/app.php',
+        'key' => 'configuration.index.select-state',
+        'must_equal' => 'اختر المحافظة',
+        'row' => '§4.9 state / province field (operator decision 11, 2026-11-05)',
+    ],
+
+    /*
+     * §4.9 decision 12 — the quote adjustment. Deliberately **key rules, not a token rule**:
+     * `التعديل` is the ordinary word for "the edit" and ships as the edit action/verb in 60-odd
+     * keys (`'edit' => 'تعديل'` and the `تعديل عرض السعر` / `تعديل الفرصة` titles), so a token rule
+     * would be a false-positive machine and would have to be exempted back to nothing. The English
+     * source of every key below is `Adjustment` (`en`:414, 421, 466, 496, 2062), which is the
+     * amount adjustment on a quote, so each is asserted by its own full key path.
+     */
+    [
+        'file' => 'packages/Webkul/Admin/src/Resources/lang/ar/app.php',
+        'key' => 'quotes.index.datagrid.adjustment',
+        'must_equal' => 'تعديل المبلغ',
+        'row' => '§4.9 quote adjustment (operator decision 12, 2026-11-05)',
+    ],
+    [
+        'file' => 'packages/Webkul/Admin/src/Resources/lang/ar/app.php',
+        'key' => 'quotes.index.pdf.adjustment',
+        'must_equal' => 'تعديل المبلغ',
+        'row' => '§4.9 quote adjustment (operator decision 12, 2026-11-05)',
+    ],
+    [
+        'file' => 'packages/Webkul/Admin/src/Resources/lang/ar/app.php',
+        'key' => 'leads.view.quotes.adjustment',
+        'must_equal' => 'تعديل المبلغ',
+        'row' => '§4.9 quote adjustment (operator decision 12, 2026-11-05)',
+    ],
+    [
+        'file' => 'packages/Webkul/Admin/src/Resources/lang/ar/app.php',
+        'key' => 'quotes.create.total-adjustment',
+        'must_equal' => 'تعديل المبلغ (:symbol)',
+        'row' => '§4.9 quote adjustment (operator decision 12, 2026-11-05)',
+    ],
+    [
+        'file' => 'packages/Webkul/Admin/src/Resources/lang/ar/app.php',
+        'key' => 'quotes.edit.total-adjustment',
+        'must_equal' => 'تعديل المبلغ (:symbol)',
+        'row' => '§4.9 quote adjustment (operator decision 12, 2026-11-05)',
     ],
 ];
 
@@ -1105,6 +1373,11 @@ function check_locale_file(string $root, string $path, array &$violations, array
 
         foreach (RULES as $rule) {
             if ($rule['scope'] === 'docs') {
+                continue;
+            }
+
+            // A rule may name the files it is sound on; absent means "every file in scope".
+            if (isset($rule['files']) && ! in_array($path, $rule['files'], true)) {
                 continue;
             }
 

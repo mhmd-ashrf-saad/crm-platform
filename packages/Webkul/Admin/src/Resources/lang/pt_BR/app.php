@@ -6,6 +6,7 @@ return [
         'leads' => 'Oportunidades',
         'lead' => 'Oportunidade',
         'quotes' => 'Cotações',
+        'quote-mail' => 'Enviar cotação por e-mail',
         'mail' => 'E-mail',
         'inbox' => 'Caixa de Entrada',
         'draft' => 'Rascunho',
@@ -2511,6 +2512,14 @@ return [
         '403' => [
             'description' => 'Ops! Esta página é restrita. Parece que você não tem as permissões necessárias para ver este conteúdo.',
             'title' => '403 Forbidden',
+        ],
+        '419' => [
+            'description' => 'Ops! Esta página expirou enquanto estava aberta. Volte, recarregue a página e envie o formulário novamente.',
+            'title' => '419 Página expirada',
+        ],
+        '429' => [
+            'description' => 'Ops! Você está enviando solicitações mais rápido do que conseguimos processá-las. Aguarde um momento e tente novamente.',
+            'title' => '429 Muitas solicitações',
         ],
         '500' => [
             'description' => 'Ops! Algo deu errado. Parece que estamos com problemas para carregar a página que você procura.',

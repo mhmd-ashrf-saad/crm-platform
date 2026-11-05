@@ -6,6 +6,7 @@ return [
         'leads' => 'Những Khách hàng tiềm năng',
         'lead' => 'Khách hàng tiềm năng',
         'quotes' => 'Báo giá',
+        'quote-mail' => 'Gửi báo giá qua email',
         'mail' => 'Thư',
         'inbox' => 'Hộp thư đến',
         'draft' => 'Thư nháp',
@@ -2511,6 +2512,14 @@ return [
         '403' => [
             'description' => 'Rất tiếc! Trang này bị hạn chế. Có vẻ bạn không có quyền truy cập vào nội dung này.',
             'title' => '403 Cấm Truy Cập',
+        ],
+        '419' => [
+            'description' => 'Rất tiếc! Trang này đã hết hạn trong khi đang mở. Hãy quay lại, tải lại trang và gửi lại biểu mẫu.',
+            'title' => '419 Trang Đã Hết Hạn',
+        ],
+        '429' => [
+            'description' => 'Rất tiếc! Bạn đang gửi yêu cầu nhanh hơn mức chúng tôi có thể xử lý. Vui lòng đợi một lát rồi thử lại.',
+            'title' => '429 Quá Nhiều Yêu Cầu',
         ],
         '500' => [
             'description' => 'Rất tiếc! Đã xảy ra sự cố. Có vẻ như chúng tôi đang gặp khó khăn trong việc tải trang mà bạn đang tìm kiếm.',

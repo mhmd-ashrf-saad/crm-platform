@@ -6,6 +6,7 @@ return [
         'leads' => 'Potansiyeller',
         'lead' => 'Potansiyel',
         'quotes' => 'Teklifler',
+        'quote-mail' => 'Teklifi e-posta ile gönder',
         'mail' => 'Posta',
         'inbox' => 'Gelen Kutusu',
         'draft' => 'Taslak',
@@ -2511,6 +2512,14 @@ return [
         '403' => [
             'description' => 'Oops! Bu sayfa erişime kapalı. Bu içeriği görüntülemek için gerekli izinlere sahip değilsiniz gibi görünüyor.',
             'title' => '403 Yasak',
+        ],
+        '419' => [
+            'description' => 'Oops! Bu sayfanın süresi açıkken doldu. Geri dönün, sayfayı yenileyin ve formu yeniden gönderin.',
+            'title' => '419 Sayfanın Süresi Doldu',
+        ],
+        '429' => [
+            'description' => 'Oops! İstekleri işleyebildiğimizden daha hızlı gönderiyorsunuz. Lütfen biraz bekleyip yeniden deneyin.',
+            'title' => '429 Çok Fazla İstek',
         ],
         '500' => [
             'description' => 'Oops! Bir şeyler ters gitti. Aradığınız sayfa yüklenirken sorun yaşıyoruz gibi görünüyor.',
