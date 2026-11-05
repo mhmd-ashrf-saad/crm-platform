@@ -5,6 +5,7 @@ namespace Webkul\Admin\Http\Controllers\Settings\Marketing;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Event;
 use Illuminate\View\View;
+use Symfony\Component\HttpFoundation\BinaryFileResponse;
 use Webkul\Admin\DataGrids\Settings\Marketing\CampaignDatagrid;
 use Webkul\Admin\Http\Controllers\Controller;
 use Webkul\Admin\Http\Requests\MassDestroyRequest;
@@ -26,7 +27,7 @@ class CampaignsController extends Controller
     /**
      * Display a listing of the marketing campaigns.
      */
-    public function index(): View|JsonResponse
+    public function index(): View|JsonResponse|BinaryFileResponse
     {
         if (request()->isXmlHttpRequest()) {
             return datagrid(CampaignDatagrid::class)->process();

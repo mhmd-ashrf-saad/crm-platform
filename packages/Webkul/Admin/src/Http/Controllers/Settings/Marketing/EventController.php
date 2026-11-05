@@ -6,6 +6,7 @@ use Exception;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Event;
 use Illuminate\View\View;
+use Symfony\Component\HttpFoundation\BinaryFileResponse;
 use Webkul\Admin\DataGrids\Settings\Marketing\EventDataGrid;
 use Webkul\Admin\Http\Controllers\Controller;
 use Webkul\Admin\Http\Requests\MassDestroyRequest;
@@ -21,13 +22,29 @@ class EventController extends Controller
     /**
      * Display a listing of the marketing events.
      */
-    public function index(): View|JsonResponse
+    public function index(): View|JsonResponse|BinaryFileResponse
     {
         if (request()->ajax()) {
             return datagrid(EventDataGrid::class)->process();
         }
 
         return view('admin::settings.marketing.events.index');
+    }
+
+    /**
+     * Hand a single marketing event to the grid's editing modal.
+     *
+     * The grid's create button opens a modal and `update` is the write path, so the row action needs
+     * the stored record rather than a screen of its own: the events index fetches this endpoint and
+     * fills the same modal that create uses. This is the shape the rest of the settings grids use for
+     * a modal-editing row action -- `TagController::edit` and `CampaignsController::show` both answer
+     * their grid's edit URL with the record as JSON.
+     */
+    public function edit(int $id): JsonResponse
+    {
+        return new JsonResponse([
+            'data' => $this->eventRepository->findOrFail($id),
+        ]);
     }
 
     /**

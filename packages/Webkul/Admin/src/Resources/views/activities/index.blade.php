@@ -93,10 +93,25 @@
                                 </template>
 
                                 <template v-else>
+                                    {{--
+                                        Each of the four grid columns carries a primary value and, in three
+                                        of them, a stack of secondary values underneath it: `id` / `title` /
+                                        created by, the comment / lead / type stack, and the three schedule
+                                        dates. The header printed the whole group's labels joined by a CSS
+                                        `content: ' / '`, so it read as one fused cell while the values
+                                        below it were already separate lines. The group is declared here as
+                                        a list of *lines* that mirrors the cells: one label per line, each
+                                        clickable and carrying its own sort arrow.
+                                    --}}
                                     <div class="row grid grid-cols-[.3fr_.1fr_.3fr_.5fr] grid-rows-1 items-center gap-x-2.5 border-b px-4 py-2.5 dark:border-gray-800 max-xl:hidden">
                                         <div
-                                            class="flex min-w-0 select-none items-center gap-2.5"
-                                            v-for="(columnGroup, index) in [['id', 'title', 'created_by_id'], ['is_done'], ['comment', 'lead_title', 'type'], ['schedule_from', 'schedule_to', 'created_at']]"
+                                            class="flex min-w-0 select-none items-start gap-2.5"
+                                            v-for="(columnGroup, index) in [
+                                                [['id'], ['title'], ['created_by_id']],
+                                                [['is_done']],
+                                                [['comment'], ['lead_title'], ['type']],
+                                                [['schedule_from'], ['schedule_to'], ['created_at']],
+                                            ]"
                                         >
                                             <label
                                                 class="flex w-max cursor-pointer select-none items-center gap-1"
@@ -123,11 +138,19 @@
                                                 </span>
                                             </label>
 
-                                            <p class="text-gray-600 dark:text-gray-300">
-                                                <span class="[&>*]:after:content-['_/_']">
-                                                    <template v-for="column in columnGroup">
+                                            <div class="flex min-w-0 flex-col gap-1.5">
+                                                <p
+                                                    class="flex flex-wrap items-center gap-1 text-gray-600 dark:text-gray-300"
+                                                    v-for="columnLine in columnGroup"
+                                                >
+                                                    <template v-for="(column, columnIndex) in columnLine">
                                                         <span
-                                                            class="after:content-['/'] last:after:content-['']"
+                                                            class="text-gray-400 dark:text-gray-500"
+                                                            v-if="columnIndex"
+                                                            v-text="'·'"
+                                                        ></span>
+
+                                                        <span
                                                             :class="{
                                                                 'font-medium text-gray-800 dark:text-white': applied.sort.column == column,
                                                                 'cursor-pointer hover:text-gray-800 dark:hover:text-white': available.columns.find(columnTemp => columnTemp.index === column)?.sortable,
@@ -138,15 +161,15 @@
                                                         >
                                                             @{{ available.columns.find(columnTemp => columnTemp.index === column)?.label }}
                                                         </span>
-                                                    </template>
-                                                </span>
 
-                                                <i
-                                                    class="align-text-bottom text-base text-gray-800 dark:text-white ltr:ml-1.5 rtl:mr-1.5"
-                                                    :class="[applied.sort.order === 'asc' ? 'icon-stats-down': 'icon-stats-up']"
-                                                    v-if="columnGroup.includes(applied.sort.column)"
-                                                ></i>
-                                            </p>
+                                                        <i
+                                                            class="align-text-bottom text-base text-gray-800 dark:text-white"
+                                                            :class="[applied.sort.order === 'asc' ? 'icon-stats-down': 'icon-stats-up']"
+                                                            v-if="applied.sort.column == column"
+                                                        ></i>
+                                                    </template>
+                                                </p>
+                                            </div>
                                         </div>
                                     </div>
 
@@ -253,7 +276,7 @@
                                                 :for="`mass_action_select_record_${record.id}`"
                                             ></label>
 
-                                            <div class="flex min-w-0 flex-col gap-1.5">
+                                            <div class="flex min-w-0 flex-col gap-1.5 divide-y divide-gray-200 dark:divide-gray-800">
                                                 <p class="text-gray-600 dark:text-gray-300">
                                                     @{{ record.id }}
                                                 </p>
@@ -283,7 +306,7 @@
 
                                         <!-- Comment, Lead Title and Type -->
                                         <div class="flex min-w-0 gap-1.5">
-                                            <div class="flex min-w-0 flex-col gap-1.5">
+                                            <div class="flex min-w-0 flex-col gap-1.5 divide-y divide-gray-200 dark:divide-gray-800">
                                                 <p class="break-words text-gray-600 dark:text-gray-300">
                                                     {{-- @{{ record.comment }} --}}
                                                     @{{ (record.comment || '').length > 180 ? (record.comment || '').slice(0, 180) + '...' : (record.comment || '') }}
@@ -295,15 +318,15 @@
                                                 ></p>
 
                                                 <p class="text-gray-600 dark:text-gray-300">
-                                                    @{{ record.type ?? 'N/A'}}
+                                                    @{{ record.type ?? "@lang('admin::app.activities.index.datagrid.not-available')"}}
                                                 </p>
                                             </div>
                                         </div>
 
                                         <div class="flex min-w-0 items-start justify-between gap-x-4">
-                                            <div class="flex flex-col gap-1.5">
+                                            <div class="flex flex-col gap-1.5 divide-y divide-gray-200 dark:divide-gray-800">
                                                 <p class="text-gray-600 dark:text-gray-300">
-                                                    @{{ record.schedule_from ?? 'N/A' }}
+                                                    @{{ record.schedule_from ?? "@lang('admin::app.activities.index.datagrid.not-available')" }}
                                                 </p>
 
                                                 <p class="text-gray-600 dark:text-gray-300">
@@ -429,6 +452,15 @@
                     @event-click="goToActivity"
                     locale="{{ app()->getLocale() }}"
                 >
+                    {{--
+                        vue-cal's own month/week/day placeholder comes from its bundled Arabic locale
+                        (`لا حدث`), which is neither ours to edit nor the product's convention for an
+                        empty surface. This slot replaces it with `activities.index.empty-title`.
+                    --}}
+                    <template #no-event>
+                        @lang('admin::app.activities.index.empty-title')
+                    </template>
+
                     <template #event="{ event }">
                         <div
                             class="event-resize-handle event-resize-handle--top"
@@ -868,7 +900,12 @@
                     },
 
                     formatDayTime(date) {
-                        const day = date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+                        /**
+                         * The locale is the interface locale, shared with `$admin.formatDate` so a
+                         * date here reads like a date everywhere else on the page, with Latin
+                         * digits. The time comes from `formatTime`, which is already 24-hour.
+                         */
+                        const day = date.toLocaleDateString(this.$admin.formattingLocale(), { month: 'short', day: 'numeric' });
 
                         return `${day} ${this.formatTime(date)}`;
                     },

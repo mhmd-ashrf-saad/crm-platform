@@ -42,7 +42,7 @@
                 <i class="icon-attachment text-xl font-medium"></i>
 
                 <span class="font-semibold">
-                    @lang('Add Attachments')
+                    @lang('admin::app.mail.view.add-attachments')
                 </span>
             </label>
         </div>

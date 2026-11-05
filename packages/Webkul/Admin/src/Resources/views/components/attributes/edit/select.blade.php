@@ -13,6 +13,14 @@
     :placeholder="$attribute->name"
     :value="old($attribute->code) ?? $value"
 >
+    {{--
+        A native select renders blank when no option is selected and there is no empty option, so every
+        attribute select (lead source, lead type, sales owner, ...) opened as an empty box with nothing
+        to read. The placeholder is the shipped generic `common.custom-attributes.select` key (اختر),
+        the same one the country/state selects use from the same key group.
+    --}}
+    <option value="">@lang('admin::app.common.custom-attributes.select')</option>
+
     @foreach ($options as $option)
         <option value="{{ $option->id }}">
             {{ $option->name }}

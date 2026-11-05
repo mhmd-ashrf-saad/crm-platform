@@ -74,10 +74,23 @@
                     </template>
 
                     <template v-else>
+                        {{--
+                            The middle column carries the message: its badges (attachments, tags) sit on the
+                            subject's line and the reply preview is the line under it. The header used to
+                            print all four labels joined by a CSS `content: ' / '`, which read as one fused
+                            cell. It now mirrors the row instead: one line of labels per line of values,
+                            each label clickable and carrying its own sort arrow.
+                        --}}
                         <div class="row grid grid-cols-[2fr_7fr_.0.3fr] grid-rows-1 items-center border-b px-8 py-4 dark:border-gray-800 max-xl:hidden">
                             <div
-                                class="flex items-center gap-6"
-                                v-for="(columnGroup, index) in [['name'], ['attachments', 'tags', 'subject', 'reply'], ['created_at']]"
+                                class="flex items-start gap-6"
+                                v-for="(columnGroup, index) in [
+                                    [['name']],
+                                    [[
+                                        'attachments', 'tags', 'subject'
+                                    ], ['reply']],
+                                    [['created_at']],
+                                ]"
                             >
                                 <label
                                     class="flex w-max cursor-pointer select-none items-center gap-2"
@@ -104,11 +117,19 @@
                                     </span>
                                 </label>
 
-                                <p class="text-gray-600 dark:text-gray-300">
-                                    <span class="[&>*]:after:content-['_/_']">
-                                        <template v-for="column in columnGroup">
+                                <div class="flex min-w-0 flex-col gap-1.5">
+                                    <p
+                                        class="flex flex-wrap items-center gap-1 text-gray-600 dark:text-gray-300"
+                                        v-for="columnLine in columnGroup"
+                                    >
+                                        <template v-for="(column, columnIndex) in columnLine">
                                             <span
-                                                class="after:content-['/'] last:after:content-['']"
+                                                class="text-gray-400 dark:text-gray-500"
+                                                v-if="columnIndex"
+                                                v-text="'·'"
+                                            ></span>
+
+                                            <span
                                                 :class="{
                                                     'font-medium text-gray-800 dark:text-white': applied.sort.column == column,
                                                     'cursor-pointer hover:text-gray-800 dark:hover:text-white': available.columns.find(columnTemp => columnTemp.index === column)?.sortable,
@@ -119,15 +140,15 @@
                                                 v-html="available.columns.find(columnTemp => columnTemp.index === column)?.label"
                                             >
                                             </span>
-                                        </template>
-                                    </span>
 
-                                    <i
-                                        class="align-text-bottom text-base text-gray-800 dark:text-white ltr:ml-1.5 rtl:mr-1.5"
-                                        :class="[applied.sort.order === 'asc' ? 'icon-down-stat': 'icon-up-stat']"
-                                        v-if="columnGroup.includes(applied.sort.column)"
-                                    ></i>
-                                </p>
+                                            <i
+                                                class="align-text-bottom text-base text-gray-800 dark:text-white"
+                                                :class="[applied.sort.order === 'asc' ? 'icon-down-stat': 'icon-up-stat']"
+                                                v-if="applied.sort.column == column"
+                                            ></i>
+                                        </template>
+                                    </p>
+                                </div>
                             </div>
                         </div>
                         
@@ -274,7 +295,7 @@
                                         </span>
 
                                         <!-- Subject And Reply -->
-                                        <div class="min-w-0 flex-1">
+                                        <div class="min-w-0 flex-1 divide-y divide-gray-200 dark:divide-gray-800">
                                             <!-- Subject -->
                                             <p
                                                 class="line-clamp-1 text-sm text-gray-900 dark:text-gray-100"
@@ -646,7 +667,7 @@
                             formData.append('_method', 'PUT');
                         }
         
-                        this.$axios.post(this.draft.id ? "{{ route('admin.mail.update', ':id') }}".replace(':id', this.draft.id) : '{{ route('admin.mail.store') }}', formData, {
+                        this.$axios.post(this.draft.id ? "{{ route('admin.mail.update', ':id') }}".replace(':id', this.draft.id) : "{{ route('admin.mail.store') }}", formData, {
                                 headers: {
                                     'Content-Type': 'multipart/form-data',
                                 },

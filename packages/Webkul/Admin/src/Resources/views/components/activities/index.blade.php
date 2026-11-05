@@ -574,12 +574,15 @@
                 /**
                  * Format an activity timestamp for display.
                  *
-                 * `$admin.formatDate` is pinned to `en-US`, so an Arabic interface printed
-                 * "26 Aug 2026, 1:57 AM": an English month name in the middle of an Arabic
-                 * sentence, whose own neutral characters then let the bidi algorithm scatter the
-                 * date around the user name next to it. The locale comes from the document, which
-                 * is the interface locale, with Latin digits so the numbers match the rest of the
-                 * admin; the time zone is the one the page already renders in.
+                 * `$admin.formatDate` rendered every date in `en-US` once, which printed
+                 * "26 Aug 2026, 1:57 AM" in the middle of an Arabic sentence: an English month name
+                 * in Arabic text, whose own neutral characters then let the bidi algorithm scatter
+                 * the date around the user name next to it. The locale now comes from
+                 * `$admin.formattingLocale()`, which is `<html lang>` -- the interface locale --
+                 * normalised for `Intl` and pinned to Latin digits so the numbers match the rest of
+                 * the admin. Sharing that one helper is the point: a locale tag with an underscore
+                 * is turned into a valid one in a single place. The time zone is the one the page
+                 * already renders in.
                  *
                  * The result still needs `<bdi>` isolation where it is used, because an Arabic
                  * date followed by ", <name>" is exactly the mixed run that reorders.
@@ -595,9 +598,7 @@
                         return "";
                     }
 
-                    const locale = document.documentElement.lang || "en";
-
-                    return new Intl.DateTimeFormat(`${ locale }-u-nu-latn`, {
+                    return new Intl.DateTimeFormat(this.$admin.formattingLocale(), {
                         timeZone: this.timezone || undefined,
                         day: "numeric",
                         month: "long",

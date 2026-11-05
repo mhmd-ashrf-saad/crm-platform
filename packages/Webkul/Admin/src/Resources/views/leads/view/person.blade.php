@@ -1,5 +1,25 @@
 {!! view_render_event('admin.leads.view.person.before', ['lead' => $lead]) !!}
 
+@php
+    /*
+     * `emails` and `contact_numbers` store the raw option value the shared email and phone
+     * editors submit (`work`, `home`), and those editors render the option through
+     * `admin::app.common.custom-attributes.{work,home}`. Resolving the stored value through the
+     * same keys is what keeps this block in the interface language instead of printing the raw
+     * value, and a label the product ships no translation for keeps its stored value rather than
+     * rendering empty parentheses. Nothing stored is touched: the value stays `work` in the row.
+     */
+    $contactLabel = function (?string $label): ?string {
+        if (blank($label)) {
+            return null;
+        }
+
+        $key = 'admin::app.common.custom-attributes.' . $label;
+
+        return \Illuminate\Support\Facades\Lang::has($key) ? trans($key) : $label;
+    };
+@endphp
+
 <div class="flex w-full flex-col gap-4 border-b border-gray-300 p-4 dark:border-gray-800">
     @if ($lead?->person)
         <x-admin::accordion class="select-none !border-none">
@@ -73,9 +93,11 @@
                                     <bdi dir="ltr">{{ $email['value'] }}</bdi>
                                 </a>
 
-                                <span class="text-gray-500 dark:text-gray-300">
-                                    ({{ $email['label'] }})
-                                </span>
+                                @if ($emailLabel = $contactLabel($email['label'] ?? null))
+                                    <span class="text-gray-500 dark:text-gray-300">
+                                        ({{ $emailLabel }})
+                                    </span>
+                                @endif
                             </div>
                         @endforeach
 
@@ -95,9 +117,11 @@
                                     <bdi dir="ltr">{{ $contactNumber['value'] }}</bdi>
                                 </a>
 
-                                <span class="text-gray-500 dark:text-gray-300">
-                                    ({{ $contactNumber['label'] }})
-                                </span>
+                                @if ($contactNumberLabel = $contactLabel($contactNumber['label'] ?? null))
+                                    <span class="text-gray-500 dark:text-gray-300">
+                                        ({{ $contactNumberLabel }})
+                                    </span>
+                                @endif
                             </div>
                         @endforeach
 

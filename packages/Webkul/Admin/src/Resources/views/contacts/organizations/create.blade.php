@@ -28,6 +28,18 @@
                 </div>
 
                 <div class="flex items-center gap-x-2.5">
+                    <!--
+                        Back button. Same control, key and placement as the one on the configuration
+                        form page (configuration/edit.blade.php): a transparent anchor ahead of the
+                        primary button, so a create form opened by mistake can be left without saving.
+                    -->
+                    <a
+                        href="{{ route('admin.contacts.organizations.index') }}"
+                        class="transparent-button hover:bg-gray-200 dark:text-white dark:hover:bg-gray-800"
+                    >
+                        @lang('admin::app.configuration.index.back')
+                    </a>
+
                     <div class="flex items-center gap-x-2.5">
                         {!! view_render_event('admin.organizations.create.save_buttons.before') !!}
 

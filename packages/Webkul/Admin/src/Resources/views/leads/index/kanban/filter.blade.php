@@ -634,7 +634,12 @@
             </x-slot:content>
 
             <!-- Drawer Footer -->
-            <x-slot:footer class="!pb-3">
+            {{--
+                The drawer's own footer padding (pb-8, set by the drawer component) is kept: at pb-3 the
+                apply button sat 12px from the bottom of the panel, inside the strip of viewport that
+                bottom-anchored overlays occupy, which is what clipped it.
+            --}}
+            <x-slot:footer>
                 {!! view_render_event('admin.leads.index.kanban.filter.drawer.footer.before') !!}
 
                 <div class="flex justify-end gap-2 px-2 pt-3">

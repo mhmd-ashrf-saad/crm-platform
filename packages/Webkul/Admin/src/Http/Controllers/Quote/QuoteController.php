@@ -9,6 +9,7 @@ use Illuminate\Http\Response;
 use Illuminate\Support\Facades\Event;
 use Illuminate\View\View;
 use Prettus\Repository\Criteria\RequestCriteria;
+use Symfony\Component\HttpFoundation\BinaryFileResponse;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 use Webkul\Admin\DataGrids\Quote\QuoteDataGrid;
 use Webkul\Admin\Http\Controllers\Controller;
@@ -40,7 +41,7 @@ class QuoteController extends Controller
     /**
      * Display a listing of the resource.
      */
-    public function index(): View|JsonResponse
+    public function index(): View|JsonResponse|BinaryFileResponse
     {
         if (request()->ajax()) {
             return datagrid(QuoteDataGrid::class)->process();
@@ -277,8 +278,42 @@ class QuoteController extends Controller
 
         return $this->downloadPDF(
             view('admin::quotes.pdf', compact('quote'))->render(),
-            'Quote_'.$quote->subject.'_'.$quote->created_at->format('d-m-Y')
+            $this->pdfFileName($quote)
         );
+    }
+
+    /**
+     * Name the downloaded quote PDF.
+     *
+     * The name shipped as `'Quote_'.$quote->subject.'_'.$date`, and every subject on this instance
+     * is Arabic. `streamDownload()` hands that name to `ResponseHeaderBag::makeDisposition()`
+     * together with `Str::ascii()` of it as the ASCII `filename` parameter, so
+     * `عرض سعر — تجديد الرخصة و5 مستخدمين` reached the client as
+     * `Quote_aard saar - tgdyd alrkhs o5 mstkhdmyn_13-10-2026.pdf` — a transliteration nobody can
+     * read wearing an English prefix, and the parameter the browser actually used. Passing the
+     * Arabic name does not fix it: the header would still carry that transliteration beside it.
+     *
+     * So the subject is reduced to what a file name may carry on Windows and Linux alike — ASCII
+     * letters, digits and single dashes — and a subject with no ASCII letter left in it, which an
+     * all-Arabic one never has, is dropped in favour of the quote id. The result is pure ASCII, so
+     * `Str::ascii()` leaves it untouched, both header parameters agree, and no `/`, `\`, `%`, `:`,
+     * `?` or reserved device name reaches `makeDisposition()`, which throws on the first two.
+     *
+     * No extension here: `downloadPDF()` appends `.pdf`.
+     */
+    private function pdfFileName($quote): string
+    {
+        $subject = preg_replace('/[^A-Za-z0-9]+/', '-', (string) $quote->subject);
+
+        $subject = mb_substr(trim(preg_replace('/-+/', '-', $subject), '-'), 0, 60);
+
+        /**
+         * A subject that came out all digits (`5` from `و5 مستخدمين`) identifies nothing, so it is
+         * dropped with the all-Arabic case rather than printed as if it were a name.
+         */
+        $subject = preg_match('/[A-Za-z]/', $subject) ? '-'.$subject : '';
+
+        return 'Quote-'.$quote->id.$subject.'-'.$quote->created_at->format('d-m-Y');
     }
 
     /**

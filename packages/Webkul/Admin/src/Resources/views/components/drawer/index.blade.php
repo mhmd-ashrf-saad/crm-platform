@@ -1,6 +1,15 @@
 @props([
     'isActive' => false,
+
+    /**
+     * The side the panel is pinned to. `right` is the *physical* right edge, in a left-to-right
+     * interface and in a right-to-left one alike: an administrative side panel that a reader
+     * opens deliberately belongs on the right in Arabic too. `left` keeps mirroring with the
+     * reading direction (left in LTR, right in RTL), which is what the mobile navigation sidebar
+     * wants.
+     */
     'position' => 'right',
+
     'width' => '500px',
 ])
 
@@ -18,10 +27,21 @@
 
     @isset($header)
         <template v-slot:header="{ close }">
-            <div {{ $header->attributes->merge(['class' => 'flex justify-between items-center gap-y-2.5 border-b p-3 dark:border-gray-800 max-sm:px-4']) }}>
+            {{--
+                `pr-10` reserves the corner the close control is anchored to, so header content never runs
+                under it. It is a physical (not mirrored) reserve because the control is on the physical
+                right in both directions, and it replaces the old `max-sm:px-4`, whose right padding would
+                have overridden the reserve on small screens.
+            --}}
+            <div {{ $header->attributes->merge(['class' => 'relative flex justify-between items-center gap-y-2.5 border-b p-3 pr-10 dark:border-gray-800']) }}>
                 {{ $header }}
 
-                <div class="w-full flex-1 ltr:right-3 ltr:text-right rtl:left-3 rtl:text-left">
+                <!--
+                    The panel is pinned to the physical right edge, so the close control is too, in
+                    both reading directions. It sits outside the flex flow, anchored to the panel
+                    corner -- riding the end of the row would put it on the left in RTL.
+                -->
+                <div class="absolute inset-y-0 right-2 flex items-center">
                     <span
                         class="icon-cross-large cursor-pointer text-3xl hover:rounded-md hover:bg-gray-100 dark:hover:bg-gray-950"
                         @click="close"
@@ -94,7 +114,9 @@
                     :class="{
                         'inset-x-0 top-0': position == 'top',
                         'inset-x-0 bottom-0': position == 'bottom',
-                        'inset-y-0 ltr:right-0 rtl:left-0': position == 'right',
+                        // `right` pins the panel to the physical right edge in both directions, so the
+                        // RTL side is stated rather than left to be inferred from a missing flip.
+                        'inset-y-0 ltr:right-0 rtl:right-0': position == 'right',
                         'inset-y-0 ltr:left-0 rtl:right-0': position == 'left'
                     }"
                     :style="'width:' + width"
@@ -162,7 +184,11 @@
                     } else if (this.position == 'left') {
                         return 'ltr:-translate-x-full rtl:translate-x-full';
                     } else if (this.position == 'right') {
-                        return 'ltr:translate-x-full rtl:-translate-x-full';
+                        /**
+                         * A panel pinned to the right edge slides in from the right in both directions.
+                         * `rtl:-translate-x-full` would have slid it in from the left in Arabic.
+                         */
+                        return 'ltr:translate-x-full rtl:translate-x-full';
                     }
                 }
             },

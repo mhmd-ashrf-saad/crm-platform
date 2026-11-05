@@ -179,6 +179,17 @@
 
                     return `${this.displayDate(this.start)} – ${this.displayDate(this.end)}`;
                 },
+
+                /**
+                 * The interface locale, as a BCP-47 tag. `<html lang="{{ app()->getLocale() }}">`
+                 * carries the app locale, which is what every other date on the page renders in.
+                 * Two normalisations: the shipped `pt_BR` and `zh_CN` use an underscore, which is
+                 * not a valid BCP-47 subtag separator and makes `Intl` throw, and an empty or
+                 * missing `lang` would leave the tag malformed too.
+                 */
+                locale() {
+                    return (document.documentElement.lang || 'en').replace(/_/g, '-');
+                },
             },
 
             mounted() {
@@ -410,11 +421,28 @@
 
                     const [year, month, day] = value.split('-').map(Number);
 
-                    return new Date(year, month - 1, day).toLocaleDateString(undefined, {
-                        year: 'numeric',
-                        month: 'short',
-                        day: 'numeric',
-                    });
+                    const date = new Date(year, month - 1, day);
+
+                    /**
+                     * `-u-nu-latn` keeps the language — so Arabic month names stay Arabic, as they
+                     * are everywhere else on the screen — and pins the digits to Western ones,
+                     * which is this product's numeral rule (`.agents/context/guides/
+                     * arabic-terminology.md` §2). `toLocaleDateString(undefined, …)`, which this
+                     * replaced, followed the *browser's* locale instead: an Arabic screen showed
+                     * `Oct 4, 2026 – Nov 4, 2026`.
+                     *
+                     * A tag `Intl` still cannot format falls back to the plain `Y-m-d` value rather
+                     * than throwing inside a render.
+                     */
+                    try {
+                        return new Intl.DateTimeFormat(`${this.locale}-u-nu-latn`, {
+                            year: 'numeric',
+                            month: 'short',
+                            day: 'numeric',
+                        }).format(date);
+                    } catch {
+                        return this.toIsoDate(date);
+                    }
                 },
 
                 handleClickOutside(e) {

@@ -18,9 +18,10 @@
  * updates.krayincrm.com -- pure telemetry with no effect on the install. A provisioning step should
  * not re-report a client's admin email to a third party.
  *
- * Idempotent: the row is UPDATED when it already exists, so running this twice leaves one user, not
- * two. When the seeded `admin@example.com` row (or any row with id 1) is present it is reused
- * rather than duplicated.
+ * Idempotent for the account it is given: that row is UPDATED when the email already exists, so
+ * running this twice with the same email leaves one user, not two. An email that does not exist gets
+ * a NEW administrator row. It never adopts, renames or re-emails a row it was not asked about -- see
+ * the comment at the lookup below for why the old "reuse row id 1" fallback was removed.
  *
  * Usage:
  *   KRAYIN_ADMIN_EMAIL=ops@client.test KRAYIN_ADMIN_PASSWORD='<chosen-password>' \
@@ -111,8 +112,14 @@ $app = require $basePath.'/bootstrap/app.php';
 $app->make(Kernel::class)->bootstrap();
 
 try {
-    $existing = DB::table('users')->where('email', $email)->first()
-        ?? DB::table('users')->where('id', 1)->first();
+    // Matched on the email ALONE. A `?? DB::table('users')->where('id', 1)->first()` fallback used to
+    // sit here as a convenience for reusing the installer's seeded row. It was removed because the
+    // update below rewrites `name`, `email` and `password`: with that fallback, running this script
+    // for any email that did not exist yet silently TOOK OVER the primary administrator -- it renamed
+    // that account and replaced its password hash, locking the operator out of their own login. That
+    // is a measured failure on this checkout, and the original hash was unrecoverable. An unknown
+    // email must therefore create its own row. Do not restore the fallback.
+    $existing = DB::table('users')->where('email', $email)->first();
 } catch (Throwable $e) {
     $fail('could not read the `users` table ('.$e->getMessage().'). Run the installer first.');
 }
@@ -130,8 +137,8 @@ if ($existing) {
     DB::table('users')->where('id', $existing->id)->update($attributes);
     $action = "updated user id {$existing->id}";
 } else {
-    DB::table('users')->insert($attributes + ['created_at' => now()]);
-    $action = 'created user';
+    $id = DB::table('users')->insertGetId($attributes + ['created_at' => now()]);
+    $action = "created user id {$id}";
 }
 
 File::put(storage_path('installed'), 'Krayin is successfully installed');

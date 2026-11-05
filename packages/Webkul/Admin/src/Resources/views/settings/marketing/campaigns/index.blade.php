@@ -387,7 +387,7 @@
                                     <x-admin::button
                                         type="submit"
                                         class="primary-button"
-                                        :title="trans('admin::app.components.activities.actions.activity.save-btn')"
+                                        :title="trans('admin::app.settings.marketing.campaigns.index.create.save-btn')"
                                         ::loading="isStoring"
                                         ::disabled="isStoring"
                                     />

@@ -10,6 +10,7 @@ use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\View\View;
+use Symfony\Component\HttpFoundation\BinaryFileResponse;
 use Webkul\Admin\DataGrids\Mail\EmailDataGrid;
 use Webkul\Admin\Http\Controllers\Controller;
 use Webkul\Admin\Http\Requests\MassDestroyRequest;
@@ -38,7 +39,7 @@ class EmailController extends Controller
     /**
      * Display a listing of the resource.
      */
-    public function index(): View|JsonResponse|RedirectResponse
+    public function index(): View|JsonResponse|RedirectResponse|BinaryFileResponse
     {
         $route = request('route');
 

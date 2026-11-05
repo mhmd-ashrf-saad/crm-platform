@@ -108,7 +108,7 @@
                                 <!-- Actions -->
                                 <div class="flex justify-end">
                                     @if (bouncer()->hasPermission('settings.automation.events.edit'))
-                                        <a @click.prevent="actionType = 'edit';edit(record)">
+                                        <a @click.prevent="actionType = 'edit';edit(record.actions.find(action => action.index === 'edit').url)">
                                             <span
                                                 :class="record.actions.find(action => action.index === 'edit')?.icon"
                                                 class="cursor-pointer rounded-md p-1.5 text-2xl transition-all hover:bg-gray-200 dark:hover:bg-gray-800 max-sm:place-self-center"
@@ -161,7 +161,7 @@
                                             v-if="available.actions.length"
                                         >
                                             @if (bouncer()->hasPermission('settings.automation.events.edit'))
-                                                <a @click.prevent="actionType = 'edit';edit(record)">
+                                                <a @click.prevent="actionType = 'edit';edit(record.actions.find(action => action.index === 'edit').url)">
                                                     <span
                                                         :class="record.actions.find(action => action.index === 'edit')?.icon"
                                                         class="cursor-pointer rounded-md p-1.5 text-2xl transition-all hover:bg-gray-200 dark:hover:bg-gray-800 max-sm:place-self-center"
@@ -394,14 +394,24 @@
                     },
 
                     /**
-                     * Get the particular event record, so that we can use for edit.
-                     * 
-                     * @param {Object} record
+                     * Fetch the particular event record, so that we can use for edit.
+                     *
+                     * The grid row only carries the rendered cells -- its `date` column is formatted
+                     * for display (`d M Y`), which a `type="date"` control rejects, so the stored
+                     * record is fetched from the same URL the grid's edit action advertises. That is
+                     * how the sibling settings grids (`tags`, `groups`, `sources`, `types`) open their
+                     * editing modals too.
+                     *
+                     * @param {String} url
                      */
-                    edit(record) {
-                        this.$refs.eventForm.setValues(record);
+                    edit(url) {
+                        this.$axios.get(url)
+                            .then(response => {
+                                this.$refs.eventForm.setValues(response.data.data);
 
-                        this.toggleModal();
+                                this.toggleModal();
+                            })
+                            .catch(error => {});
                     },
                 },
             });

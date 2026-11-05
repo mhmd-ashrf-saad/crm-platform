@@ -34,6 +34,20 @@
                 {!! view_render_event('admin.contacts.persons.view.organization.address.before', ['person' => $person]) !!}
 
                 @if ($person->organization->address)
+                    @php
+                        /**
+                         * A partial address arrives with `state` or `country` missing, null or an
+                         * empty string — every seeded organization stores `state` as `''`. Both
+                         * lookups take a `string`, so a null is a `TypeError`, and an empty value
+                         * rendered an empty row under the city. Read them the way
+                         * `AttributeValueRepository` and `AbstractEntity` do, and skip the line when
+                         * it has nothing to print, so a complete address still renders identically.
+                         */
+                        $state = $person->organization->address['state'] ?? null;
+
+                        $country = $person->organization->address['country'] ?? null;
+                    @endphp
+
                     <div class="flex flex-col gap-0.5 dark:text-white">
                         @isset($person->organization->address['address'])
                             <span>
@@ -50,17 +64,17 @@
                             </span>
                         @endif
 
-                        @isset($person->organization->address['state'])
+                        @if ($state !== null && $state !== '')
                             <span>
-                                {{ core()->state_name($person->organization->address['state']) }}
+                                {{ core()->state_name((string) $state, $country === null ? null : (string) $country) }}
                             </span>
-                        @endisset
+                        @endif
 
-                        @isset($person->organization->address['country'])
+                        @if ($country !== null && $country !== '')
                             <span>
-                                {{ core()->country_name($person->organization->address['country']) }}
+                                {{ core()->country_name((string) $country) }}
                             </span>
-                        @endisset
+                        @endif
                     </div>
                 @endif
 

@@ -28,6 +28,17 @@ use Webkul\Admin\Http\Controllers\Settings\WorkflowController;
  */
 Route::prefix('settings')->group(function () {
     /**
+     * Canonical hub URL.
+     *
+     * The hub itself is registered below as `settings/settings`, so the URL a user types —
+     * `admin/settings` — used to answer 404. The route stays where it is and the bare URL redirects
+     * to it, because menu entries, breadcrumbs and the ACL all reach the hub by route name and the
+     * target is resolved from that name rather than a hardcoded path, so a non-default
+     * `APP_ADMIN_PATH` keeps working.
+     */
+    Route::get('', fn () => redirect()->route('admin.settings.index'))->name('admin.settings.home');
+
+    /**
      * Settings routes.
      */
     Route::controller(SettingController::class)->prefix('settings')->group(function () {
@@ -324,7 +335,11 @@ Route::prefix('settings')->group(function () {
 
             Route::post('create', 'store')->name('admin.settings.marketing.events.store');
 
-            Route::get('edit/{id?}', 'edit')->name('admin.settings.marketing.events.edit');
+            /**
+             * An id is required: the row action always has one, and an optional parameter here only
+             * produced a 500 via a missing argument when the URL was opened without it.
+             */
+            Route::get('edit/{id}', 'edit')->name('admin.settings.marketing.events.edit');
 
             Route::put('edit/{id}', 'update')->name('admin.settings.marketing.events.update');
 

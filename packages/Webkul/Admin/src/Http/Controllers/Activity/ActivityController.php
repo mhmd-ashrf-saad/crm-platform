@@ -7,6 +7,7 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\View\View;
+use Symfony\Component\HttpFoundation\BinaryFileResponse;
 use Symfony\Component\HttpFoundation\RedirectResponse;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 use Webkul\Activity\Repositories\ActivityRepository;
@@ -53,7 +54,7 @@ class ActivityController extends Controller
     /**
      * Returns a listing of the resource.
      */
-    public function get(): JsonResponse
+    public function get(): JsonResponse|BinaryFileResponse
     {
         if (! request()->has('view_type')) {
             return datagrid(ActivityDataGrid::class)->process();

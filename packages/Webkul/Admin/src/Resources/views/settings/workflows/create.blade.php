@@ -21,6 +21,19 @@
                 </div>
 
                 <div class="flex items-center gap-x-2.5">
+                    <!--
+                        Back button. This screen already ships the key for it
+                        (admin::app.settings.workflows.create.back-btn); the control and placement are the
+                        ones configuration/edit.blade.php uses, a transparent anchor ahead of the primary
+                        button.
+                    -->
+                    <a
+                        href="{{ route('admin.settings.workflows.index') }}"
+                        class="transparent-button hover:bg-gray-200 dark:text-white dark:hover:bg-gray-800"
+                    >
+                        @lang('admin::app.settings.workflows.create.back-btn')
+                    </a>
+
                     <div class="flex items-center gap-x-2.5">
                         {!! view_render_event('admin.settings.workflow.save_button.before') !!}
 
@@ -174,6 +187,14 @@
                                     :placeholder="trans('admin::app.settings.workflows.create.event')"
                                     v-model="event"
                                 >
+                                    {{--
+                                        A native select shows nothing when no option matches, so the closed
+                                        control was an empty box. The placeholder is the shipped generic
+                                        `common.custom-attributes.select` key (اختر), the same one the address
+                                        attribute selects use.
+                                    --}}
+                                    <option value="">@lang('admin::app.common.custom-attributes.select')</option>
+
                                     <optgroup
                                         v-for='entity in events'
                                         :label="entity.name"
@@ -227,6 +248,9 @@
                                     :label="trans('admin::app.settings.workflows.create.condition-type')"
                                     :placeholder="trans('admin::app.settings.workflows.create.condition-type')"
                                 >
+                                    {{-- Same placeholder as the event select above. --}}
+                                    <option value="">@lang('admin::app.common.custom-attributes.select')</option>
+
                                     <option value="and">
                                         @lang('admin::app.settings.workflows.create.all-condition-are-true')
                                     </option>
@@ -843,7 +867,11 @@
 
                         event: '',
 
-                        conditionType: '1',
+                        /**
+                         * Empty, not '1': '1' matched none of the select's options ('and' / 'or'), so the
+                         * closed control rendered blank and a submitted form carried condition_type=1.
+                         */
+                        conditionType: '',
 
                         conditions: [],
 

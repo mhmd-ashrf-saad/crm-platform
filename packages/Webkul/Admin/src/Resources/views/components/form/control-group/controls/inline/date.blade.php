@@ -37,16 +37,20 @@
                     :style="{ 'text-align': position }"
                 >
                     <span class="cursor-pointer truncate rounded">
-                        @{{ valueLabel ? valueLabel : inputValue.length > 20 ? inputValue.substring(0, 20) + '...' : inputValue }}
+                        @{{
+                            displayValue.length > 20
+                                ? displayValue.substring(0, 20) + '...'
+                                : displayValue
+                        }}
                     </span> 
 
                     <!-- Tooltip -->
                     <div
                         class="absolute bottom-0 mb-5 hidden flex-col group-hover:flex"
-                        v-if="inputValue.length > 20"
+                        v-if="displayValue.length > 20"
                     >
                         <span class="whitespace-no-wrap relative z-10 rounded-md bg-black px-4 py-2 text-xs leading-none text-white shadow-lg dark:bg-white dark:text-gray-900">
-                            @{{ inputValue }}
+                            @{{ displayValue }}
                         </span>
 
                         <div class="-mt-2 ml-4 h-3 w-3 rotate-45 bg-black dark:bg-white"></div>
@@ -159,6 +163,11 @@
                     type: String,
                     default: '',
                 },
+
+                valueFormatter: {
+                    type: Function,
+                    default: null,
+                },
             },
 
             data() {
@@ -166,6 +175,8 @@
                     inputValue: this.value,
 
                     isEditing: false,
+
+                    isDirty: false,
 
                     isRTL: document.documentElement.dir === 'rtl',
                 };
@@ -179,6 +190,35 @@
                  */
                 value(newValue) {
                     this.inputValue = newValue;
+                },
+            },
+
+            computed: {
+                /**
+                 * Resolve the display value for non-editing mode.
+                 *
+                 * Keep the server label by default -- it is the only place the date is
+                 * formatted in the interface language -- but format the local value after an
+                 * inline save, when the server label is the one rendered before it.
+                 *
+                 * @return {String}
+                 */
+                displayValue() {
+                    let value = this.isDirty
+                        ? this.inputValue
+                        : (this.valueLabel || this.inputValue || '');
+
+                    if (this.isDirty && this.valueFormatter) {
+                        const formattedValue = this.valueFormatter(this.inputValue);
+
+                        value = formattedValue ?? value;
+                    }
+
+                    if (value === null || value === undefined) {
+                        return '';
+                    }
+
+                    return String(value);
                 },
             },
 
@@ -205,6 +245,8 @@
                     this.isEditing = false;
 
                     if (this.url) {
+                        this.isDirty = true;
+
                         this.$axios.put(this.url, {
                                 [this.name]: this.inputValue,
                             })
@@ -212,6 +254,8 @@
                                 this.$emitter.emit('add-flash', { type: 'success', message: response.data.message });
                             })
                             .catch((error) => {
+                                this.isDirty = false;
+
                                 this.inputValue = this.value;
 
                                 this.$emitter.emit('add-flash', { type: 'error', message: error.response.data.message });

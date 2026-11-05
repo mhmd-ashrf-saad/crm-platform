@@ -854,7 +854,13 @@
                         </template>
                     </x-slot>
 
-                    <x-slot:footer class="!pb-3">
+                    {{--
+                        The drawer's own footer padding (pb-8, set by the drawer component) is kept: at
+                        pb-3 the action buttons sat 12px from the bottom of the panel, inside the strip of
+                        viewport that bottom-anchored overlays occupy (the debug toolbar in a dev build, the
+                        browser's own chrome on a phone), which is what clipped طتطبيق الفلاتر.
+                    --}}
+                    <x-slot:footer>
                         <!-- Buttons Panel -->
                         <div
                             class="flex justify-end gap-2 px-2 pt-3"

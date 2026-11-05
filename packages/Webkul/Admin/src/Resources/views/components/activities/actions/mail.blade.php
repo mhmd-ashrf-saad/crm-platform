@@ -173,6 +173,10 @@
 
                             <!-- Content -->
                             <x-admin::form.control-group>
+                                <x-admin::form.control-group.label class="required">
+                                    @lang('admin::app.components.activities.actions.mail.message')
+                                </x-admin::form.control-group.label>
+
                                 <x-admin::form.control-group.control
                                     type="textarea"
                                     name="reply"

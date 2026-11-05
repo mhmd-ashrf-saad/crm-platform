@@ -32,6 +32,21 @@
                     class="flex flex-col"
                     v-if="report.statistics.length"
                 >
+                    <!--
+                        Column headings for the two amounts every row carries. They reuse the
+                        dashboard PDF's own headings for the same two numbers, and they mirror the
+                        row's nesting so each one sits directly over the column it names.
+                    -->
+                    <div class="flex gap-2.5 border-b px-4 py-2 dark:border-gray-800">
+                        <div class="flex w-full flex-col gap-1.5">
+                            <div class="flex justify-between text-xs font-medium text-gray-500 dark:text-gray-400">
+                                <p>@lang('admin::app.dashboard.index.pdf.price')</p>
+
+                                <p>@lang('admin::app.dashboard.index.pdf.revenue')</p>
+                            </div>
+                        </div>
+                    </div>
+
                     <a
                         :href="'{{ route('admin.products.view', ':id') }}'.replace(':id', item.id)"
                         class="flex gap-2.5 border-b p-4 transition-all last:border-b-0 hover:bg-gray-50 dark:border-gray-800 dark:hover:bg-gray-950"

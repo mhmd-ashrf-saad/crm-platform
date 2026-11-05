@@ -82,13 +82,25 @@
                 </template>
 
                 <template v-else>
+                    {{--
+                        The free-text region, rendered for the 239 of the 255 seeded countries that
+                        have no rows in `country_states`. It carries no `required`: the select branch
+                        above is the only case where the form can put a correct value in this field
+                        by itself, and demanding one here asked the user for a region of a country the
+                        product ships no list for. `validations` cannot be reused here either -- it is
+                        the *address* attribute's string, so for a required address it still holds
+                        `required` -- and no address attribute in this schema carries a validation of
+                        its own, so the empty string is this subfield's whole rule set. `AttributeForm`
+                        applies the same rule on the server, through the same `country_states` lookup
+                        that drives this `v-if`/`v-else`.
+                    --}}
                     <x-admin::form.control-group>
                         <x-admin::form.control-group.control
                             type="text"
                             ::name="attribute['code'] + '[state]'"
                             :placeholder="trans('admin::app.common.custom-attributes.state')"
                             :label="trans('admin::app.common.custom-attributes.state')"
-                            ::rules="attribute.is_required ? 'required|' + validations : validations"
+                            ::rules="''"
                             v-model="state"
                         >
                         </x-admin::form.control-group.control>
