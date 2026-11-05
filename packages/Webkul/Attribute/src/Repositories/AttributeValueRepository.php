@@ -321,8 +321,15 @@ class AttributeValueRepository extends Repository
                      * `format()` prints English day and month names whatever the locale is, which
                      * put "Wed Nov 25, 2026" into the Arabic activity log. `translatedFormat()`
                      * renders the same pattern in the active locale and leaves `en` unchanged.
+                     *
+                     * `d M Y` is the product's date-only shape -- `core()->formatDate()`'s default
+                     * minus the clock, and what every grid, the record view and the change-log row
+                     * above this one use. `D M d, Y` printed a weekday and a Latin comma where the
+                     * product writes neither: the Arabic change-log read `جمعة نوفمبر 27, 2026`
+                     * beside the `2 نوفمبر 2026 في 1:57 ص` the same screen rendered, and the English
+                     * equivalent was `Fri Nov 27, 2026` against `27 Nov 2026`.
                      */
-                    $label = Carbon::parse($value)->locale(app()->getLocale())->translatedFormat('D M d, Y');
+                    $label = Carbon::parse($value)->locale(app()->getLocale())->translatedFormat('d M Y');
                 } else {
                     $label = null;
                 }
@@ -331,7 +338,7 @@ class AttributeValueRepository extends Repository
 
             case 'datetime':
                 if ($value) {
-                    $label = Carbon::parse($value)->locale(app()->getLocale())->translatedFormat('D M d, Y H:i A');
+                    $label = Carbon::parse($value)->locale(app()->getLocale())->translatedFormat('d M Y H:i A');
                 } else {
                     $label = null;
                 }
@@ -340,7 +347,11 @@ class AttributeValueRepository extends Repository
 
             default:
                 if ($value instanceof Carbon) {
-                    $label = $value->copy()->locale(app()->getLocale())->translatedFormat('D M d, Y H:i A');
+                    /**
+                     * Same shape as the `datetime` case above, for the same reason: the weekday and
+                     * the Latin comma `D M d, Y` carries are not part of what this product renders.
+                     */
+                    $label = $value->copy()->locale(app()->getLocale())->translatedFormat('d M Y H:i A');
                 } else {
                     $label = $value;
                 }

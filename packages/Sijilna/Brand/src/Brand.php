@@ -106,11 +106,37 @@ final class Brand
     ];
 
     /**
-     * The footer credit, exactly as specified by brand/copy-deck.md §2.4.
+     * The footer credit, in the interface language the product ships.
      *
      * Register blue rgb(11, 60, 93) is #0B3C5D from the approved palette; the
      * value is stored as rich text (the field is a TinyMCE `editor`) and passes
      * through core()->sanitizeHtml() on the way into core_config.
+     *
+     * The credit is a STORED setting, so it cannot follow the interface locale
+     * the way `admin::app.layouts.powered-by.description` does on the login page
+     * -- one stored row renders the same words in every language. The shipped
+     * wording is therefore the Arabic one, which is what the login page reads
+     * (`مدعوم من Sijilna.`) and what the rest of this product's Arabic-first copy
+     * looks like; an English install reads `Powered by` on the login page and the
+     * Arabic credit at the bottom of the same screen.
+     *
+     * This constant is BOTH the config default
+     * (`BrandingServiceProvider::overrideFooterCredit()`) and the value
+     * `php artisan sijilna:brand` seeds, so a new install never renders the
+     * English wording.
      */
-    public const FOOTER_CREDIT = 'Powered by <span style="color: rgb(11, 60, 93);"><a href="https://sijilna.com" target="_blank">Sijilna</a></span>.';
+    public const FOOTER_CREDIT = 'مدعوم من <span style="color: rgb(11, 60, 93);"><a href="https://sijilna.com" target="_blank">Sijilna</a></span>.';
+
+    /**
+     * The English footer credit this product shipped before {@see self::FOOTER_CREDIT}
+     * became the Arabic wording.
+     *
+     * Nothing renders it any more. It is kept because it is the only record of
+     * what an untouched row in an existing installation still holds, and
+     * `2026_11_05_170000_repair_stale_change_log_labels_and_footer.php` matches on
+     * exactly that value (as stored, i.e. after `core()->sanitizeHtml()`) to decide
+     * whether the footer row is the shipped wording or an operator's own edit. A row
+     * that no longer carries it is an edit and is never rewritten.
+     */
+    public const FOOTER_CREDIT_EN = 'Powered by <span style="color: rgb(11, 60, 93);"><a href="https://sijilna.com" target="_blank">Sijilna</a></span>.';
 }

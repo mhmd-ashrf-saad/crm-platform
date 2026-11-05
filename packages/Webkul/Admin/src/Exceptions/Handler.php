@@ -24,7 +24,7 @@ class Handler extends ExceptionHandler
      *
      * @var array<int, int>
      */
-    private const BRANDED_ERROR_CODES = [401, 403, 404, 419, 429, 500, 503];
+    private const BRANDED_ERROR_CODES = [401, 403, 404, 405, 419, 429, 500, 503];
 
     /**
      * Json error messages.
@@ -44,6 +44,7 @@ class Handler extends ExceptionHandler
 
         $this->jsonErrorMessages = [
             '404' => trans('admin::app.errors.404.title'),
+            '405' => trans('admin::app.errors.405.title'),
             '403' => trans('admin::app.errors.403.title'),
             '401' => trans('admin::app.errors.401.title'),
             '419' => trans('admin::app.errors.419.title'),

@@ -280,7 +280,18 @@ anywhere in this deck**.
 
 The approved replacement value — applied by `Brand::FOOTER_CREDIT`, not by this
 line — is
-`Powered by <span style="color: rgb(11, 60, 93);"><a href="https://sijilna.com" target="_blank">Sijilna</a></span>.`
+`مدعوم من <span style="color: rgb(11, 60, 93);"><a href="https://sijilna.com" target="_blank">Sijilna</a></span>.`
+The wording moved to Arabic on 2026-11-05: a footer credit is a **stored**
+setting, so one row renders the same words in every language, and the shipped
+English value left an Arabic install reading `Powered by … Sijilna.` at the
+bottom of the screen while the login page read `مدعوم من Sijilna.`. The English
+wording is kept as `Brand::FOOTER_CREDIT_EN` — nothing renders it — because it is
+what an untouched row on an existing installation still holds, and
+`2026_11_05_170000_repair_stale_change_log_labels_and_footer.php` matches on it
+(as stored, i.e. after `core()->sanitizeHtml()`) to tell a shipped row from an
+operator's own edit. An English install now reads `Powered by` on the login page
+and the Arabic credit at the bottom of the same screen; that is the trade the
+one-stored-row design forces.
 `rgb(11, 60, 93)` is register blue `#0B3C5D` (10.80:1 on `#FAF7F1`, 11.55:1 on
 `#FFFFFF` — AA and AAA). It replaces the vendor blue `rgb(14, 144, 217)` not in
 the palette. The field type is a TinyMCE `editor` and the value passes through

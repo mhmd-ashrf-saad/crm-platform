@@ -182,7 +182,9 @@ class BrandingServiceProvider extends ServiceProvider
      */
     protected function overrideFooterCredit(): void
     {
-        $credit = class_exists(Brand::class) ? Brand::FOOTER_CREDIT : 'Powered by Sijilna.';
+        $credit = class_exists(Brand::class)
+            ? Brand::FOOTER_CREDIT
+            : 'مدعوم من <span style="color: rgb(11, 60, 93);"><a href="https://sijilna.com" target="_blank">Sijilna</a></span>.';
 
         config([
             'settings.footer.label' => $credit,

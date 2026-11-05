@@ -2562,6 +2562,10 @@ return [
             'description' => 'Oops! The page you\'re looking for is on vacation. It seems we couldn\'t find what you were searching for.',
             'title' => '404 Page Not Found',
         ],
+        '405' => [
+            'description' => 'Oops! This address does not accept the request method that was used. Go back and use the page\'s own links and forms instead of resending the request.',
+            'title' => '405 Method Not Allowed',
+        ],
         '401' => [
             'description' => 'Oops! Looks like you\'re not allowed to access this page. It seems you\'re missing the necessary credentials.',
             'title' => '401 Unauthorized',
