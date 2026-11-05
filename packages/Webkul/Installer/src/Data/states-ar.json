@@ -1,0 +1,40 @@
+{
+    "_meta": {
+        "what": "ISO 3166-1 alpha-2 country code => (ISO 3166-2 sub-national code => state name in Arabic).",
+        "scope": "Egypt only, all 27 governorates. The other 14 countries in states.json have no Arabic names yet and keep their English names in an ar install.",
+        "source": "The 27 governorates of Egypt and their ISO 3166-2:EG codes, named with the short Arabic form an Egyptian address form shows (القاهرة, الجيزة, ...) rather than an official long form. Hand-written proper nouns, not generated: CLDR subdivision names are not in this ICU build (ResourceBundle::create('ar', 'ICUDATA-subdivisions') returns null) and there is no network path to CAPMAS from a build.",
+        "read_by": "Webkul\\Installer\\Database\\Seeders\\Core\\StatesSeeder and database/migrations/2026_11_05_140000_seed_egypt_governorates_arabic.php",
+        "count": 27
+    },
+    "names": {
+        "EG": {
+            "C": "القاهرة",
+            "GZ": "الجيزة",
+            "ALX": "الإسكندرية",
+            "KB": "القليوبية",
+            "SHR": "الشرقية",
+            "DK": "الدقهلية",
+            "BH": "البحيرة",
+            "MNF": "المنوفية",
+            "GH": "الغربية",
+            "KFS": "كفر الشيخ",
+            "DT": "دمياط",
+            "PTS": "بورسعيد",
+            "IS": "الإسماعيلية",
+            "SUZ": "السويس",
+            "SIN": "شمال سيناء",
+            "JS": "جنوب سيناء",
+            "BNS": "بني سويف",
+            "FYM": "الفيوم",
+            "MN": "المنيا",
+            "AST": "أسيوط",
+            "SHG": "سوهاج",
+            "KN": "قنا",
+            "LX": "الأقصر",
+            "ASN": "أسوان",
+            "BA": "البحر الأحمر",
+            "WAD": "الوادي الجديد",
+            "MT": "مطروح"
+        }
+    }
+}

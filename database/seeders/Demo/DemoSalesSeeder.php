@@ -4,6 +4,7 @@ namespace Database\Seeders\Demo;
 
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\File;
 use Webkul\Activity\Repositories\ActivityRepository;
 use Webkul\Attribute\Repositories\AttributeRepository;
 use Webkul\Contact\Repositories\OrganizationRepository;
@@ -37,17 +38,52 @@ class DemoSalesSeeder
     public const HISTORY_DAYS = 75;
 
     /**
-     * Source names the installer seeds, in the order DemoFixtures::leads() refers to them.
+     * Source keys the installer seeds, in the order DemoFixtures::leads() refers to them.
+     *
+     * These are the `installer::app.seeders.lead.source.*` keys, not the seeded wording: the name a
+     * row carries is that translation in whichever locale the installation was seeded in, so `ar`
+     * writes `البريد الإلكتروني` where `en` writes `Email`, and
+     * `2026_11_04_120000_rename_seeded_arabic_values` renamed the rows an older install already had.
+     * A hardcoded list of names could only ever match one of those, which is why this is a list of
+     * keys resolved through the translation instead.
      *
      * Resolved by name rather than by id: a re-install or an operator edit must not silently
      * re-point a lead at a different source.
      */
-    public const LEAD_SOURCE_NAMES = ['Email', 'Web', 'Web Form', 'Phone', 'Direct'];
+    public const LEAD_SOURCE_KEYS = ['email', 'web', 'web-form', 'phone', 'direct'];
 
     /**
-     * Type names the installer seeds, in fixture order.
+     * Type keys the installer seeds, in fixture order.
      */
-    public const LEAD_TYPE_NAMES = ['New Business', 'Existing Business'];
+    public const LEAD_TYPE_KEYS = ['new-business', 'existing-business'];
+
+    /**
+     * The ISO 3166-2:EG code of the governorate each demo city sits in.
+     *
+     * A quote's `billing_address` is a required `address` attribute, and `AttributeForm` requires its
+     * `state` whenever the chosen country has rows in `country_states` -- Egypt has had its 27
+     * governorates since `2026_11_05_140000_seed_egypt_governorates_arabic.php`. Seeding `state` as an
+     * empty string therefore produced quotes that could not be saved untouched: the form loaded a
+     * quote whose own address failed the rule it was about to be saved under.
+     *
+     * The value written is the `country_states.code`, not the Arabic name, because that is what the
+     * address component persists (`:value="state.code"`) and what a saved address resolves its label
+     * from; writing the name would store a value no picker would ever select. `القاهرة الجديدة` is not
+     * a governorate in its own right -- it is a district of Cairo -- so it shares Cairo's code.
+     *
+     * `2026_11_05_160000_repair_seeded_quote_data.php` reads this map to repair rows an earlier seed
+     * already wrote, which is why it is a public constant rather than a protected helper: one list,
+     * so the seeder and the repair can never disagree about which governorate a city belongs to.
+     */
+    public const GOVERNORATE_CODES = [
+        'القاهرة' => 'C',
+        'القاهرة الجديدة' => 'C',
+        'الجيزة' => 'GZ',
+        'طنطا' => 'GH',
+        'الإسكندرية' => 'ALX',
+        'الشرقية' => 'SHR',
+        'أسوان' => 'ASN',
+    ];
 
     public function __construct(
         protected OrganizationRepository $organizationRepository,
@@ -115,36 +151,110 @@ class DemoSalesSeeder
             }
         }
 
-        $sources = [];
-
-        foreach (self::LEAD_SOURCE_NAMES as $index => $name) {
-            $source = app(SourceRepository::class)->findOneByField('name', $name);
-
-            if (! $source) {
-                throw new \RuntimeException("The installed lead source [{$name}] is missing.");
-            }
-
-            $sources[$index + 1] = $source->id;
-        }
-
-        $types = [];
-
-        foreach (self::LEAD_TYPE_NAMES as $index => $name) {
-            $type = app(TypeRepository::class)->findOneByField('name', $name);
-
-            if (! $type) {
-                throw new \RuntimeException("The installed lead type [{$name}] is missing.");
-            }
-
-            $types[$index + 1] = $type->id;
-        }
-
         return [
             'pipeline_id' => $pipeline->id,
             'stages' => $stages,
-            'sources' => $sources,
-            'types' => $types,
+            'sources' => $this->seededIds(app(SourceRepository::class), 'lead.source', self::LEAD_SOURCE_KEYS),
+            'types' => $this->seededIds(app(TypeRepository::class), 'lead.type', self::LEAD_TYPE_KEYS),
         ];
+    }
+
+    /**
+     * Resolve one seeded reference table's rows, numbered the way the fixtures refer to them.
+     *
+     * Stages have a `code` to match on; sources and types do not, so the only stable thing about
+     * them is the translation the installer wrote the name from. Every wording the installer ships
+     * for a key is tried in turn, which covers an `en` install, an `ar` install and an install in
+     * any other locale the installer is translated into.
+     *
+     * A key no row answers to is a missing row -- deleted, or renamed by hand -- and that throws
+     * rather than falling back to whatever row happens to sit at the id it used to hold. Two keys
+     * resolving to the same row throws too: that would quietly point a whole pipeline column at one
+     * source.
+     *
+     * @param  array<int, string>  $keys  installer translation keys, in fixture order
+     * @return array<int, int> fixture number => row id
+     */
+    protected function seededIds(object $repository, string $namespace, array $keys): array
+    {
+        $ids = [];
+
+        foreach ($keys as $index => $key) {
+            $names = $this->seededNames("installer::app.seeders.{$namespace}.{$key}");
+
+            $row = null;
+
+            foreach ($names as $name) {
+                $row = $repository->findOneByField('name', $name);
+
+                if ($row) {
+                    break;
+                }
+            }
+
+            if (! $row) {
+                throw new \RuntimeException(
+                    "The installed [{$namespace}] row [{$key}] is missing: this installation holds none of ["
+                    .implode(', ', $names).'].'
+                );
+            }
+
+            $ids[$index + 1] = $row->id;
+        }
+
+        if (count(array_unique($ids)) !== count($ids)) {
+            throw new \RuntimeException(
+                "The installed [{$namespace}] rows could not be told apart: the keys [".implode(', ', $keys)
+                .'] resolved to ['.implode(', ', $ids).'].'
+            );
+        }
+
+        return $ids;
+    }
+
+    /**
+     * Every wording the installer could have written for one of its seed keys.
+     *
+     * A fresh install writes exactly one of them -- the translation for the locale it ran in -- so
+     * the whole set is what a lookup has to accept.
+     *
+     * @return array<int, string>
+     */
+    protected function seededNames(string $key): array
+    {
+        $names = [];
+
+        foreach ($this->installerLocales() as $locale) {
+            $name = (string) trans($key, [], $locale);
+
+            /**
+             * An untranslated key comes back as the key itself, which no seeded row holds.
+             */
+            if ($name !== '' && $name !== $key) {
+                $names[$name] = $name;
+            }
+        }
+
+        return array_values($names);
+    }
+
+    /**
+     * The locales the installer ships translations for, read from the directory the translator
+     * registered for it, so a locale added to the installer is covered without editing this seeder.
+     *
+     * @return array<int, string>
+     */
+    protected function installerLocales(): array
+    {
+        $locales = [];
+
+        foreach ((array) (app('translator')->getLoader()->namespaces()['installer'] ?? []) as $path) {
+            foreach (File::directories($path) as $directory) {
+                $locales[] = basename($directory);
+            }
+        }
+
+        return $locales ?: [config('app.locale'), config('app.fallback_locale')];
     }
 
     /**
@@ -515,7 +625,7 @@ class DemoSalesSeeder
      * Web forms (نماذج الويب) and the leads/contacts their submissions produce.
      *
      * There is no submissions table in this product: a submission creates a lead (when the form is
-     * a lead form) and a person, linked to the "Web Form" source. Those rows are seeded here so the
+     * a lead form) and a person, linked to the `web-form` source. Those rows are seeded here so the
      * leads gained from a form are visible in the pipeline with the right source.
      *
      * @param  array<string, mixed>  $context
@@ -646,7 +756,7 @@ class DemoSalesSeeder
             return [
                 'address' => 'القاهرة',
                 'city' => 'القاهرة',
-                'state' => '',
+                'state' => $this->governorateFor('القاهرة'),
                 'postcode' => '11511',
                 'country' => 'EG',
             ];
@@ -657,10 +767,28 @@ class DemoSalesSeeder
         return [
             'address' => $organization['address'],
             'city' => $organization['city'],
-            'state' => '',
+            'state' => $this->governorateFor($organization['city']),
             'postcode' => $organization['postcode'],
             'country' => 'EG',
         ];
+    }
+
+    /**
+     * Resolve a demo city to its governorate code.
+     *
+     * A city the map does not know is a fixture defect, so it throws rather than seeding an empty
+     * `state` that no address save would accept -- the same posture `productBySku()` takes on an
+     * unknown SKU.
+     */
+    protected function governorateFor(string $city): string
+    {
+        if (! isset(self::GOVERNORATE_CODES[$city])) {
+            throw new \RuntimeException(
+                "The demo city [{$city}] has no governorate code in DemoSalesSeeder::GOVERNORATE_CODES."
+            );
+        }
+
+        return self::GOVERNORATE_CODES[$city];
     }
 
     /**

@@ -141,7 +141,14 @@ class Installer extends Command
 
         $this->warn('Step: Seeding basic data for Krayin kickstart...');
         $this->info(app(KrayinDatabaseSeeder::class)->run([
-            'locale' => $applicationDetails['locale'] ?? 'en',
+            /*
+             * The seeders resolve every name they write through the install locale, and fall back
+             * to the running app locale when they are not told one. Passing a hardcoded `en` here
+             * would defeat that fallback: `--skip-env-check` leaves $applicationDetails empty, so a
+             * non-interactive install of an `ar` application would be seeded with English attribute
+             * names, email templates, workflows and role label.
+             */
+            'locale' => $applicationDetails['locale'] ?? config('app.locale'),
             'currency' => $applicationDetails['currency'] ?? 'USD',
         ]));
 

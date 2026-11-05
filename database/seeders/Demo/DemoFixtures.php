@@ -58,43 +58,43 @@ final class DemoFixtures
         return [
             [
                 'name' => 'شركة النيل للتوريدات الصناعية',
-                'address' => '١٢ شارع مصطفى النحاس، مدينة نصر',
+                'address' => '12 شارع مصطفى النحاس، مدينة نصر',
                 'city' => 'القاهرة',
                 'postcode' => '11371',
             ],
             [
                 'name' => 'مجموعة الأهرام الطبية',
-                'address' => '٤٤ شارع جامعة الدول العربية، المهندسين',
+                'address' => '44 شارع جامعة الدول العربية، المهندسين',
                 'city' => 'الجيزة',
                 'postcode' => '12411',
             ],
             [
                 'name' => 'مؤسسة الدلتا للتجارة والتوزيع',
-                'address' => '٧ شارع البحر، وسط البلد',
+                'address' => '7 شارع البحر، وسط البلد',
                 'city' => 'طنطا',
                 'postcode' => '31511',
             ],
             [
                 'name' => 'شركة الإسكندرية للخدمات اللوجستية',
-                'address' => '٢١ طريق الجيش، سموحة',
+                'address' => '21 طريق الجيش، سموحة',
                 'city' => 'الإسكندرية',
                 'postcode' => '21615',
             ],
             [
                 'name' => 'مصنع السلام للأثاث المكتبي',
-                'address' => 'المنطقة الصناعية A٣، العاشر من رمضان',
+                'address' => 'المنطقة الصناعية A3، العاشر من رمضان',
                 'city' => 'الشرقية',
                 'postcode' => '44621',
             ],
             [
                 'name' => 'شركة الصفا للمقاولات العامة',
-                'address' => '٩ شارع ٩، المعادي',
+                'address' => '9 شارع 9، المعادي',
                 'city' => 'القاهرة',
                 'postcode' => '11728',
             ],
             [
                 'name' => 'تك سمارت للأنظمة المتكاملة',
-                'address' => 'مبنى C٤، التجمع الخامس',
+                'address' => 'مبنى C4، التجمع الخامس',
                 'city' => 'القاهرة الجديدة',
                 'postcode' => '11835',
             ],
@@ -144,12 +144,12 @@ final class DemoFixtures
             ['sku' => 'SLP-USER-01', 'name' => 'ترخيص مستخدم إضافي', 'price' => 3500, 'quantity' => 120, 'description' => 'مستخدم إضافي على نفس التركيب السنوي.'],
             ['sku' => 'SLP-IMPL-BAS', 'name' => 'حزمة التطبيق والتهيئة', 'price' => 25000, 'quantity' => 15, 'description' => 'تركيب النظام، تهيئة المراحل والصلاحيات، وضبط القوالب.'],
             ['sku' => 'SLP-MIG-01', 'name' => 'ترحيل البيانات التاريخية', 'price' => 12000, 'quantity' => 10, 'description' => 'ترحيل جهات الاتصال والفرص من ملفات Excel أو نظام سابق.'],
-            ['sku' => 'SLP-TRN-05', 'name' => 'تدريب ٥ مستخدمين', 'price' => 8000, 'quantity' => 30, 'description' => 'جلستان تدريب عن بُعد مع دليل مستخدم عربي.'],
+            ['sku' => 'SLP-TRN-05', 'name' => 'تدريب 5 مستخدمين', 'price' => 8000, 'quantity' => 30, 'description' => 'جلستان تدريب عن بُعد مع دليل مستخدم عربي.'],
             ['sku' => 'SLP-SUP-ANN', 'name' => 'عقد دعم وصيانة سنوي', 'price' => 18000, 'quantity' => 40, 'description' => 'تحديثات أمنية، تصحيحات، ودعم فني خلال ساعات العمل.'],
             ['sku' => 'SLP-API-01', 'name' => 'تكامل مع منظومة الفاتورة الإلكترونية', 'price' => 15000, 'quantity' => 12, 'description' => 'ربط عروض الأسعار والفواتير بمصلحة الضرائب.'],
             ['sku' => 'SLP-WA-01', 'name' => 'وحدة واتساب بزنس', 'price' => 9500, 'quantity' => 18, 'description' => 'إرسال رسائل المتابعة وتذكيرات المواعيد عبر واتساب.'],
             ['sku' => 'SLP-POS-01', 'name' => 'ربط نقاط البيع', 'price' => 11000, 'quantity' => 9, 'description' => 'مزامنة الأصناف والفواتير مع أنظمة الكاشير.'],
-            ['sku' => 'SLP-REP-01', 'name' => 'حزمة تقارير مخصصة — ٥ تقارير', 'price' => 7500, 'quantity' => 20, 'description' => 'بناء خمسة تقارير حسب مؤشرات العميل.'],
+            ['sku' => 'SLP-REP-01', 'name' => 'حزمة تقارير مخصصة — 5 تقارير', 'price' => 7500, 'quantity' => 20, 'description' => 'بناء خمسة تقارير حسب مؤشرات العميل.'],
             ['sku' => 'SLP-HOST-Y', 'name' => 'استضافة سحابية سنوية', 'price' => 6000, 'quantity' => 35, 'description' => 'استضافة على سيرفر خاص مع نسخ احتياطي يومي.'],
             ['sku' => 'SLP-AUD-01', 'name' => 'مراجعة أمنية للموقع', 'price' => 20000, 'quantity' => 6, 'description' => 'تقييم للثغرات وتقرير بالإصلاحات المطلوبة.'],
         ];
@@ -185,11 +185,11 @@ final class DemoFixtures
         return [
             ['title' => 'تجديد رخصة إدارة العملاء — النيل للتوريدات', 'person' => 0, 'stage' => 'new', 'source' => 1, 'type' => 2, 'value' => 45000, 'created_days_ago' => 0, 'close_in_days' => 25, 'tags' => ['عميل مميز'], 'description' => 'العميل يريد تجديد الرخصة وإضافة مستخدمين قبل نهاية الربع.'],
             ['title' => 'تطبيق وحدة نقاط البيع — الدلتا للتجارة', 'person' => 2, 'stage' => 'new', 'source' => 5, 'type' => 1, 'value' => 38000, 'created_days_ago' => 1, 'close_in_days' => 30, 'tags' => [], 'description' => 'طلب ورد بعد زيارة ميدانية لفرع طنطا.'],
-            ['title' => 'ترحيل بيانات العملاء — الأهرام الطبية', 'person' => 1, 'stage' => 'new', 'source' => 2, 'type' => 1, 'value' => 12000, 'created_days_ago' => 2, 'close_in_days' => 40, 'tags' => [], 'description' => 'ثلاثة ملفات Excel تضم نحو ٤٠٠٠ جهة اتصال.'],
+            ['title' => 'ترحيل بيانات العملاء — الأهرام الطبية', 'person' => 1, 'stage' => 'new', 'source' => 2, 'type' => 1, 'value' => 12000, 'created_days_ago' => 2, 'close_in_days' => 40, 'tags' => [], 'description' => 'ثلاثة ملفات Excel تضم نحو 4000 جهة اتصال.'],
             ['title' => 'تكامل الفاتورة الإلكترونية — تك سمارت', 'person' => 6, 'stage' => 'new', 'source' => 3, 'type' => 1, 'value' => 15000, 'created_days_ago' => 4, 'close_in_days' => 20, 'tags' => ['عرض سعر مرسل'], 'description' => 'وصل الطلب من نموذج الموقع، والمهندس عمرو هو نقطة الاتصال.'],
             ['title' => 'تدريب فرق المبيعات — الصفا للمقاولات', 'person' => 5, 'stage' => 'new', 'source' => 4, 'type' => 1, 'value' => 8000, 'created_days_ago' => 6, 'close_in_days' => 35, 'tags' => [], 'description' => 'طلب تدريب لثمانية مندوبين على مراحل الفرص.'],
 
-            ['title' => 'إضافة ١٠ مستخدمين — الإسكندرية للوجستية', 'person' => 3, 'stage' => 'follow-up', 'source' => 1, 'type' => 2, 'value' => 35000, 'created_days_ago' => 15, 'close_in_days' => 18, 'tags' => ['خصم خاص'], 'description' => 'بانتظار موافقة المدير المالي على الخصم.'],
+            ['title' => 'إضافة 10 مستخدمين — الإسكندرية للوجستية', 'person' => 3, 'stage' => 'follow-up', 'source' => 1, 'type' => 2, 'value' => 35000, 'created_days_ago' => 15, 'close_in_days' => 18, 'tags' => ['خصم خاص'], 'description' => 'بانتظار موافقة المدير المالي على الخصم.'],
             ['title' => 'وحدة واتساب بزنس — مصنع السلام', 'person' => 4, 'stage' => 'follow-up', 'source' => 2, 'type' => 1, 'value' => 9500, 'created_days_ago' => 18, 'close_in_days' => 21, 'tags' => [], 'description' => 'جلسة عرض عن بُعد تمت، ولم تُحدد جلسة المتابعة بعد.'],
             ['title' => 'عقد دعم وصيانة سنوي — أسوان للطاقة', 'person' => 7, 'stage' => 'follow-up', 'source' => 5, 'type' => 2, 'value' => 18000, 'created_days_ago' => 22, 'close_in_days' => 14, 'tags' => ['متابعة عاجلة'], 'description' => 'العقد ينتهي هذا الشهر ويحتاج تجديداً قبل الموعد.'],
             ['title' => 'مراجعة أمنية للموقع — الأهرام الطبية', 'person' => 9, 'stage' => 'follow-up', 'source' => 4, 'type' => 2, 'value' => 20000, 'created_days_ago' => 25, 'close_in_days' => 27, 'tags' => [], 'description' => 'طلبت إدارة تقنية المعلومات تقريراً بنطاق العمل أولاً.'],
@@ -199,8 +199,8 @@ final class DemoFixtures
             ['title' => 'ربط نقاط البيع بفروع الإسكندرية', 'person' => 3, 'stage' => 'prospect', 'source' => 2, 'type' => 1, 'value' => 11000, 'created_days_ago' => 36, 'close_in_days' => 16, 'tags' => ['عرض سعر مرسل'], 'description' => 'أربعة فروع، والربط مطلوب مع نظام الكاشير الحالي.'],
             ['title' => 'رخصة أساسية — مؤسسة تقنية ناشئة', 'person' => 12, 'stage' => 'prospect', 'source' => 5, 'type' => 1, 'value' => 45000, 'created_days_ago' => 40, 'close_in_days' => 22, 'tags' => ['إحالة'], 'description' => 'إحالة من مصطفى كمال بعد مشروع سابق في شركة أخرى.'],
 
-            ['title' => 'تجديد سنوي و٥ مستخدمين — الصفا للمقاولات', 'person' => 5, 'stage' => 'negotiation', 'source' => 1, 'type' => 2, 'value' => 62000, 'created_days_ago' => 45, 'close_in_days' => 8, 'tags' => ['عميل مميز', 'خصم خاص'], 'description' => 'التفاوض على ١٥٪ خصم مقابل التعاقد لثلاث سنوات.'],
-            ['title' => 'تطبيق النظام على ٣ فروع — مصنع السلام', 'person' => 4, 'stage' => 'negotiation', 'source' => 4, 'type' => 1, 'value' => 88000, 'created_days_ago' => 48, 'close_in_days' => 11, 'tags' => [], 'description' => 'بانتظار خطاب الضمان قبل توقيع العقد.'],
+            ['title' => 'تجديد سنوي و5 مستخدمين — الصفا للمقاولات', 'person' => 5, 'stage' => 'negotiation', 'source' => 1, 'type' => 2, 'value' => 62000, 'created_days_ago' => 45, 'close_in_days' => 8, 'tags' => ['عميل مميز', 'خصم خاص'], 'description' => 'التفاوض على 15٪ خصم مقابل التعاقد لثلاث سنوات.'],
+            ['title' => 'تطبيق النظام على 3 فروع — مصنع السلام', 'person' => 4, 'stage' => 'negotiation', 'source' => 4, 'type' => 1, 'value' => 88000, 'created_days_ago' => 48, 'close_in_days' => 11, 'tags' => [], 'description' => 'بانتظار خطاب الضمان قبل توقيع العقد.'],
             ['title' => 'تكامل الفاتورة الإلكترونية — الإسكندرية للوجستية', 'person' => 10, 'stage' => 'negotiation', 'source' => 1, 'type' => 2, 'value' => 15000, 'created_days_ago' => 52, 'close_in_days' => 6, 'tags' => ['متابعة عاجلة'], 'description' => 'الاتفاق على النطاق، والنقاش الآن على جدول التسليم.'],
             ['title' => 'عقد دعم وتدريب — أسوان للطاقة', 'person' => 7, 'stage' => 'negotiation', 'source' => 4, 'type' => 2, 'value' => 26000, 'created_days_ago' => 55, 'close_in_days' => 19, 'tags' => [], 'description' => 'حزمة تجمع الدعم السنوي مع تدريب فريق الموقع.'],
 
@@ -209,8 +209,8 @@ final class DemoFixtures
             ['title' => 'ربط نقاط البيع — الإسكندرية للوجستية', 'person' => 3, 'stage' => 'won', 'source' => 4, 'type' => 2, 'value' => 11000, 'created_days_ago' => 70, 'closed_days_ago' => 30, 'tags' => ['عميل مميز'], 'description' => 'أُغلق بعد زيارة ميدانية لفرع سموحة.'],
             ['title' => 'اشتراك دعم — مصنع السلام', 'person' => 4, 'stage' => 'won', 'source' => 2, 'type' => 2, 'value' => 18000, 'created_days_ago' => 74, 'closed_days_ago' => 35, 'tags' => [], 'description' => 'تجديد تلقائي لمدة سنة.'],
 
-            ['title' => 'أتمتة كاملة للمبيعات — الدلتا للتجارة', 'person' => 11, 'stage' => 'lost', 'source' => 2, 'type' => 1, 'value' => 120000, 'created_days_ago' => 58, 'closed_days_ago' => 18, 'tags' => [], 'lost_reason' => 'الميزانية المعتمدة أقل من نصف قيمة العرض.', 'description' => 'مشروع يضم ٤٠ مستخدماً وأتمتة كاملة للعمليات.'],
-            ['title' => 'تطبيق نظام متكامل — مؤسسة تقنية ناشئة', 'person' => 12, 'stage' => 'lost', 'source' => 5, 'type' => 1, 'value' => 45000, 'created_days_ago' => 64, 'closed_days_ago' => 22, 'tags' => [], 'lost_reason' => 'اختار العميل عرض منافس أقل سعراً بنسبة ٢٠٪.', 'description' => 'لم يُقبل الفرق في السعر مقابل نطاق التنفيذ.'],
+            ['title' => 'أتمتة كاملة للمبيعات — الدلتا للتجارة', 'person' => 11, 'stage' => 'lost', 'source' => 2, 'type' => 1, 'value' => 120000, 'created_days_ago' => 58, 'closed_days_ago' => 18, 'tags' => [], 'lost_reason' => 'الميزانية المعتمدة أقل من نصف قيمة العرض.', 'description' => 'مشروع يضم 40 مستخدماً وأتمتة كاملة للعمليات.'],
+            ['title' => 'تطبيق نظام متكامل — مؤسسة تقنية ناشئة', 'person' => 12, 'stage' => 'lost', 'source' => 5, 'type' => 1, 'value' => 45000, 'created_days_ago' => 64, 'closed_days_ago' => 22, 'tags' => [], 'lost_reason' => 'اختار العميل عرض منافس أقل سعراً بنسبة 20٪.', 'description' => 'لم يُقبل الفرق في السعر مقابل نطاق التنفيذ.'],
             ['title' => 'تأجيل مشروع التقارير — الصفا للمقاولات', 'person' => 13, 'stage' => 'lost', 'source' => 1, 'type' => 1, 'value' => 12000, 'created_days_ago' => 68, 'closed_days_ago' => 28, 'tags' => [], 'lost_reason' => 'العميل أجّل المشروع إلى السنة المالية القادمة.', 'description' => 'يُعاد فتح الفرصة في الربع الأول.'],
         ];
 
@@ -228,12 +228,12 @@ final class DemoFixtures
     {
         return [
             [
-                'subject' => 'عرض سعر — تجديد الرخصة و٥ مستخدمين',
+                'subject' => 'عرض سعر — تجديد الرخصة و5 مستخدمين',
                 'lead' => 17,
                 'person' => 1,
                 'created_days_ago' => 20,
                 'expires_in_days' => 25,
-                'description' => 'العرض ساري ٣٠ يوماً من تاريخ الإصدار، ويشمل التطبيق والترحيل.',
+                'description' => 'العرض ساري 30 يوماً من تاريخ الإصدار، ويشمل التطبيق والترحيل.',
                 'items' => [
                     ['sku' => 'SLP-CRM-CORE', 'quantity' => 1, 'tax_percent' => 14, 'discount_amount' => 0],
                     ['sku' => 'SLP-USER-01', 'quantity' => 5, 'tax_percent' => 14, 'discount_amount' => 0],
@@ -256,12 +256,12 @@ final class DemoFixtures
                 'adjustment_amount' => 0,
             ],
             [
-                'subject' => 'عرض سعر — تجديد سنوي و٥ مستخدمين (الصفا)',
+                'subject' => 'عرض سعر — تجديد سنوي و5 مستخدمين (الصفا)',
                 'lead' => 13,
                 'person' => 5,
                 'created_days_ago' => 14,
                 'expires_in_days' => 16,
-                'description' => 'العرض يشمل خصم التعاقد لثلاث سنوات بقيمة ١٥٪.',
+                'description' => 'العرض يشمل خصم التعاقد لثلاث سنوات بقيمة 15٪.',
                 'items' => [
                     ['sku' => 'SLP-CRM-CORE', 'quantity' => 1, 'tax_percent' => 14, 'discount_amount' => 0],
                     ['sku' => 'SLP-USER-01', 'quantity' => 5, 'tax_percent' => 14, 'discount_amount' => 0],
@@ -270,7 +270,7 @@ final class DemoFixtures
                 'adjustment_amount' => -1500,
             ],
             [
-                'subject' => 'عرض سعر — تطبيق النظام على ٣ فروع',
+                'subject' => 'عرض سعر — تطبيق النظام على 3 فروع',
                 'lead' => 14,
                 'person' => 4,
                 'created_days_ago' => 10,
@@ -284,12 +284,12 @@ final class DemoFixtures
                 'adjustment_amount' => 2000,
             ],
             [
-                'subject' => 'عرض سعر — ١٠ مستخدمين إضافيين',
+                'subject' => 'عرض سعر — 10 مستخدمين إضافيين',
                 'lead' => 5,
                 'person' => 3,
                 'created_days_ago' => 12,
                 'expires_in_days' => 8,
-                'description' => 'يُطبَّق الخصم عند السداد خلال ١٥ يوماً.',
+                'description' => 'يُطبَّق الخصم عند السداد خلال 15 يوماً.',
                 'items' => [
                     ['sku' => 'SLP-USER-01', 'quantity' => 10, 'tax_percent' => 14, 'discount_amount' => 3500],
                     ['sku' => 'SLP-TRN-05', 'quantity' => 1, 'tax_percent' => 14, 'discount_amount' => 0],
@@ -380,7 +380,7 @@ final class DemoFixtures
             ['lead' => 17, 'type' => 'meeting', 'title' => 'اجتماع توقيع العقد — الأهرام الطبية', 'user' => 'manager', 'schedule_in_days' => -20, 'at' => '11:00', 'duration' => 60, 'is_done' => 1, 'location' => 'مقر الأهرام الطبية — المهندسين', 'comment' => 'تم التوقيع على الرخصة والتطبيق.'],
             ['lead' => 18, 'type' => 'lunch', 'title' => 'غداء عمل مع مدير المشتريات', 'user' => 'manager', 'schedule_in_days' => -24, 'at' => '14:00', 'duration' => 120, 'is_done' => 1, 'location' => 'مطعم النيل — مدينة نصر', 'comment' => 'جلسة غير رسمية لتثبيت العلاقة بعد التوقيع.'],
             ['lead' => 21, 'type' => 'call', 'title' => 'مكالمة استكشاف الميزانية', 'user' => 'agent', 'schedule_in_days' => -17, 'at' => '13:30', 'duration' => 25, 'is_done' => 1, 'location' => 'مكالمة هاتفية', 'comment' => 'الميزانية المعتمدة أقل من نصف قيمة العرض.'],
-            ['lead' => 13, 'type' => 'note', 'title' => 'ملاحظة تفاوض — طلب خصم ١٥٪', 'user' => 'manager', 'schedule_in_days' => -6, 'at' => '16:00', 'duration' => 0, 'is_done' => 1, 'location' => null, 'comment' => 'طلبت إدارة الصفا خصماً ١٥٪ مقابل التعاقد لثلاث سنوات؛ يحتاج قراراً من الإدارة.'],
+            ['lead' => 13, 'type' => 'note', 'title' => 'ملاحظة تفاوض — طلب خصم 15٪', 'user' => 'manager', 'schedule_in_days' => -6, 'at' => '16:00', 'duration' => 0, 'is_done' => 1, 'location' => null, 'comment' => 'طلبت إدارة الصفا خصماً 15٪ مقابل التعاقد لثلاث سنوات؛ يحتاج قراراً من الإدارة.'],
             ['lead' => 5, 'type' => 'call', 'title' => 'مكالمة مع المدير المالي للإسكندرية للوجستية', 'user' => 'agent', 'schedule_in_days' => -4, 'at' => '10:00', 'duration' => 30, 'is_done' => 1, 'location' => 'مكالمة هاتفية', 'comment' => 'بانتظار موافقة نهائية على الخصم الخاص.'],
 
             // Today.
@@ -397,7 +397,7 @@ final class DemoFixtures
             ['lead' => 11, 'type' => 'call', 'title' => 'مكالمة مراجعة عرض ربط نقاط البيع', 'user' => 'agent', 'schedule_in_days' => 8, 'at' => '14:00', 'duration' => 30, 'is_done' => 0, 'location' => 'مكالمة هاتفية', 'comment' => 'مراجعة ملاحظات مديرة تقنية المعلومات على البنود.'],
             ['lead' => 12, 'type' => 'meeting', 'title' => 'اجتماع تعريفي — تقنية ناشئة', 'user' => 'manager', 'schedule_in_days' => 10, 'at' => '13:00', 'duration' => 45, 'is_done' => 0, 'location' => 'أونلاين — Teams', 'comment' => 'عرض عام للنظام والاتفاق على الخطوات التالية.'],
             ['lead' => 16, 'type' => 'lunch', 'title' => 'غداء عمل مع مديرة الموارد البشرية', 'user' => 'manager', 'schedule_in_days' => 12, 'at' => '15:30', 'duration' => 120, 'is_done' => 0, 'location' => 'فندق سميراميس — القاهرة', 'comment' => 'مناقشة حزمة الدعم والتدريب لأسوان للطاقة.'],
-            ['lead' => 1, 'type' => 'note', 'title' => 'ملاحظة — حجم الفواتير اليومية', 'user' => 'agent', 'schedule_in_days' => 1, 'at' => '09:00', 'duration' => 0, 'is_done' => 0, 'location' => null, 'comment' => 'نحو ٤٠٠ فاتورة يومياً على أربعة فروع؛ يجب تحديد حجم الترخيص بناءً على ذلك.'],
+            ['lead' => 1, 'type' => 'note', 'title' => 'ملاحظة — حجم الفواتير اليومية', 'user' => 'agent', 'schedule_in_days' => 1, 'at' => '09:00', 'duration' => 0, 'is_done' => 0, 'location' => null, 'comment' => 'نحو 400 فاتورة يومياً على أربعة فروع؛ يجب تحديد حجم الترخيص بناءً على ذلك.'],
             ['lead' => 20, 'type' => 'note', 'title' => 'ملاحظة بعد الإغلاق — فرص التجديد', 'user' => 'manager', 'schedule_in_days' => -2, 'at' => '17:00', 'duration' => 0, 'is_done' => 1, 'location' => null, 'comment' => 'العميل مرشح قوي لإضافة وحدة واتساب بزنس في الربع القادم.'],
 
             // Attached to a contact rather than a lead.
@@ -417,7 +417,7 @@ final class DemoFixtures
             [
                 'name' => 'عرض سعر جديد — قالب التسويق',
                 'subject' => 'عرض سعر جديد من سِجلنا',
-                'content' => '<p>مرحباً {%persons.name%}،</p><p>أرفقنا لك عرض سعر مخصصاً لنظام إدارة العملاء. العرض ساري ٣٠ يوماً.</p><p>مع التحية،<br>فريق سِجلنا</p>',
+                'content' => '<p>مرحباً {%persons.name%}،</p><p>أرفقنا لك عرض سعر مخصصاً لنظام إدارة العملاء. العرض ساري 30 يوماً.</p><p>مع التحية،<br>فريق سِجلنا</p>',
             ],
             [
                 'name' => 'تذكير بموعد — قالب التسويق',
@@ -483,7 +483,7 @@ final class DemoFixtures
                         'direction' => 'out',
                         'days_ago' => 8,
                         'subject' => 'رد: استفسار عن خصم التعاقد لثلاث سنوات',
-                        'body' => 'أهلاً هدى، شكراً على ملاحظاتك. أرفقنا نسخة معدلة بخصم ١٥٪ على بند الدعم السنوي مع تثبيت السعر لثلاث سنوات. العرض ساري حتى نهاية الشهر، ويسعدنا عقد اجتماع لمراجعة البنود.',
+                        'body' => 'أهلاً هدى، شكراً على ملاحظاتك. أرفقنا نسخة معدلة بخصم 15٪ على بند الدعم السنوي مع تثبيت السعر لثلاث سنوات. العرض ساري حتى نهاية الشهر، ويسعدنا عقد اجتماع لمراجعة البنود.',
                     ],
                     [
                         'direction' => 'in',
@@ -587,7 +587,7 @@ final class DemoFixtures
                     ['entity_type' => 'leads', 'code' => 'description', 'placeholder' => 'تفاصيل إضافية', 'is_required' => 0, 'sort_order' => 5],
                 ],
                 'submissions' => [
-                    ['name' => 'إيمان صبري', 'email' => 'eman.sabry@example.com', 'phone' => '+20 100 555 1201', 'title' => 'طلب عرض سعر — نظام إدارة العملاء', 'description' => 'شركة توزيع مواد غذائية بعدد ٦ مندوبين، تريد متابعة الفرص والعروض.'],
+                    ['name' => 'إيمان صبري', 'email' => 'eman.sabry@example.com', 'phone' => '+20 100 555 1201', 'title' => 'طلب عرض سعر — نظام إدارة العملاء', 'description' => 'شركة توزيع مواد غذائية بعدد 6 مندوبين، تريد متابعة الفرص والعروض.'],
                     ['name' => 'شريف حمادة', 'email' => 'sherif.hamada@example.com', 'phone' => '+20 101 555 1202', 'title' => 'طلب عرض سعر — وحدة الفاتورة الإلكترونية', 'description' => 'مطلوب ربط الفواتير بمصلحة الضرائب قبل نهاية الربع.'],
                     ['name' => 'هالة رمزي', 'email' => 'hala.ramzy@example.com', 'phone' => '+20 106 555 1203', 'title' => 'طلب عرض سعر — ترحيل بيانات', 'description' => 'لدينا ملفات Excel لجهات الاتصال والفرص من النظام الحالي.'],
                 ],

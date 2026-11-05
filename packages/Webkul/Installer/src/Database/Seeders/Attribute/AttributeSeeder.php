@@ -486,7 +486,13 @@ class AttributeSeeder extends Seeder
                 'type' => 'price',
                 'entity_type' => 'quotes',
                 'lookup_type' => null,
-                'validation' => 'decimal',
+                /**
+                 * The only money attribute that opts into the signed rule: an adjustment takes
+                 * money off the offer, so a negative is a real value and the demo tenant's own
+                 * quote stores `-1500.0000`. Every other `price` attribute stays on `decimal`,
+                 * which `AttributeForm` maps to the non-negative rule.
+                 */
+                'validation' => 'signed_decimal',
                 'sort_order' => '9',
                 'is_required' => '0',
                 'is_unique' => '0',
@@ -557,7 +563,7 @@ class AttributeSeeder extends Seeder
              */
             [
                 'code' => 'name',
-                'name' => trans('installer::app.seeders.attributes.warehouses.name'),
+                'name' => trans('installer::app.seeders.attributes.warehouses.name', [], $defaultLocale),
                 'type' => 'text',
                 'entity_type' => 'warehouses',
                 'lookup_type' => null,
@@ -571,7 +577,7 @@ class AttributeSeeder extends Seeder
                 'updated_at' => $now,
             ], [
                 'code' => 'description',
-                'name' => trans('installer::app.seeders.attributes.warehouses.description'),
+                'name' => trans('installer::app.seeders.attributes.warehouses.description', [], $defaultLocale),
                 'type' => 'textarea',
                 'entity_type' => 'warehouses',
                 'lookup_type' => null,
@@ -585,7 +591,7 @@ class AttributeSeeder extends Seeder
                 'updated_at' => $now,
             ], [
                 'code' => 'contact_name',
-                'name' => trans('installer::app.seeders.attributes.warehouses.contact-name'),
+                'name' => trans('installer::app.seeders.attributes.warehouses.contact-name', [], $defaultLocale),
                 'type' => 'text',
                 'entity_type' => 'warehouses',
                 'lookup_type' => null,
@@ -599,7 +605,7 @@ class AttributeSeeder extends Seeder
                 'updated_at' => $now,
             ], [
                 'code' => 'contact_emails',
-                'name' => trans('installer::app.seeders.attributes.warehouses.contact-emails'),
+                'name' => trans('installer::app.seeders.attributes.warehouses.contact-emails', [], $defaultLocale),
                 'type' => 'email',
                 'entity_type' => 'warehouses',
                 'lookup_type' => null,
@@ -613,7 +619,7 @@ class AttributeSeeder extends Seeder
                 'updated_at' => $now,
             ], [
                 'code' => 'contact_numbers',
-                'name' => trans('installer::app.seeders.attributes.warehouses.contact-numbers'),
+                'name' => trans('installer::app.seeders.attributes.warehouses.contact-numbers', [], $defaultLocale),
                 'type' => 'phone',
                 'entity_type' => 'warehouses',
                 'lookup_type' => null,
@@ -627,7 +633,7 @@ class AttributeSeeder extends Seeder
                 'updated_at' => $now,
             ], [
                 'code' => 'contact_address',
-                'name' => trans('installer::app.seeders.attributes.warehouses.contact-address'),
+                'name' => trans('installer::app.seeders.attributes.warehouses.contact-address', [], $defaultLocale),
                 'type' => 'address',
                 'entity_type' => 'warehouses',
                 'lookup_type' => null,
