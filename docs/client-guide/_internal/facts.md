@@ -4,7 +4,7 @@
 
 **الأساس:** قراءة ساكنة لهذا المستودع عند `04c20425` (2026-10-20)، `KRAYIN_VERSION = 2.2.7` (`packages/Webkul/Core/src/Core.php:21`). لم يُشغَّل أي اختبار أو خادم أو أمر قاعدة بيانات أثناء إعداد هذا الملف.
 
-**تحديث المصطلحات (2026-11-04):** طُبِّقت مصطلحات `.agents/context/guides/arabic-terminology.md` على النصوص المشحونة، فالنصوص العربية المنقولة هنا احتُذيت من شجرة العمل **بعد** التطبيق ولم تعد تقرأ كما كانت عند `04c20425`. الأرقام والمسارات والمعرّفات لم تتغيّر. ومصطلحان في الأسماء المشحونة ما زالا ناقصى التطبيق، ومحلّهما مذكور في موضعهما (§2 و§3).
+**تحديث المصطلحات (2026-11-04):** طُبِّقت مصطلحات `.agents/context/guides/arabic-terminology.md` على النصوص المشحونة، فالنصوص العربية المنقولة هنا احتُذيت من شجرة العمل **بعد** التطبيق ولم تعد تقرأ كما كانت عند `04c20425`. الأرقام والمسارات والمعرّفات لم تتغيّر. ولم يبقَ مصطلح مشحون ناقص التطبيق: المفتاحان اللذان كانا متأخرين (`layouts.configuration` و`products.view.inventory.add-warehouse`) صارا «التهيئة» و«إضافة مخزن»، والتفصيل في §8.
 
 **شكل الإحالة:** كل ادعاء يحمل الملف الذي بُني عليه بين قوسين معكوسين. المسارات نسبية إلى جذر المستودع.
 
@@ -22,7 +22,8 @@
 - **اللغة إعداد عام واحد للمنصة كلها، لا لكل مستخدم:** تُقرأ في `app()->setLocale()` من `general.general.locale_settings.locale` داخل الوسيط `admin_locale` (`packages/Webkul/Admin/src/Http/Middleware/Locale.php:38-42`)، والوسيط مُسجَّل في `packages/Webkul/Admin/src/Providers/AdminServiceProvider.php:34,42,46`.
 - **الاتجاه RTL من سمة `dir` على التخطيط:** `dir="{{ in_array(app()->getLocale(), ['fa', 'ar']) ? 'rtl' : 'ltr' }}"` في `packages/Webkul/Admin/src/Resources/views/components/layouts/index.blade.php:6` و`.../anonymous.blade.php:5`. ليس إعداداً مستقلاً — يتبع اللغة.
 - **اللغات المتاحة للاختيار عشر:** `config/app.php:107-118` (`ar, en, es, fa, ja, ko, pt_BR, tr, vi, zh_CN`).
-- **في هذا الـ checkout بالذات `APP_LOCALE=en` و`APP_TIMEZONE=Asia/Kolkata`:** في `.env` و`.env.example` كليهما. أي أن الواجهة العربية **غير مُفعَّلة افتراضياً هنا** حتى يغيّرها المالك من الإعدادات. الافتراضيات في `config/app.php:82,95`.
+- **في هذا الـ checkout بالذات `APP_LOCALE=en` و`APP_TIMEZONE=Africa/Cairo`:** في `.env` و`.env.example` كليهما، وافتراض `config/app.php:82` هو `Africa/Cairo` أيضاً — وكان `Asia/Kolkata` حتى 2026-11-04. أي أن الواجهة العربية **غير مُفعَّلة افتراضياً هنا** حتى يغيّرها المالك من الإعدادات. الافتراضيات في `config/app.php:82,95`.
+- **قاعدة البيانات تحفظ توقيت الحائط المحلي، لا `UTC`:** لا `config/database.php` يضبط منطقة زمنية للجلسة، وEloquent يكتب `now()` كما هي، فما يكتبه النظام هو ساعة التطبيق نفسها. ولأن التطبيق كان على `Asia/Kolkata` (+5:30) والقاهرة على `+2`، فالسجل المكتوب قبل 2026-11-04 يقرأ **3 ساعات و30 دقيقة أكبر** من لحظته الحقيقية — وإن كُتب والقاهرة على توقيت الصيف `+3` — وهو ما كان قائماً حتى 2026-10-30 — فالفارق **ساعتان و30 دقيقة**. **لم يُعَد كتابة أي سجل** (قرار المشغّل): اطرح الفارق من الوقت المعروض لتصل إلى اللحظة الفعلية بتوقيت القاهرة؛ أما السجل المكتوب بعد التبديل فمعروض صحيحاً بلا طرح.
 - **البريد يُعرَض LTR عند العميل حتى في نشر عربي؛ أما ملف PDF العرض العربي فيُعرَض RTL.** لا تُعِد وعد RTL للبريد. أما ملف PDF فليس LTR: في `packages/Webkul/Core/src/Traits/PDFHandler.php:28-41`، إذا كانت اللغة `ar` أو `he` يُبنى الملف بـ`Mpdf` مع `SetDirectionality('ar')` و`WriteHTML($this->adjustArabicAndPersianContent($html))` (تشكيل ArPHP)، والمسار نفسه في `packages/Webkul/Admin/src/Http/Controllers/Lead/QuoteController.php:152-167`. وdompdf (`barryvdh/laravel-dompdf`) يُستعمل لباقي اللغات فقط. (مكدّس PDF: `mpdf/mpdf ^8.2` و`khaled.alshamaa/ar-php ^6.3` و`barryvdh/laravel-dompdf ^3.1` في `composer.json:12,17,26`.)
 - **الترجمة العربية للواجهة لا تعني ترجمة بيانات العميل.** أسماء مسارات المبيعات والمراحل والمصادر والأنواع تأتي من المُبدِّلات ومن إدخال المالك، وقد تكون عربية أو إنجليزية حسب لغة التثبيت (`$defaultLocale` في `packages/Webkul/Installer/src/Database/Seeders/Lead/PipelineSeeder.php:27`).
 
@@ -47,7 +48,7 @@
   المصدر: `packages/Webkul/Admin/src/Config/menu.php` (مفاتيح `key`/`route`)، والنصوص من `layouts.*` في `ar/app.php`. البادئة `/{admin}` = `config('app.admin_path')` = `env('APP_ADMIN_PATH','admin')` (`config/app.php:67`, `packages/Webkul/Admin/src/Providers/AdminServiceProvider.php:42`).
 - **البند الثالث صار يُقرأ «عروض الأسعار»** مثل عنوان الشاشة `quotes.index.title` وتسمية ACL `acl.quotes`، فالتسميات الثلاث لنفس الشيء صارت واحدة. قبل تطبيق المصطلحات (2026-11-04) كان البند يقرأ «العروض» وحده — انظر §8.
 - **البندان 8 و9 متجاوران ويشتبهان** («الإعدادات» صفحة البطاقات، و«التهيئة» شجرة التهيئة) وهما شاشتان مختلفتان تماماً. قبل تطبيق المصطلحات كان البندان **متطابقين نصاً** («الإعدادات»)، وهذا كان أكبر مصدر لبس في القائمة كلها.
-- **المفتاح صُحِّح (2026-11-04):** `layouts.configuration` (`packages/Webkul/Admin/src/Resources/lang/ar/app.php:2438`) يقرأ الآن «التهيئة» مثل `acl.configuration` و`configuration.index.general.settings.menu_items.configuration` وتبويب البحث الشامل، فبند الشجرة لم يبقَ مطابقاً لبند صفحة البطاقات. قبل التصحيح كان المفتاح يشحن «الإعدادات»، وهو ما كان يجعل البندين متطابقين نصاً. الجدول أعلاه يكتب الاسم المعتمد.
+- **المفتاح صُحِّح (2026-11-04):** `layouts.configuration` في `packages/Webkul/Admin/src/Resources/lang/ar/app.php` يقرأ الآن «التهيئة» مثل `acl.configuration` و`configuration.index.general.settings.menu_items.configuration` وتبويب البحث الشامل، فبند الشجرة لم يبقَ مطابقاً لبند صفحة البطاقات. قبل التصحيح كان المفتاح يشحن «الإعدادات»، وهو ما كان يجعل البندين متطابقين نصاً. الجدول أعلاه يكتب الاسم المعتمد.
 - **عنوان صفحة الإعدادات هو `/{admin}/settings/settings` — الجزء مكرَّر.** مسبارا `settings` في `packages/Webkul/Admin/src/Routes/Admin/settings-routes.php:29,33` يتراكبان على مسار الابن. من يكتب `/admin/settings` وحده لا يصل إلى صفحة البطاقات.
 - **عنوان «حسابي» هو `/{admin}/account`** (`packages/Webkul/Admin/src/Routes/Admin/rest-routes.php:52-53`)، لا `/{admin}/user/account`.
 - **عنوان التهيئة:** `/{admin}/configuration` بمقطعَين اختياريَّين (`{slug?}/{slug2?}`، `configuration-routes.php:9`)؛ ولغة الواجهة على `/{admin}/configuration/general/general`.
@@ -99,7 +100,7 @@
 | `/{admin}/configuration` | **عام**، **إعدادات البريد الإلكتروني** |
 | `/{admin}/configuration/general` | **عام**، **الإعدادات**، **الذكاء الاصطناعي السحري** |
 | `/{admin}/configuration/general/general` | نموذج فيه **إعدادات اللغة** و**شعار الإدارة** |
-| `/{admin}/configuration/general/settings` | **إعدادات قسم "تم تطويره بواسطة"**، **إعدادات عناصر القائمة**، **إعدادات ألوان عناصر القائمة**، **إعدادات لوحة المعلومات**، **إعدادات الإشعارات** |
+| `/{admin}/configuration/general/settings` | **إعدادات قسم "مدعوم بواسطة"**، **إعدادات عناصر القائمة**، **إعدادات ألوان عناصر القائمة**، **إعدادات لوحة المعلومات**، **إعدادات الإشعارات** |
 | `/{admin}/configuration/general/magic_ai` | **الذكاء الاصطناعي السحري** (عدا زر التفعيل) و**إنشاء المستندات** |
 | `/{admin}/configuration/email/imap` | **حساب IMAP** |
 
@@ -111,7 +112,7 @@
   - «إعدادات اللغة» — `locale`، قائمة منسدلة من `Webkul\Core\Core@locales`، الافتراضي `en` (الأسطر 30-45). **هذا هو المفتاح العام للغة.**
   - «شعار الإدارة» — `logo_image` (`mimes:bmp,jpeg,jpg,png,webp`) و`favicon_image` (`mimes:ico,jpeg,jpg,png,webp`) (الأسطر 46-68).
 - **`/configuration/general/settings`** (الأسطر 69-…):
-  - «إعدادات قسم "تم تطويره بواسطة"» — `show` و`label`.
+  - «إعدادات قسم "مدعوم بواسطة"» — `show` و`label`.
   - «إعدادات عناصر القائمة» — **ستة عشر** حقلاً نصياً، `validation => 'max:20'`، بمفاتيح `dashboard, leads, quotes, mail, mail.inbox, mail.draft, mail.outbox, mail.sent, mail.trash, activities, contacts, contacts.persons, contacts.organizations, products, settings, configuration`. **تسميات القائمة قابلة للتغيير لكل عميل، بحد 20 حرفاً.**
   - «إعدادات ألوان عناصر القائمة» — `brand_color` (نوع `color`).
   - «إعدادات لوحة المعلومات» — `date_range` بقيم `1_month, 3_months, 9_months, 1_year, 2_years, custom` («شهر واحد، 3 أشهر، 9 أشهر، سنة واحدة، سنتان، مخصص») و`custom_days` (الافتراضي 30). **هذه ليست محدّدات اليوم/الأسبوع الظاهرة على اللوحة نفسها.**
@@ -130,7 +131,7 @@
 | المفتاح | القيمة في `.env` و`.env.example` هنا | الأثر |
 | --- | --- | --- |
 | `APP_LOCALE` | `en` | اللغة الافتراضية للمنصة؛ عربي يحتاج `ar` |
-| `APP_TIMEZONE` | `Asia/Kolkata` | التوقيت المشحون — يجب تغييره لتوقيت العميل |
+| `APP_TIMEZONE` | `Africa/Cairo` | توقيت القاهرة، ويُكتَب به في قاعدة البيانات (توقيت حائط محلي لا `UTC`)؛ يُغيَّر إلى توقيت العميل إن اختلف |
 | `APP_CURRENCY` | `USD` | **عملة واحدة فقط** لكل مثبَّت؛ لا تعدّد عملات |
 | `APP_ADMIN_PATH` | فارغ → `admin` | مسار لوحة الإدارة (`config/app.php:67`) |
 | `NOTIFICATION_DRIVER` | `polling` | `polling \| reverb \| pusher` (`config/notifications.php:34`) |
@@ -174,6 +175,8 @@
 
 - **المصادر الخمسة:** مباشر، البريد الإلكتروني، الهاتف، ويب، نموذج ويب (`Lead/SourceSeeder.php`).
 - **النوعان:** عمل جديد، عمل قائم (`Lead/TypeSeeder.php`).
+- **قائمة المحافظات عربية لمصر وحدها، والسعودية والإمارات بلا قائمة:** `packages/Webkul/Installer/src/Data/states.json` يحوي 595 صفاً في 16 دولة، ومن بينها **مصر** بمحافظاتها السبع والعشرين، بترتيبها المصري المعتاد (القاهرة، الجيزة، الإسكندرية، ثم الدلتا والقناة وسيناء والصعيد والحدود) وبأكواد ISO 3166-2:EG؛ وأسماؤها العربية في `packages/Webkul/Installer/src/Data/states-ar.json` يقرؤه `StatesSeeder` والترحيل `2026_11_05_140000_seed_egypt_governorates_arabic.php`. والدول الـ15 الأخرى تحتفظ بأسمائها الإنجليزية. و**السعودية والإمارات ليستا في الملف**، فيصير حقل **المحافظة** فيهما حقلاً نصياً حرّاً لا قائمة (`packages/Webkul/Admin/src/Resources/views/components/attributes/edit/address.blade.php`).
+- **أسماء الدول عربية ومرتَّبة بالقاموس:** أسماء **255 دولة** مولَّدة من CLDR في `packages/Webkul/Installer/src/Data/countries-ar.json` (بالسكربت `scripts/generate-arabic-country-names.php`)، و`Core::countries()` يرتّبها بـ`Collator` على اسم الدولة بعد حذف «ال» التعريف من أوّله، فتقع **اليمن** و**اليونان** و**اليابان** و**الولايات المتحدة** في آخر القائمة (`packages/Webkul/Core/src/Core.php`).
 - **الدور المُبدَّأ:** اسمه «مسؤول» ووصفه «دور المسؤول»، و`permission_type='all'` (`User/RoleSeeder.php`, `seeders.user.role.*`).
 - **سيرا عمل مُبدَّآن:** «رسائل بريد إلكتروني للمشاركين بعد إنشاء النشاط» و«… بعد تحديث النشاط» (`Workflow/WorkflowSeeder.php`).
 - **حالات الفراغ — تُقتبَس حرفياً ولا تُعاد صياغتها:**
@@ -213,6 +216,7 @@
 20. **لا تذكيرات موعَد بها، والبريد من سير العمل لا من موعد.** لا منبّه عند الموعد ولا قبله، والمُجدولان الوحيدان مهام الوارد والحملات؛ والبريد يخرج فقط بأن يُربَط إجراء `send_email_to_*` بحدثَي إنشاء أو تحديث النشاط (§3).
 21. **نموذج ويب لا يُسنِد المصدر «نموذج ويب» في تثبيت عربي.** الكود يبحث عن الاسم الإنجليزي الحرفي: `$this->sourceRepository->findOneByField('name', 'Web Form')`، وإن لم يجده يأخذ `first()` (`packages/Webkul/WebForm/src/Http/Controllers/WebFormController.php:203-210`). والمُبدِّل العربي يكتب في `lead_sources` الاسم مُعرَّمًا «نموذج ويب» في الصف id 3، و`first()` يُرجع id 1 = «البريد الإلكتروني» (`packages/Webkul/Installer/src/Database/Seeders/Lead/SourceSeeder.php:24-45`). النتيجة: فرصة تأتي من نموذج ويب يُسجَّل مصدرها **البريد الإلكتروني**. الحل المقترح للمزوّد: تسمية المصدر `Web Form` بالإنجليزية، أو تعديل البحث ليطابق code بدل الاسم. **لا تستنتج «جاء من النموذج» من حقل المصدر.**
 22. **المرحلة المسندة للنموذج هي أول مرحلة في مسار المبيعات المختار** (أو الافتراضي عند الفراغ) — `WebFormController.php:185-197`.
+23. **المسودة التي ترسلها تظهر في مجلدين معاً: «المرسل» و«البريد الوارد».** في `update()` يُضبَط `folders` أولاً على `[outbox]` (السطر 224)، ثم بعد نجاح `Mail::send` على `[inbox, sent]` (الأسطر 235-237)، وإعادة التوجيه إلى **البريد الوارد** (السطر 250) — بخلاف الرسالة الجديدة التي تنتهي في `[sent]` وحدها (`store()`، السطر 177) وتُعيد التوجيه إلى **المرسل** (السطر 200). وفلترة المجلد `where('folders', 'like', '%"'.$route.'"%')` (`packages/Webkul/Admin/src/DataGrids/Mail/EmailDataGrid.php:46`) تُظهر الصف نفسه في المجلدين، والجلد في **الوارد** أو من **المرسل** ينقل الرسالة الواحدة إلى **سلة المهملات** لا إلى مجلدها (`EmailController.php:346-368`). تحقُّق بمعاملة أُرجِعت: `["draft"]` ← `["outbox"]` ← `["inbox","sent"]`، والفلترة: `inbox` نعم، `sent` نعم، `draft` لا، `outbox` لا. (المصدر: `packages/Webkul/Admin/src/Http/Controllers/Mail/EmailController.php:209-264`.)
 
 ## 8. المصطلحات (مثبَّتة — لا يُعاد تقريرها)
 
@@ -246,4 +250,4 @@
 | configuration | التهيئة | مغلق في `acl` وتبويب البحث وبند القائمة؛ ويبقى «الإعدادات» لصفحة البطاقات |
 
 - **won/lost لم تعد صيغاً متعددة:** المرحلة والكانبان وبطاقة الإيراد تقول كلها «مكتسب»/«مفقود» (وبطاقة الإيراد «الإيرادات المكتسبة»/«الإيرادات المفقودة»). لم يبق ما يُقارَن، فلا تُكتَب ملاحظة فرق في الفصل.
-- **التطبيقان اكتملا في ملف اللغة (2026-11-04):** `layouts.configuration` (`packages/Webkul/Admin/src/Resources/lang/ar/app.php:2438`) صار «التهيئة» فلم يبقَ بند الشجرة مطابقاً لبند صفحة البطاقات، و`products.view.inventory.add-warehouse` (`ar/app.php:684`) صار «إضافة مخزن». قبل التصحيح كان الأول «الإعدادات» والثاني «إضافة مستودع»، والجدول أعلاه يكتب الاسم المعتمد (التهيئة، إضافة مخزن). ومن وجد مفتاحاً منهما عاد إلى القديم فليُبلِغ المشغّل بدل تعديله.
+- **التطبيقان اكتملا في ملف اللغة (2026-11-04):** `layouts.configuration` في `packages/Webkul/Admin/src/Resources/lang/ar/app.php` صار «التهيئة» فلم يبقَ بند الشجرة مطابقاً لبند صفحة البطاقات، و`products.view.inventory.add-warehouse` في الملف نفسه صار «إضافة مخزن». قبل التصحيح كان الأول «الإعدادات» والثاني «إضافة مستودع»، والجدول أعلاه يكتب الاسم المعتمد (التهيئة، إضافة مخزن). ومن وجد مفتاحاً منهما عاد إلى القديم فليُبلِغ المشغّل بدل تعديله.
