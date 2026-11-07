@@ -2487,6 +2487,7 @@ return [
         'message' => [
             'code' => 'Alan geçerli bir kod olmalıdır.',
             'decimal' => ':attribute ondalıklı bir sayı olmalıdır.',
+            'signed_decimal' => ':attribute eksi işareti taşıyabilen ondalıklı bir sayı olmalıdır.',
         ],
     ],
     'errors' => [
@@ -2504,6 +2505,10 @@ return [
         '404' => [
             'description' => 'Oops! Aradığınız sayfa tatilde. Aradığınız şeyi bulamadık gibi görünüyor.',
             'title' => '404 Sayfa Bulunamadı',
+        ],
+        '405' => [
+            'description' => 'Oops! Bu adres kullanılan istek yöntemini kabul etmiyor. Geri dönün ve isteği yeniden göndermek yerine sayfanın kendi bağlantılarını ve formlarını kullanın.',
+            'title' => '405 Yönteme İzin Verilmiyor',
         ],
         '401' => [
             'description' => 'Oops! Bu sayfaya erişim izniniz yok gibi görünüyor. Gerekli yetkilere sahip değilsiniz.',

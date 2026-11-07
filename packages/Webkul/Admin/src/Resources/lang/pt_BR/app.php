@@ -2487,6 +2487,7 @@ return [
         'message' => [
             'code' => 'O campo deve ser um código válido.',
             'decimal' => 'O campo :attribute deve ser um decimal.',
+            'signed_decimal' => 'O campo :attribute deve ser um decimal, que pode conter um sinal de menos.',
         ],
     ],
     'errors' => [
@@ -2504,6 +2505,10 @@ return [
         '404' => [
             'description' => 'Ops! A página que você procura saiu de férias. Parece que não encontramos o que você estava buscando.',
             'title' => '404 Page Not Found',
+        ],
+        '405' => [
+            'description' => 'Ops! Este endereço não aceita o método de solicitação utilizado. Volte e use os links e formulários da própria página em vez de reenviar a solicitação.',
+            'title' => '405 Método não permitido',
         ],
         '401' => [
             'description' => 'Ops! Parece que você não tem permissão para acessar esta página. Parece que estão faltando as credenciais necessárias.',

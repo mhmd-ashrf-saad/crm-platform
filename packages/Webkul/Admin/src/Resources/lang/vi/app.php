@@ -2487,6 +2487,7 @@ return [
         'message' => [
             'code' => 'Trường phải là một mã hợp lệ.',
             'decimal' => ':attribute phải là một số thập phân.',
+            'signed_decimal' => ':attribute phải là một số thập phân và có thể có dấu trừ.',
         ],
     ],
     'errors' => [
@@ -2504,6 +2505,10 @@ return [
         '404' => [
             'description' => 'Rất tiếc! Trang bạn đang tìm kiếm hiện không có ở đây. Có vẻ như chúng tôi không thể tìm thấy những gì bạn đang tìm kiếm.',
             'title' => '404 Không Tìm Thấy Trang',
+        ],
+        '405' => [
+            'description' => 'Rất tiếc! Địa chỉ này không chấp nhận phương thức yêu cầu đã được sử dụng. Hãy quay lại và sử dụng các liên kết và biểu mẫu của chính trang thay vì gửi lại yêu cầu.',
+            'title' => '405 Phương Thức Không Được Phép',
         ],
         '401' => [
             'description' => 'Rất tiếc! Có vẻ như bạn không được phép truy cập vào trang này. Có vẻ bạn đang thiếu thông tin xác thực cần thiết.',
