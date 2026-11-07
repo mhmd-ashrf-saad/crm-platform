@@ -151,6 +151,86 @@ const todayParts = () => {
     return { year: today.getFullYear(), month: today.getMonth(), day: today.getDate() };
 };
 
+/**
+ * Every dashboard report fetches its figures from this one route, whatever card it feeds.
+ */
+const STATS_URL = "/admin/dashboard/stats";
+
+/**
+ * The dashboard's own report fetches, watched so a case can wait for them to finish.
+ *
+ * Every card component fetches from its own `mounted()` with no filters — `this.getStats({})` in
+ * `Resources/views/dashboard/index/*.blade.php`, once per card, so eight requests come out of a
+ * single mount: `over-all`, `revenue-stats`, `revenue-by-sources`, `revenue-by-types`, `total-leads`,
+ * `top-persons`, `top-selling-products` and `open-leads-by-states`. They carry no `start` and no
+ * `end` on purpose: they are the dashboard opening on its default period, and the server fills that
+ * period in. They are legitimately range-less.
+ *
+ * What they are not is ordered. They land whenever the network delivers them, so a case that
+ * attaches a `request` listener and then asserts on *everything* it collected can collect one of
+ * them and fail on a request that was never a response to a click. That is what reddened shard 1,
+ * with `http://127.0.0.1:8000/admin/dashboard/stats?type=revenue-stats` as the received URL.
+ *
+ * The listeners are attached before the navigation that mounts the dashboard, because a request
+ * already in flight when a listener is attached never reaches it — and then "nothing is in flight"
+ * would be a claim about a set the offending request was never in.
+ *
+ * The set is emptied when a navigation commits. Without that, the requests belonging to the page the
+ * navigation replaced stay in it: a request aborted by a navigation does not reliably report
+ * `requestfinished` or `requestfailed`, so it would sit there looking like a fetch that never comes
+ * back, and `drain()` would wait out its whole budget on requests from a document that is gone.
+ */
+const watchDashboardStats = (adminPage: any) => {
+    const inFlight = new Set<any>();
+
+    adminPage.on("request", (request: any) => {
+        if (request.url().includes(STATS_URL)) {
+            inFlight.add(request);
+        }
+    });
+
+    const settled = (request: any) => inFlight.delete(request);
+
+    adminPage.on("requestfinished", settled);
+    adminPage.on("requestfailed", settled);
+
+    /**
+     * A new document's own scripts cannot have run yet when its navigation commits, so everything
+     * in the set at this point belongs to the document that was just replaced.
+     */
+    adminPage.on("framenavigated", (frame: any) => {
+        if (frame === adminPage.mainFrame()) {
+            inFlight.clear();
+        }
+    });
+
+    return {
+        /**
+         * Resolve once the dashboard has mounted and every fetch that mount issued is answered.
+         *
+         * `#app.__vue_app__` is Vue's own marker, and `app.mount()` assigns it after the child
+         * components' `mounted()` hooks have run — so when it appears, the last of the eight
+         * fetches has already been sent. Measured on this instance: the eight are issued inside a
+         * 1 ms window, 22 ms before the marker appears, and all of them are answered within 500 ms.
+         * Waiting for the requests to drain without waiting for the marker would resolve in the
+         * window between the document loading and Vue mounting it, which is the same race in a
+         * different disguise.
+         */
+        drain: async () => {
+            await adminPage.waitForFunction(() =>
+                Boolean((document.querySelector("#app") as any)?.__vue_app__)
+            );
+
+            await expect
+                .poll(() => inFlight.size, {
+                    message:
+                        "the dashboard's own mount-time report fetches should finish before a case starts",
+                })
+                .toBe(0);
+        },
+    };
+};
+
 test.describe("dashboard date range filter", () => {
     const control = (adminPage: any) =>
         adminPage.locator("button:has(.icon-calendar)").first();
@@ -159,7 +239,17 @@ test.describe("dashboard date range filter", () => {
         adminPage.locator(`button:text-is("${ label }")`).first();
 
     test.beforeEach(async ({ adminPage }) => {
+        /**
+         * Watched from before the navigation, then waited out. The dashboard issues its own
+         * range-less report fetches as it mounts, and a case must not have to tell those apart from
+         * the ones its own clicks cause: `watchDashboardStats` records why they exist, and why
+         * leaving one in flight is a race rather than a product fault.
+         */
+        const mountFetches = watchDashboardStats(adminPage);
+
         await adminPage.goto("admin/dashboard");
+
+        await mountFetches.drain();
     });
 
     test("the control shows the range it currently holds", async ({ adminPage }) => {
@@ -323,7 +413,7 @@ test.describe("dashboard date range filter", () => {
         const requests: string[] = [];
 
         adminPage.on("request", (request: any) => {
-            if (request.url().includes("/admin/dashboard/stats")) {
+            if (request.url().includes(STATS_URL)) {
                 requests.push(request.url());
             }
         });
@@ -351,8 +441,20 @@ test.describe("dashboard date range filter", () => {
     test("a hand-picked range reaches the reports", async ({ adminPage }) => {
         const requests: string[] = [];
 
+        /**
+         * This listener is attached after `beforeEach` has waited the dashboard's own mount-time
+         * fetches out, so everything collected below is a response to the two clicks and the strict
+         * "every request carries both ends" assertion below is honest.
+         *
+         * Do not move the collection earlier without that wait. Each card fetches once as it mounts,
+         * with no range at all (`this.getStats({})`), and one of those arriving late is exactly what
+         * failed here: the received URL was `.../admin/dashboard/stats?type=revenue-stats`, a request
+         * no click caused. Filtering the assertion down to "at least one request has a range" would
+         * hide the race instead of removing it, and would stop detecting the defect this case exists
+         * for — a picked range arriving with `start`/`end` overwritten by `undefined`.
+         */
         adminPage.on("request", (request: any) => {
-            if (request.url().includes("/admin/dashboard/stats")) {
+            if (request.url().includes(STATS_URL)) {
                 requests.push(request.url());
             }
         });

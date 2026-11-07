@@ -2,16 +2,24 @@
 /test-results
 /.state
 
-# Run scratch that the suite rewrites on every execution, so it must never be a committed artifact.
-# Each of these was tracked, and because an ignore rule does not apply to a tracked file the tree went
-# dirty after every run and the committed copy was only ever a stale snapshot. They stay on disk.
+# Run scratch is ignored. Upload fixtures are not, and conflating the two is what reddened CI: with
+# `/data/data-transfer/*.csv` ignored, a fresh checkout had no CSVs to upload and the data-transfer
+# spec died on `ENOENT .../data/data-transfer/products.csv` before it reached a single assertion.
 #
 #   /test-data/runtime.json     a data bag one fixture writes for another to read; only this file
-#                               lives in test-data/, and it carries no fixture the suite needs to run.
-#   /data/data-transfer/*.csv   the files the import specs upload and the export specs overwrite.
-#                               Deliberately not `/data/`: data/images/ holds twelve fixture images
-#                               the specs attach and those are read-only inputs worth tracking.
+#                               lives in test-data/, the suite never reads it as an input, and it is
+#                               rewritten on every run. Ignoring it is right.
+#
+# `data/data-transfer/*.csv` are *inputs*: the six CSVs the import cases upload, and nothing
+# regenerates them, so they stay tracked. They are not read-only, though, and the difference matters
+# to whoever runs this suite next: `updateCsv()` and `updateCsvProductId()` in
+# `pages/settings/DataTransferPage.ts` rewrite the `person_id`, `organization_id` and `product`
+# columns in place with ids read from the instance under test. A local run therefore leaves the
+# tracked copies modified — do not commit that, restore it with
+# `git checkout -- packages/Webkul/Admin/tests/e2e-pw/data/data-transfer/`.
+#
+# Deliberately not `/data/`: `data/images/` holds twelve fixture images the specs attach, and those
+# are read-only inputs worth tracking.
 #
 # `.state/` needs no entry of its own -- `/.state` above already covers it.
 /test-data/runtime.json
-/data/data-transfer/*.csv
