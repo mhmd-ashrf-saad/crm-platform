@@ -23,6 +23,7 @@ npm-debug.log
 !/docs/sales/
 !/docs/ops/
 !/docs/legal/
+!/docs/design/
 /playwright-report
 /public/css
 /public/js

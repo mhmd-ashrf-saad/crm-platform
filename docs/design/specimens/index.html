@@ -1,0 +1,195 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Sijilna admin - palette and typography directions (proposal)</title>
+<style>
+
+:root {
+  --chrome-ink: #16181d;
+  --chrome-mute: #5c626d;
+  --chrome-rule: #e3e4e8;
+  --chrome-bg: #ffffff;
+  --chrome-sunken: #f6f7f9;
+}
+* { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; }
+body {
+  margin: 0;
+  background: var(--chrome-bg);
+  color: var(--chrome-ink);
+  font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  font-size: 15px;
+  line-height: 1.6;
+}
+code, .mono { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 0.86em; }
+
+.topbar {
+  position: sticky; top: 0; z-index: 50;
+  display: flex; align-items: center; gap: 18px;
+  padding: 10px 24px;
+  background: rgba(255,255,255,.92);
+  backdrop-filter: blur(8px);
+  border-bottom: 1px solid var(--chrome-rule);
+}
+.topbar .brand { display: flex; align-items: center; gap: 10px; font-weight: 600; letter-spacing: -.01em; }
+.topbar .brand svg { width: 22px; height: 22px; display: block; }
+.topbar .brand small { color: var(--chrome-mute); font-weight: 400; }
+.topbar nav { display: flex; gap: 4px; margin-left: auto; flex-wrap: wrap; }
+.topbar nav a {
+  padding: 4px 10px; border-radius: 6px; text-decoration: none;
+  color: var(--chrome-mute); font-size: 13px; border: 1px solid transparent;
+}
+.topbar nav a:hover { background: var(--chrome-sunken); color: var(--chrome-ink); }
+.topbar nav a[aria-current="page"] { color: var(--chrome-ink); border-color: var(--chrome-rule); font-weight: 600; }
+
+.tag {
+  display: inline-flex; align-items: center; gap: 6px;
+  font-size: 11px; font-weight: 600; letter-spacing: .06em; text-transform: uppercase;
+  padding: 3px 8px; border-radius: 999px;
+  background: #fff4d6; color: #6b4b00; border: 1px solid #e9d9a8;
+}
+
+.doc { max-width: 1080px; margin: 0 auto; padding: 40px 24px 96px; }
+
+.sec { padding: 34px 0; border-top: 1px solid var(--chrome-rule); }
+.sec:first-of-type { border-top: 0; padding-top: 8px; }
+.sec > h2 {
+  font-size: 13px; font-weight: 700; letter-spacing: .09em; text-transform: uppercase;
+  color: var(--chrome-mute); margin: 0 0 6px;
+}
+.sec > .lede { margin: 0 0 22px; font-size: 17px; line-height: 1.55; max-width: 72ch; }
+.sec > .note { margin: -10px 0 22px; color: var(--chrome-mute); font-size: 13.5px; max-width: 78ch; }
+
+.hero h1 { font-size: 34px; line-height: 1.15; letter-spacing: -.02em; margin: 6px 0 10px; }
+.hero .kicker { font-size: 12px; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; color: var(--chrome-mute); }
+.hero .character { font-size: 19px; line-height: 1.5; max-width: 72ch; margin: 0 0 18px; }
+
+.facts { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 14px; margin: 22px 0 0; }
+.fact { border: 1px solid var(--chrome-rule); border-radius: 10px; padding: 12px 14px; background: #fff; }
+.fact h3 { margin: 0 0 6px; font-size: 11px; letter-spacing: .08em; text-transform: uppercase; color: var(--chrome-mute); font-weight: 700; }
+.fact p { margin: 0; font-size: 13.5px; line-height: 1.5; }
+
+.anchors { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 10px 20px; }
+.anchors li { display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--chrome-mute); }
+.anchors .sw { width: 16px; height: 16px; border-radius: 4px; border: 1px solid rgba(0,0,0,.12); display: inline-block; }
+.anchors b { color: var(--chrome-ink); font-weight: 600; }
+
+/* ---- swatch strips ---- */
+.strip { display: grid; gap: 0; border-radius: 10px; overflow: hidden; border: 1px solid var(--chrome-rule); }
+.strip.primary, .strip.neutral { grid-template-columns: repeat(11, 1fr); }
+.strip .chip { padding: 0; }
+.strip .chip-sw { height: 62px; position: relative; }
+.strip .chip-sw.pin::after {
+  content: ""; position: absolute; inset: 0; border: 2px solid var(--chrome-ink); border-radius: 0;
+}
+.strip .chip-meta { padding: 6px 7px 8px; font-size: 10.5px; line-height: 1.35; }
+.strip .chip-meta code { display: block; color: var(--chrome-ink); }
+.strip .chip-meta span { display: block; color: var(--chrome-mute); }
+.strip .chip-meta em { display: block; font-style: normal; font-weight: 700; color: var(--chrome-ink); font-size: 9.5px; letter-spacing: .04em; text-transform: uppercase; }
+
+.sem-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(232px, 1fr)); gap: 14px; }
+.sem {
+  border: 1px solid var(--chrome-rule); border-radius: 10px; overflow: hidden; background: #fff;
+}
+.sem .sem-head { padding: 10px 12px 8px; font-weight: 700; font-size: 13px; display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.sem .sem-head code { font-weight: 400; color: var(--chrome-mute); font-size: 11px; }
+.sem .sem-sw { display: grid; grid-template-columns: repeat(3, 1fr); }
+.sem .sem-sw > div { height: 44px; }
+.sem .sem-body { padding: 10px 12px 12px; font-size: 11.5px; line-height: 1.5; color: var(--chrome-mute); }
+.sem .sem-body table { width: 100%; border-collapse: collapse; }
+.sem .sem-body td { padding: 1px 0; vertical-align: baseline; }
+.sem .sem-body td:last-child { text-align: right; color: var(--chrome-ink); font-family: ui-monospace, Menlo, monospace; font-size: 11px; }
+.sem .sem-demo { padding: 10px 12px; border-top: 1px solid var(--chrome-rule); background: var(--chrome-sunken); }
+
+/* ---- type scale ---- */
+.tscale { width: 100%; border-collapse: collapse; }
+.tscale th { text-align: left; font-size: 11px; letter-spacing: .08em; text-transform: uppercase; color: var(--chrome-mute); font-weight: 700; padding: 0 10px 8px 0; }
+.tscale td { padding: 12px 10px 12px 0; border-top: 1px solid var(--chrome-rule); vertical-align: baseline; }
+.tscale td.role { width: 220px; font-size: 12px; color: var(--chrome-mute); }
+.tscale td.role b { display: block; color: var(--chrome-ink); font-size: 13px; }
+.tscale td.role code { font-size: 11px; }
+.tscale td.ar { border-left: 1px solid var(--chrome-rule); padding-left: 18px; }
+
+/* ---- radii / density ---- */
+.radii { display: flex; flex-wrap: wrap; gap: 14px; }
+.radius { border: 1px solid var(--chrome-rule); border-radius: 10px; padding: 10px; width: 118px; }
+.radius .box { height: 46px; background: var(--surface-sunken); border: 1px solid var(--border-default); }
+.radius p { margin: 8px 0 0; font-size: 11px; color: var(--chrome-mute); line-height: 1.4; }
+.radius p code { display: block; color: var(--chrome-ink); }
+
+.densities { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; }
+@media (max-width: 860px) { .densities { grid-template-columns: 1fr; } }
+.density h3 { margin: 0 0 8px; font-size: 12px; letter-spacing: .07em; text-transform: uppercase; color: var(--chrome-mute); }
+.density .spec {
+  border: 1px solid var(--border-default); border-radius: var(--card-radius); overflow: hidden; background: var(--surface-card);
+}
+
+.doc-foot { max-width: 1080px; margin: 0 auto; padding: 24px 24px 80px; color: var(--chrome-mute); font-size: 13px; border-top: 1px solid var(--chrome-rule); }
+.doc-foot p { margin: 0 0 8px; max-width: 84ch; }
+.doc-foot strong { color: var(--chrome-ink); }
+
+/* ---- chooser ---- */
+.picker { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 18px; margin-top: 8px; }
+.pick { display: block; border: 1px solid var(--chrome-rule); border-radius: 12px; padding: 18px; text-decoration: none; color: inherit; background: #fff; transition: border-color .15s, box-shadow .15s; }
+.pick:hover { border-color: #b9bcc4; box-shadow: 0 6px 18px rgba(16,24,40,.07); }
+.pick .pick-ramp { display: flex; height: 26px; border-radius: 6px; overflow: hidden; margin-bottom: 12px; }
+.pick .pick-ramp i { flex: 1; }
+.pick h2 { margin: 0 0 4px; font-size: 19px; letter-spacing: -.01em; }
+.pick .pick-char { margin: 0 0 10px; font-size: 13.5px; color: var(--chrome-mute); line-height: 1.5; }
+.pick dl { margin: 0; font-size: 12.5px; display: grid; grid-template-columns: 74px 1fr; gap: 4px 8px; }
+.pick dt { color: var(--chrome-mute); }
+.pick dd { margin: 0; }
+.pick .go { margin-top: 12px; font-size: 13px; font-weight: 600; }
+
+.picker { margin-top: 26px; }
+</style>
+</head>
+<body>
+<div class="topbar">
+  <div class="brand"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" width="22" height="22" role="img" aria-labelledby="sijilna-mark-title">
+  <title id="sijilna-mark-title">Sijilna mark</title>
+  <!-- Sijilna monogram: the Arabic seen (س) of سجلنا built as a register — three ruled
+       entry humps on a bound baseline, the tail descending as the register spine.
+       One union path: fills only, no strokes, no text, no gradients, no rasters.
+       Single colour: brand ink #0B3C5D. Glyph bbox x 35-222, y 63-194. -->
+  <path fill="#0B3C5D" d="M108 78 A15 15 0 0 1 138 78 L138 108 L150 108 L150 78 A15 15 0 0 1 180 78 L180 108 L192 108 L192 78 A15 15 0 0 1 222 78 L222 138 L89 138 L89 194 L50 194 A15 15 0 0 1 50 164 L59 164 L59 108 L108 108 Z"/>
+</svg>
+<span>Sijilna <small>- admin design directions</small></span></div>
+  <nav><span class="tag">Proposal - not a decision</span></nav>
+</div>
+<main class="doc">
+  <section class="sec hero">
+    <p class="kicker">Design brief - crm-7qu.1</p>
+    <h1>Three directions for the admin UI. You pick one.</h1>
+    <p class="character">All three derive their primary scale from the brand navy <code>#0B3C5D</code> and their neutral scale from the brand cream <code>#FAF7F1</code>, keep the mark and both wordmarks untouched, and are expressible as the same six token groups (primary, neutral, semantic, type, radii, density) so the token bead can ship whichever one you choose. They differ in character: how deep the navy goes, how warm the paper stays, how loud the semantics are, what the Arabic typeface is, and how sharp or soft the corners are.</p>
+    <div class="facts">
+      <div class="fact"><h3>Fixed input</h3><p>Navy <code>#0B3C5D</code>, cream <code>#FAF7F1</code>, the existing mark and wordmarks, and Arabic-first typography. Not up for redesign.</p></div>
+      <div class="fact"><h3>Not a recommendation</h3><p>No direction in this set is marked recommended or approved. The choice is recorded on the bead once you make it.</p></div>
+      <div class="fact"><h3>No network</h3><p>Each sheet embeds its real font files and its own CSS. Open it from the filesystem with the network off; nothing is fetched.</p></div>
+      <div class="fact"><h3>Nothing wired in</h3><p>No application file, no token file and no CSS in the product was changed by this brief.</p></div>
+    </div>
+  </section>
+  <section class="sec">
+    <h2>Pick a sheet</h2>
+    <div class="picker">
+      <a class="pick" href="register.html"><div class="pick-ramp"><i style="background:#CADDED"></i><i style="background:#ACC7DF"></i><i style="background:#87ABC8"></i><i style="background:#658EB0"></i><i style="background:#4A7699"></i><i style="background:#326084"></i><i style="background:#1F4E71"></i><i style="background:#0B3C5D"></i><i style="background:#002843"></i></div><div class="pick-ramp" style="height:10px"><i style="background:#F1EDE6"></i><i style="background:#E3DDD5"></i><i style="background:#D2CAC1"></i><i style="background:#B3A9A2"></i><i style="background:#8E847F"></i><i style="background:#5A6472"></i><i style="background:#445162"></i><i style="background:#2A3B4E"></i><i style="background:#12263A"></i></div><h2>A - Register</h2><p class="pick-char">Institutional. The brand exactly as it was drawn, with nothing louder than the data.</p><dl><dt>Arabic</dt><dd>IBM Plex Sans Arabic</dd><dt>Latin</dt><dd>IBM Plex Sans</dd><dt>Radii</dt><dd>control 6 (md) - card 8 (lg) - chip 6 (md)</dd><dt>Rows</dt><dd>52px comfortable / 38px compact</dd></dl><p class="go">Open the specimen sheet &rarr;</p></a><a class="pick" href="qalam.html"><div class="pick-ramp"><i style="background:#C7DCEE"></i><i style="background:#A7C6E0"></i><i style="background:#84A9C9"></i><i style="background:#628DB1"></i><i style="background:#47769B"></i><i style="background:#34648A"></i><i style="background:#245478"></i><i style="background:#17476A"></i><i style="background:#0B3C5D"></i></div><div class="pick-ramp" style="height:10px"><i style="background:#F2EFE8"></i><i style="background:#E6E1D9"></i><i style="background:#D7D1C8"></i><i style="background:#BEB7AD"></i><i style="background:#9A9288"></i><i style="background:#797067"></i><i style="background:#60574E"></i><i style="background:#473E37"></i><i style="background:#312822"></i></div><h2>B - Qalam</h2><p class="pick-char">A register that looks printed: deep ink, paper, hairlines, Naskh for Arabic headings.</p><dl><dt>Arabic</dt><dd>Noto Sans Arabic (grid) + Noto Naskh Arabic (headings)</dd><dt>Latin</dt><dd>Noto Sans (UI) + Noto Serif (display)</dd><dt>Radii</dt><dd>control 2 (md) - card 4 (xl) - badge 2 (a squared label, not a pill)</dd><dt>Rows</dt><dd>46px comfortable / 34px compact</dd></dl><p class="go">Open the specimen sheet &rarr;</p></a><a class="pick" href="signal.html"><div class="pick-ramp"><i style="background:#C0E1FB"></i><i style="background:#9DCCF1"></i><i style="background:#72AFDE"></i><i style="background:#4891C8"></i><i style="background:#2478B1"></i><i style="background:#036299"></i><i style="background:#004F7C"></i><i style="background:#0B3C5D"></i><i style="background:#002843"></i></div><div class="pick-ramp" style="height:10px"><i style="background:#F3F0EA"></i><i style="background:#E4E4DF"></i><i style="background:#D2D6D5"></i><i style="background:#B8BBBC"></i><i style="background:#91979B"></i><i style="background:#6D747C"></i><i style="background:#515962"></i><i style="background:#383F49"></i><i style="background:#1F2731"></i></div><h2>C - Signal</h2><p class="pick-char">Contemporary product UI: a livelier navy family, cool neutrals, soft corners, loud semantics.</p><dl><dt>Arabic</dt><dd>Cairo</dd><dt>Latin</dt><dd>Cairo</dd><dt>Radii</dt><dd>control 10 (md) - card 14 (lg) - chip pill</dd><dt>Rows</dt><dd>56px comfortable / 40px compact</dd></dl><p class="go">Open the specimen sheet &rarr;</p></a>
+    </div>
+  </section>
+  <section class="sec">
+    <h2>The decision in plain terms</h2>
+    <p class="lede">The three directions are not three shades of the same choice; they answer three different questions.</p>
+    <div class="facts">
+      <div class="fact"><h3>Is the brand navy the button?</h3><p><strong>A</strong> yes, exactly. <strong>B</strong> yes, and deeper still. <strong>C</strong> no - the button is a livelier step of the same family and navy becomes the frame.</p></div>
+      <div class="fact"><h3>Is the product paper or screen?</h3><p><strong>A</strong> paper canvas, white cards. <strong>B</strong> paper everywhere, hairlines instead of shadows. <strong>C</strong> white screen, tinted panels.</p></div>
+      <div class="fact"><h3>How much does Arabic shape the type?</h3><p><strong>A</strong> one neutral sans across both scripts. <strong>B</strong> Naskh for Arabic headings - a printed register. <strong>C</strong> one geometric family carrying both scripts.</p></div>
+      <div class="fact"><h3>How tight are the grids?</h3><p><strong>A</strong> 52/38 px rows. <strong>B</strong> 46/34 px. <strong>C</strong> 56/40 px. Arabic never drops below 16 px in any of them.</p></div>
+    </div>
+  </section>
+</main>
+<footer class="doc-foot">
+  <p><strong>Proposal, not a decision.</strong> Full rationale, every scale, every ratio and every licence: <code>docs/design/rebrand-palette-directions.md</code></p>
+</footer>
+</body>
+</html>
