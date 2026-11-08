@@ -1357,6 +1357,7 @@ return [
             ],
         ],
         'warehouses' => [
+            'products' => '产品',
             'index' => [
                 'title' => '仓库',
                 'create-btn' => '创建仓库',

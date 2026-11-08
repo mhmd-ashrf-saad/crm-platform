@@ -1357,6 +1357,7 @@ return [
             ],
         ],
         'warehouses' => [
+            'products' => 'Productos',
             'index' => [
                 'title' => 'Almacenes',
                 'create-btn' => 'Crear Almacén',

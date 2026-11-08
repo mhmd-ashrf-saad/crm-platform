@@ -1357,6 +1357,7 @@ return [
             ],
         ],
         'warehouses' => [
+            'products' => 'Ürünler',
             'index' => [
                 'title' => 'Depolar',
                 'create-btn' => 'Depo Oluştur',

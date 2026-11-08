@@ -1357,6 +1357,7 @@ return [
             ],
         ],
         'warehouses' => [
+            'products' => 'Sản phẩm',
             'index' => [
                 'title' => 'Kho Hàng',
                 'create-btn' => 'Tạo Kho Hàng',

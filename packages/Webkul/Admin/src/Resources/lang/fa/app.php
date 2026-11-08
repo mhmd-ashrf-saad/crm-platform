@@ -1357,6 +1357,7 @@ return [
             ],
         ],
         'warehouses' => [
+            'products' => 'محصولات',
             'index' => [
                 'title' => 'انبارها',
                 'create-btn' => 'ایجاد انبار',

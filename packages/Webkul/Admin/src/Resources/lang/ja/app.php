@@ -1359,6 +1359,7 @@ return [
             ],
         ],
         'warehouses' => [
+            'products' => '商品',
             'index' => [
                 'title' => '倉庫',
                 'create-btn' => '倉庫を作成',

@@ -1357,6 +1357,7 @@ return [
             ],
         ],
         'warehouses' => [
+            'products' => '상품',
             'index' => [
                 'title' => '창고',
                 'create-btn' => '창고 생성',

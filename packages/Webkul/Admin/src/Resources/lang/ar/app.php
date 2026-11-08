@@ -1359,6 +1359,7 @@ return [
             ],
         ],
         'warehouses' => [
+            'products' => 'المنتجات',
             'index' => [
                 'title' => 'المخازن',
                 'create-btn' => 'إنشاء مخزن',
