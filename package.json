@@ -3,7 +3,10 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "vite build"
+    "build": "vite build",
+    "vr:baseline": "cd packages/Webkul/Admin && npx playwright test --config=tests/e2e-pw/playwright.visual.config.ts --update-snapshots",
+    "vr:compare": "cd packages/Webkul/Admin && npx playwright test --config=tests/e2e-pw/playwright.visual.config.ts",
+    "vr:coverage": "node packages/Webkul/Admin/tests/e2e-pw/visual/check-coverage.mjs"
   },
   "devDependencies": {
     "@fast-csv/format": "^5.0.7",
