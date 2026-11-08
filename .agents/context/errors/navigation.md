@@ -10,6 +10,7 @@ and the check that catches each one.
 | File | Topic |
 | ---- | ----- |
 | [lands-from-experience.md](lands-from-experience.md) | Eight diagnosed failures: dangling storage symlink, hardcoded credential, DB name mismatch, installer hang, unanchored `pkill`, tracked cache file, read-only-store illusion, cached-config guard/wipe disagreement |
+| [installer-ignores-env-override.md](installer-ignores-env-override.md) | The 2026-11-08 incident: `krayin-crm:install` discards `DB_DATABASE` and ran `migrate:fresh` against the live `krayin` database |
 
 ## Related
 

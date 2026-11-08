@@ -1,5 +1,6 @@
 <?php
 
+use Database\Seeders\Demo\DemoCredentials;
 use Database\Seeders\Demo\DemoIdentity;
 use Database\Seeders\Demo\DemoSeeder;
 use Illuminate\Foundation\Testing\DatabaseTransactions;
@@ -40,6 +41,43 @@ function demoCredentialsPath(): string
     static $path;
 
     return $path ??= storage_path('framework/testing/demo-credentials-'.Str::random(12).'.txt');
+}
+
+/**
+ * A credentials *directory* this test run owns.
+ *
+ * `DemoCredentials::DEFAULT_DIRECTORY` is `/var/tmp/pi-scratch/demo-seed`, which holds the file a
+ * live instance depends on right now. The suite must never create, overwrite or delete anything
+ * there — doing so is the very defect this feature exists to prevent — so a test that exercises the
+ * database-derived naming designates its own directory instead. `DemoCredentials::path()` takes one
+ * as its second argument for exactly that reason, so the real derivation still runs: the connection
+ * is read and the name is turned into a filename, only the write lands somewhere the suite owns.
+ */
+function demoCredentialsDirectory(): string
+{
+    return storage_path('framework/testing/demo-credentials-'.Str::random(12));
+}
+
+/**
+ * The demo passwords as the credentials file holds them, keyed by address.
+ *
+ * @return array<string, string>
+ */
+function demoCredentialsFilePasswords(?string $path = null): array
+{
+    $passwords = [];
+
+    foreach (file($path ?? demoCredentialsPath(), FILE_IGNORE_NEW_LINES) as $line) {
+        if ($line === '' || str_starts_with($line, '#')) {
+            continue;
+        }
+
+        [$email, $password] = explode(': ', $line, 2);
+
+        $passwords[$email] = $password;
+    }
+
+    return $passwords;
 }
 
 /**
@@ -230,17 +268,7 @@ it('writes the demo passwords as real bcrypt hashes, with the file at the config
      * The path is a fixture this test owns and the seeder wrote moments ago, so reading it back is
      * not a dependency on an artefact the operator has to create before CI can pass.
      */
-    $passwords = [];
-
-    foreach (file(demoCredentialsPath(), FILE_IGNORE_NEW_LINES) as $line) {
-        if ($line === '' || str_starts_with($line, '#')) {
-            continue;
-        }
-
-        [$email, $password] = explode(': ', $line, 2);
-
-        $passwords[$email] = $password;
-    }
+    $passwords = demoCredentialsFilePasswords();
 
     expect($passwords)->toHaveCount(3);
 
@@ -432,4 +460,236 @@ it('leaves installed reference data exactly as the installer seeded it', functio
         ->and(DB::table('roles')->count())->toBe($roles)
         ->and(DB::table('email_templates')->whereIn('name', ['Activity created', 'Activity modified'])->count())
         ->toBe(2);
+});
+
+it('keeps the credentials file authenticating against the rows after two consecutive runs', function () {
+    seedDemoDataset();
+
+    $first = demoCredentialsFilePasswords();
+
+    seedDemoDataset();
+
+    $second = demoCredentialsFilePasswords();
+
+    $hashes = DB::table('users')
+        ->where('email', 'like', DemoSeeder::RESERVED_EMAIL_PATTERN)
+        ->pluck('password', 'email')
+        ->all();
+
+    expect(array_keys($second))->toEqualCanonicalizing(array_keys($hashes));
+
+    /**
+     * Every line of the file the operator just received must work: the hash the login guard reads
+     * and the clear-text password the file hands over are one pair, not two facts to be trusted.
+     */
+    foreach ($second as $email => $password) {
+        expect(Hash::check($password, $hashes[$email]))->toBeTrue()
+            ->and(Auth::guard('user')->validate(['email' => $email, 'password' => $password]))->toBeTrue();
+    }
+
+    /**
+     * A rerun regenerates the passwords, so the first run's file describes logins that no longer
+     * exist; a file still holding them is exactly the stale file this bead is about.
+     */
+    foreach ($first as $email => $password) {
+        expect($password)->not->toBe($second[$email])
+            ->and(Hash::check($password, $hashes[$email]))->toBeFalse();
+    }
+});
+
+it('binds the credentials file to the database it describes', function () {
+    /**
+     * The defect: one global filename meant a run against a throwaway database replaced the file an
+     * operator reads for the live one, and the passwords in it authenticated against neither the
+     * rows they were generated for nor the file's new contents. The path is now derived from the
+     * connection's database name.
+     *
+     * Every path here is under `demoCredentialsDirectory()`, not `DemoCredentials::DEFAULT_DIRECTORY`.
+     * The default directory holds the file a live instance is using right now, so a test that writes
+     * and deletes there would re-execute the defect against the directory this feature protects.
+     */
+    unset($_ENV['DEMO_SEED_CREDENTIALS_PATH'], $_SERVER['DEMO_SEED_CREDENTIALS_PATH']);
+
+    $directory = demoCredentialsDirectory();
+    $default = config('database.default');
+
+    config([
+        'database.connections.demo_other_database' => array_merge(
+            config('database.connections.'.$default),
+            ['database' => 'krayin_other']
+        ),
+        'database.default' => 'demo_other_database',
+    ]);
+
+    $otherPath = DemoCredentials::path(null, $directory);
+
+    config(['database.default' => $default]);
+
+    $currentPath = DemoCredentials::path(null, $directory);
+    $currentDatabase = DB::connection()->getDatabaseName();
+
+    /**
+     * The seeded run goes through the operator's own entry point — `DemoCredentials::path()` with no
+     * arguments — so the override is pointed at the path this derivation just produced. The run then
+     * writes exactly the file the operator would get, in the directory this test owns.
+     */
+    $_ENV['DEMO_SEED_CREDENTIALS_PATH'] = $currentPath;
+    $_SERVER['DEMO_SEED_CREDENTIALS_PATH'] = $currentPath;
+
+    $sentinel = '# sentinel: another database\'s credentials'.PHP_EOL;
+
+    /**
+     * Every path this test can create, plus the directory itself when this test is the one creating
+     * it, is registered *before* the first assertion and before the `try`: an expectation failing
+     * anywhere below then still removes what the test made, instead of leaving a credentials file
+     * behind in a directory a later run or an operator will read.
+     */
+    $removeDirectory = is_dir($directory) ? null : $directory;
+    $created = [$otherPath, $currentPath, $currentPath.'.tmp'];
+
+    /**
+     * A file left by the pre-binding scheme is neither trusted nor deleted. On a machine that has
+     * one, this run must leave it byte-identical.
+     */
+    $legacyDigest = file_exists(DemoCredentials::LEGACY_PATH)
+        ? hash_file('sha256', DemoCredentials::LEGACY_PATH)
+        : null;
+
+    try {
+        expect($otherPath)->not->toBe($currentPath)
+            ->and(basename($otherPath))->toBe('credentials-krayin_other.txt')
+            /**
+             * The name comes from the connection, not from the default database configured in a
+             * file: passing that name explicitly has to resolve to the very same path.
+             */
+            ->and($currentPath)->toBe(DemoCredentials::path($currentDatabase, $directory))
+            ->and($currentPath)->toStartWith($directory.'/credentials-')
+            ->and($currentPath)->not->toBe(DemoCredentials::LEGACY_PATH);
+
+        if (! is_dir($directory)) {
+            mkdir($directory, 0700, true);
+        }
+
+        file_put_contents($otherPath, $sentinel);
+
+        seedDemoDataset();
+
+        /**
+         * A file written for another database has to come through this database's run untouched.
+         * The file that proves it is the sentinel above; the run it survives is a real one, seeded
+         * the way the operator seeds it.
+         */
+        expect(file_exists($currentPath))->toBeTrue()
+            ->and(file_get_contents($otherPath))->toBe($sentinel);
+
+        /**
+         * The header names what the file is bound to, next to the timestamp: a reader can see which
+         * connection and database the passwords below belong to without guessing.
+         */
+        $header = implode("\n", array_filter(
+            file($currentPath, FILE_IGNORE_NEW_LINES),
+            fn (string $line) => str_starts_with($line, '#')
+        ));
+
+        expect($header)->toContain('database ['.$currentDatabase.']')
+            ->and($header)->toContain('connection ['.DB::connection()->getName().']');
+    } finally {
+        foreach (array_unique($created) as $path) {
+            if (is_file($path)) {
+                unlink($path);
+            }
+        }
+
+        if ($removeDirectory !== null && is_dir($removeDirectory)) {
+            rmdir($removeDirectory);
+        }
+    }
+
+    if ($legacyDigest !== null) {
+        expect(hash_file('sha256', DemoCredentials::LEGACY_PATH))->toBe($legacyDigest);
+    }
+});
+
+it('gives every database its own filename, and keeps the current one for a safe name', function () {
+    /**
+     * A slug alone is not one filename per database. `filename()` collapses every run of disallowed
+     * bytes to a single `-`, so slugging alone puts `krayin$test` and `krayin-test` on one file, and
+     * two multibyte names that differ only outside `[A-Za-z0-9._-]` on another.
+     *
+     * Nothing is written here: the derivation is pure, which is what lets it be checked against a
+     * directory that is never created.
+     */
+    unset($_ENV['DEMO_SEED_CREDENTIALS_PATH'], $_SERVER['DEMO_SEED_CREDENTIALS_PATH']);
+
+    $directory = demoCredentialsDirectory();
+
+    /**
+     * A name that is already filename-safe keeps exactly the name it has today. `krayin` is the live
+     * instance's database and an operator is depending on the file that name already produced, so
+     * renaming it would strand the credentials they are reading.
+     */
+    expect(basename(DemoCredentials::path('krayin', $directory)))->toBe('credentials-krayin.txt')
+        ->and(basename(DemoCredentials::path('krayin_test', $directory)))->toBe('credentials-krayin_test.txt');
+
+    $lossy = DemoCredentials::path('krayin$test', $directory);
+    $safe = DemoCredentials::path('krayin-test', $directory);
+
+    expect($lossy)->not->toBe($safe)
+        ->and(basename($safe))->toBe('credentials-krayin-test.txt')
+        ->and(basename($lossy))->toStartWith('credentials-krayin-test-')
+        ->and(basename($lossy))->toEndWith('.txt');
+
+    /**
+     * The digest is a function of the raw name alone, so the same database always resolves to the
+     * same file and two different ones never do.
+     */
+    expect(DemoCredentials::path('krayin$test', $directory))->toBe($lossy)
+        ->and(DemoCredentials::path('krayin@test', $directory))->not->toBe($lossy)
+        ->and(DemoCredentials::path('قاعدة', $directory))->not->toBe(DemoCredentials::path('بيانات', $directory))
+        /**
+         * Deriving a path writes nothing, so the directory above is still absent.
+         */
+        ->and(file_exists($directory))->toBeFalse();
+});
+
+it('fails loudly when a generated password does not match the row it was written to', function () {
+    $credentials = new DemoCredentials;
+
+    $users = [
+        ['key' => 'manager', 'email' => 'manager@sijilna.demo'],
+        ['key' => 'agent', 'email' => 'agent@sijilna.demo'],
+    ];
+
+    $credentials->generate($users);
+
+    $hashes = [
+        'manager@sijilna.demo' => Hash::make($credentials->password('manager')),
+        'agent@sijilna.demo' => Hash::make('a password this run did not generate'),
+    ];
+
+    expect(fn () => $credentials->verify($users, $hashes))->toThrow(
+        RuntimeException::class,
+        'The generated demo password for [agent@sijilna.demo] does not authenticate'
+    );
+
+    /**
+     * The failure names the account and never the password: the exception reaches a console and a
+     * log file that are not the credentials file.
+     */
+    try {
+        $credentials->verify($users, $hashes);
+    } catch (RuntimeException $exception) {
+        expect($exception->getMessage())
+            ->not->toContain($credentials->password('agent'))
+            ->not->toContain($credentials->password('manager'));
+    }
+
+    /**
+     * The same pair with the stored hash corrected passes: the check is about the pair, not about
+     * refusing everything it is shown.
+     */
+    $credentials->verify($users, [
+        'manager@sijilna.demo' => $hashes['manager@sijilna.demo'],
+        'agent@sijilna.demo' => Hash::make($credentials->password('agent')),
+    ]);
 });

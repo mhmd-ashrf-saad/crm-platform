@@ -219,6 +219,21 @@ one. See `scripts/README.md` for the full runbook.
   administrator row for `KRAYIN_ADMIN_EMAIL`, `storage/installed`, and
   `core_config installation.completed=1`, all written by
   `scripts/create-admin.php` — so a reset never leaves a half-installed instance.
+- **Never aim `php artisan krayin-crm:install` at any database.** It does not
+  honour `DB_DATABASE` or any other environment override.
+  `packages/Webkul/Installer/src/Console/Commands/Installer.php` re-reads the
+  `.env` **file** directly in `loadEnvConfigAtRuntime()`, writes
+  `database.connections.mysql.database` from it and calls `DB::purge()`, then
+  runs `migrate:fresh` against whatever `.env` names. A pre-flight `tinker` check
+  that prints the right database proves nothing, because the override is
+  discarded one line before the migrate. On 2026-11-08 a scratch-database
+  install done this way wiped the live `krayin` database — 27 leads, 19
+  contacts, 10 quotes, 486 activities — which had to be restored from a
+  three-day-old dump. It also rotates `APP_KEY` via `key:generate`. To install
+  into a scratch database, change `.env`'s `DB_DATABASE` (backing up `.env` and
+  the original `APP_KEY` first), or install from a throwaway copy of the
+  checkout. The incident record is
+  [.agents/context/errors/installer-ignores-env-override.md](.agents/context/errors/installer-ignores-env-override.md).
 - **`APP_ENV` is read from `.env` only, deliberately.** Setting `APP_ENV` in the
   caller's environment does not make the guard refuse: a live instance whose
   `.env` says `local` is still wiped. That is exactly why an agent testing the

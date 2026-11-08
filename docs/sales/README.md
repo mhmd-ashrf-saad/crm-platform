@@ -13,6 +13,7 @@ and handed to a buyer. The rest never leaves the team.
 | [`offer-sheet-ar.md`](offer-sheet-ar.md) | The **client-facing** one-page sheet, in Arabic, print-ready | The buyer |
 | [`target-list.md`](target-list.md) | The framework for building the 40-account target list: segments, columns, sourcing, lead scoring, weekly routine. A method, not a list of leads | Whoever builds the list |
 | [`discovery-script-ar.md`](discovery-script-ar.md) | The 20-minute first-meeting script in Egyptian colloquial, with the demo path, the price presentation and six objections | Whoever runs the first meeting |
+| [`demo-script.md`](demo-script.md) | Eleven-beat live demo (20-30 min): the URL, the click and the Arabic line for each beat, the three moments that land, what must not be shown, and an answer for every question it refuses to promise — every URL checked against `packages/Webkul/Admin/src/Routes/Admin/` | Whoever runs the demo |
 
 ## Operating cadence
 

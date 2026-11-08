@@ -11,7 +11,7 @@ authoritative.
 
 | Category | Purpose | Files |
 | -------- | ------- | ----- |
-| [operations/](operations/navigation.md) | How this checkout is provisioned, served, stored, reset and branded; where the live homelab demo runs | environment-and-deployment, deployment-homelab, provisioning, database, brand |
+| [operations/](operations/navigation.md) | How this checkout is provisioned, served, stored, reset and branded; where the live homelab demo runs | environment-and-deployment, deployment-homelab, provisioning, database, demo-dataset, brand |
 | [guides/](guides/navigation.md) | Rules an agent must follow while working here | testing, agent-workflow-rules, rebrand-boundary |
 | [errors/](errors/navigation.md) | Failures that actually happened here, and how to detect each | lands-from-experience |
 

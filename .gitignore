@@ -32,6 +32,9 @@ npm-debug.log
 /public/vendor
 /lang/vendor
 /storage/*.key
+# Full database dumps: live client CRM rows and user password hashes. A dump
+# here must never be committable; keep them outside the checkout or ignored.
+/storage/backups/
 /storage/dcc-data/
 /vendor
 yarn.lock

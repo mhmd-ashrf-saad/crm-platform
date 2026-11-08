@@ -15,6 +15,7 @@ be shared with a client — and only after its `DECISION` blocks are filled in
 | [`secrets-handling.md`](secrets-handling.md) | Every secret the product holds, per-instance provisioning, per-secret rotation with its blast radius, access control, leak response, the operator checklist | **No** — it names every key and what rotating it breaks |
 | [`decisions-to-confirm.md`](decisions-to-confirm.md) | The one checklist of commitments the owner has not made, with what closing each unlocks | No |
 | [`ci-workflows.md`](ci-workflows.md) | The CI workflow reference | No |
+| [`demo-dataset.md`](demo-dataset.md) | The demo seeder: the one command, what its wipe destroys and spares, the demo accounts, the clear-text credentials file and its stale-file warning, the coverage counts, the full reset procedure | **No** — §4 names the file holding every demo password |
 
 Companion documents: [`../legal/`](../legal/) for the privacy notice, DPA, terms
 and data-residency statement.

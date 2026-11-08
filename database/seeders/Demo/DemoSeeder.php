@@ -115,6 +115,12 @@ class DemoSeeder extends Seeder
 
         $this->assertProtectedUsersUntouched($protectedUsers);
 
+        /**
+         * Before the file is written, so a run that cannot produce a working login never leaves a
+         * file claiming one.
+         */
+        $this->assertGeneratedPasswordsAuthenticate($fixtureUsers);
+
         $credentialsPath = $this->credentials->write($fixtureUsers, DemoCredentials::path());
 
         $this->report($fixtureUsers, $counts, $credentialsPath);
@@ -201,6 +207,25 @@ class DemoSeeder extends Seeder
                 throw new \RuntimeException("User [{$id}] did not hold a bcrypt hash before the seed, which is unexpected.");
             }
         }
+    }
+
+    /**
+     * Fail loudly unless every generated password authenticates against the row that now holds it.
+     *
+     * The rows are read back from the database rather than assumed, because what makes a stale
+     * credentials file harmful is that nothing ever compared the pair it described with what was
+     * stored: the run reported success while the login it handed over could not work.
+     *
+     * @param  array<int, array<string, string>>  $fixtureUsers
+     */
+    protected function assertGeneratedPasswordsAuthenticate(array $fixtureUsers): void
+    {
+        $hashes = DB::table('users')
+            ->whereIn('email', array_column($fixtureUsers, 'email'))
+            ->pluck('password', 'email')
+            ->all();
+
+        $this->credentials->verify($fixtureUsers, $hashes);
     }
 
     /**
@@ -346,7 +371,22 @@ class DemoSeeder extends Seeder
 
         $this->command?->newLine();
         $this->command?->line('Credentials file: '.$credentialsPath);
+        $this->command?->line('Named after the database it describes, so a run against another database cannot overwrite it.');
         $this->command?->line('File mode 0600. It is not committed: delete it when the demo is over.');
+
+        /**
+         * A file from the pre-binding naming scheme holds passwords for whichever database was
+         * seeded last, and there is no way to tell which. It is left exactly where it is: deleting
+         * the operator's file is not this seeder's call, and trusting it is what went wrong.
+         */
+        if ($credentialsPath !== DemoCredentials::LEGACY_PATH && file_exists(DemoCredentials::LEGACY_PATH)) {
+            $this->command?->warn(
+                'An older credentials file is still at '.DemoCredentials::LEGACY_PATH.
+                '. It is not bound to any database, so it was not read, not trusted and not deleted. '
+                .'The file named above is the one this run wrote.'
+            );
+        }
+
         $this->command?->newLine();
     }
 }
