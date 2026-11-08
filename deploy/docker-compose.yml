@@ -140,6 +140,25 @@ services:
     volumes:
       - ../public:/var/www/html/public:ro
       - ../storage:/var/www/html/storage:ro
+      # A SINGLE-FILE bind mount, and that has a consequence worth knowing
+      # before touching it: it pins the inode the container was created with.
+      # `git checkout` never rewrites that inode -- it writes a new file and
+      # renames it over the path -- so after a deploy that changes this file the
+      # container keeps serving the OLD configuration, and neither `up -d` (the
+      # service definition did not change) nor `nginx -s reload` (same inode)
+      # notices. deploy/deploy.sh therefore hashes this file against the
+      # container's copy on every deploy and force-recreates `web` when they
+      # differ, then FAILS the deploy if the served copy still does not match
+      # the tag. See ensure_web_conf_current() and assert_web_conf_served()
+      # there, and "The single-file mount trap" in deploy/README.md.
+      #
+      # Do not "fix" this by mounting ../docker (the whole directory) over
+      # /etc/nginx/conf.d: that would feed nginx php-fpm.conf as well, and nginx
+      # includes every *.conf in that directory. A directory mount of a new
+      # conf.d/ subdirectory would work, but it needs the source file moved and
+      # this path is referenced by php.Dockerfile's build context and by the
+      # documentation -- the content check in deploy.sh does not care where the
+      # file lives, so it is the cheaper half to rely on.
       - ./docker/nginx.conf:/etc/nginx/conf.d/default.conf:ro
     depends_on:
       - app

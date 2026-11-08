@@ -173,6 +173,14 @@ sudo docker compose -f deploy/docker-compose.yml ps          # all three Up; db 
 #     60s (monitor 11, Telegram on failure). A DOWN there while the stack is up
 #     means the tunnel, not the app.
 
+# 4c. The served nginx.conf is the one in the checkout. A single-file bind mount
+#     pins an inode, so this can differ from the checked-out file -- see "The
+#     single-file mount trap" below. deploy.sh reconciles and gates on this; here
+#     it is by hand.
+sha256sum /opt/sijilna/app/deploy/docker/nginx.conf
+docker exec sijilna-web sha256sum /etc/nginx/conf.d/default.conf 2>/dev/null
+docker exec sijilna-web nginx -T 2>/dev/null | grep -c 'add_header'   # what nginx PARSED
+
 # 5. Count rows, not tables: the installer seeded an admin, so this is >= 1
 sudo docker compose -f deploy/docker-compose.yml exec -T db sh -c \
   'MYSQL_PWD="$MYSQL_PASSWORD" mysql -u"$MYSQL_USER" -N -e "select count(*) from users;" "$MYSQL_DATABASE"'
@@ -798,9 +806,14 @@ this box, so there is no deploy credential in CI and no SSH key on a runner.
                    No dump, no deploy: the restore point comes first.
       5  deploy    git checkout --detach <tag>; rebuild only when the image
                    inputs changed; docker compose up -d; then force-recreate
-                   `app` if its image is not what sijilna-app:latest is.
+                   `app` if its image is not what sijilna-app:latest is, and
+                   `web` if the bind-mounted nginx.conf content is not what the
+                   container has (a single-file mount pins an inode, so up -d
+                   cannot see that -- see "The single-file mount trap")
       6  gate      HTTP 200 from http://127.0.0.1:3102/admin/login, 60 probes
-                   2 s apart, and all three containers running (db healthy)
+                   2 s apart, and all three containers running (db healthy);
+                   then the served nginx.conf must equal the tag's file, or the
+                   deploy fails (a stale nginx answers the same 200)
       7  either    commit: state file = the tag, runner refreshed, exit 0
          or        rollback: previous ref + previous image, restore the
                    pre-deploy dump if this deploy added migrations, re-verify,
@@ -1039,6 +1052,60 @@ nginx out of it, so the price is one `app` restart: **502 for under four seconds
 at 250 ms probe resolution, with no single gap above about one second — that is
 `php-fpm` coming back, not `nginx*`, and `sijilna-db` is never restarted at all.
 
+### The single-file mount trap
+
+`deploy/docker-compose.yml` bind-mounts `deploy/docker/nginx.conf` into `web` as a
+**single file**, and a single-file bind mount is resolved to the inode that existed
+when the container was created. `git checkout` does not rewrite that inode — it
+writes a new file and renames it over the path — so a deploy that changes
+`nginx.conf` used to change the file on the host and nothing else. Three separate
+things hid it, and each one is worth knowing because each one looks like a fix:
+
+* `docker compose up -d` recreates a container only when its **definition**
+  changed. The web service definition did not change; the file's content did.
+* `docker exec sijilna-web nginx -s reload` re-reads the same stale inode. Measured:
+  it did not help.
+* the health gate asks for an HTTP 200, and a stale `nginx.conf` answers the same
+  200 as a fresh one.
+
+The measured result (2026-10-31, bead `crm-bed`): a tag that added five security
+headers deployed, the log said `done in 168s`, the gate was green, and nginx served
+none of the headers. `grep -c add_header /etc/nginx/conf.d/default.conf` inside the
+container stayed at `2` until someone ran `up -d --force-recreate --no-deps web` by
+hand, after which it was `18`.
+
+`deploy.sh` now closes this in two halves, and both are needed:
+
+1. **Reconcile.** `ensure_web_conf_current()` hashes the file in the checkout and
+the file the running container has (`docker exec sijilna-web sha256sum …`, computed
+inside the container because that is the file nginx parses) and, when they differ,
+runs `up -d --force-recreate --no-deps web`. It runs from `deploy_forward()` and
+from `rollback()` — a rollback checks the previous tag out, which rewrites the same
+bind-mount source, so it needs the same treatment in the other direction. It also
+runs a throwaway `nginx -t` on the stack's network before replacing a serving
+container, so a typo in `nginx.conf` fails the deploy with the site still up
+instead of taking nginx down until the rollback reconciles it back.
+
+2. **Gate.** `assert_web_conf_served()` re-checks after the health gate and, on a
+mismatch, rolls back, writes the previous tag to the state file and exits non-zero
+through `die()`, which is the existing Telegram alert path. A deploy whose served
+configuration is not the checked-out tag can no longer log `done`.
+
+Costs and side effects: two `docker exec`s and no restart when `nginx.conf` did not
+change (so the "re-run changes nothing" property holds), and one `web` restart when
+it did — the database and the app are excluded by `--no-deps`, and nginx comes back
+in well under a second.
+
+Why not mount the `conf.d` **directory** instead, which would make a reload pick up
+new content? Because the image ships exactly one file there (`default.conf`) and a
+directory mount would have to be of a new `deploy/docker/conf.d/` subdirectory,
+which means moving the source file and updating its references; mounting
+`deploy/docker/` itself would feed nginx `php-fpm.conf` as well, since nginx
+includes every `*.conf` in that directory. Worse, a directory mount alone is not
+sufficient for a deploy anyway: `up -d` still would not reload nginx, so
+`deploy.sh` would still have to detect the change and act on it. The content check
+is the half that makes either layout correct, so it is the half that ships.
+
 ## Reset (destructive — deletes the database)
 
 ```bash
@@ -1074,6 +1141,9 @@ exactly as carefully as `down -v`, and stop the stack before touching `storage/`
 | **Deploy log says `instance-identity key(s) present in the live deployment, refusing to deploy: SIJILNA_… in /opt/sijilna/app/.env`** | A second-instance `.env` (or a stray `SIJILNA_*` key) reached the live environment. Those keys re-resolve the project, containers, image, volume and port, so `up -d` would stand up an empty stack beside the real one | Comment out / delete the named keys — the live instance is defined by their absence — then `/opt/sijilna/deploy.sh --redeploy`. The refused run changed nothing: it refuses before the fetch, the dump and the checkout. See "Second instance". |
 | **Deploy fails with `open /opt/sijilna/app/deploy/.env: permission denied`** | `.env` is `www-data:www-data 0600`, so `docker compose` cannot interpolate it as `mohamed` | `sudo chown mohamed:www-data /opt/sijilna/app/.env; sudo chmod 640`, then `/opt/sijilna/deploy.sh --redeploy` |
 | **A deploy "succeeds" but the old code is still running** | `docker compose up -d` did not recreate the container after a rebuild (containerd image store) | `deploy.sh` handles it with an explicit `--force-recreate app`; if you see it after a manual `up -d`, compare `docker inspect -f '{{.Image}}' sijilna-app` with `docker image inspect -f '{{.Id}}' sijilna-app:latest` |
+| **A deploy "succeeds" but a `deploy/docker/nginx.conf` change is not served** (headers missing, old `client_max_body_size`, an edit that "did nothing") | A single-file bind mount pins the inode the container was created with, and `git checkout` replaces the file rather than writing it; `up -d` sees no service change and `nginx -s reload` re-reads the stale inode | `deploy.sh` now reconciles and gates on this. By hand: `sha256sum /opt/sijilna/app/deploy/docker/nginx.conf; docker exec sijilna-web sha256sum /etc/nginx/conf.d/default.conf`, then `sudo docker compose -p sijilna -f deploy/docker-compose.yml up -d --force-recreate --no-deps web`. See "The single-file mount trap". |
+| **Deploy log says `webconf: GATE FAILED - checkout has …, sijilna-web serves …`** | The tag's `nginx.conf` is not what the running `web` container has, even after the reconcile step — typically the container could not be recreated, or the mount source is not what compose mounts | The rollback has already run and the state file still names the previous tag. Check `docker compose -p sijilna -f deploy/docker-compose.yml ps`, `docker compose … logs web`, and that `deploy/docker-compose.yml` still mounts `./docker/nginx.conf` at `/etc/nginx/conf.d/default.conf`. Nothing was recorded as deployed. |
+| **Deploy log says `webconf: nginx -t REJECTED deploy/docker/nginx.conf: …`** | The tag's nginx config does not parse, and the check caught it BEFORE the serving container was replaced | Fix the config and tag again. The site was not touched: `nginx -t` runs in a throwaway `nginx:alpine` on the stack network, and the deploy fails without recreating `web`. |
 | **Mixed content / forms post to `http://`** | `APP_FORCE_HTTPS` missing | The tunnel forwards plain HTTP, so Laravel must be told. Set `APP_FORCE_HTTPS=true` in `.env`, then **recreate** `app` (`up -d --force-recreate --no-deps app`, see "A `.env` edit does nothing until the app container is recreated") — a `restart` keeps the old value. |
 | **Login works on `127.0.0.1:3102`, not through the tunnel** | Cookies/URLs bound to the wrong host | `APP_URL=https://crm.mohamedlabs.com`, `SESSION_COOKIE=sijilna_session`, and `APP_FORCE_HTTPS=true`; then recreate `app`, not merely restart it. |
 | **`db` container healthy, app loops "no TCP connection"** | `DB_HOST` is not `db` (a leftover `127.0.0.1` from a dev `.env`) or the password changed after MySQL first initialised | `DB_HOST=db`, `DB_PORT=3306`. `MYSQL_PASSWORD`/`MYSQL_ROOT_PASSWORD` are only applied when the data directory is empty — changing them later needs the reset above. |

@@ -24,9 +24,14 @@
 #      deploy: a failed deploy that needs a restore is not the moment to
 #      discover the dump is missing.
 #   5. git checkout the tag, rebuild the image only when the image inputs
-#      changed, docker compose up -d.
+#      changed, docker compose up -d, then force-recreate the one container whose
+#      definition cannot express the change: `app` when its image moved, `web`
+#      when the bind-mounted nginx.conf content moved (a single-file bind mount
+#      pins an inode, so `up -d` cannot see it -- see ensure_web_conf_current).
 #   6. Health gate: HTTP 200 from HEALTH_URL and all three containers running,
-#      polled, bounded.
+#      polled, bounded -- then a second gate that the running `web` container
+#      really serves THIS tag's deploy/docker/nginx.conf, because a stale nginx
+#      config answers the same 200 (bead crm-bed).
 #   7. On failure after step 5: go back to the previous ref, put the previous
 #      image back by its ID, restore the pre-deploy dump if this deploy applied
 #      new migrations, restart, verify, exit non-zero, one Telegram alert.
@@ -101,7 +106,18 @@ TAG_PREFIX="deploy-"
 
 DB_CONTAINER="sijilna-db"
 APP_CONTAINER="sijilna-app"
+WEB_CONTAINER="sijilna-web"
 IMAGE="sijilna-app"
+# The nginx server block: the file in the checkout, and the path it is bind-mounted
+# to inside `web` by deploy/docker-compose.yml. Both are used by
+# ensure_web_conf_current(); the paths match the compose file and must not drift
+# from it.
+NGINX_CONF_FILE="deploy/docker/nginx.conf"
+NGINX_CONF_MOUNT="/etc/nginx/conf.d/default.conf"
+# Only for the throwaway syntax check in nginx_conf_valid(), which needs a container
+# that has busybox's nginx. Must stay the image deploy/docker-compose.yml names for
+# the `web` service.
+WEB_IMAGE="nginx:alpine"
 # The tag a rollback returns to. See the comment where it is written in main():
 # on this host the image store is containerd's, and a rebuild that moves
 # `sijilna-app:latest` garbage-collects the image it replaced, so holding the
@@ -741,6 +757,141 @@ ensure_app_on_latest() {
     return 0
 }
 
+# ------------------------------------------------- served nginx configuration
+#
+# THE BUG THIS EXISTS FOR (bead crm-bed, measured on the live host 2026-10-31).
+# deploy/docker-compose.yml bind-mounts `deploy/docker/nginx.conf` into the `web`
+# container as a SINGLE FILE, and a single-file bind mount is resolved to the
+# inode that existed when the container was created. `git checkout` does not
+# rewrite that inode: git writes a new file and renames it over the path. So
+# after a deploy the running container still holds the OLD inode and serves the
+# OLD configuration -- indefinitely. Three things hid it:
+#
+#   * `compose up -d` recreates a container only when its *definition* changed,
+#     and the web service definition did not change. The file's CONTENT did.
+#   * `docker exec sijilna-web nginx -s reload` re-reads the same stale inode, so
+#     it does not help -- measured, it did not.
+#   * the health gate asks for an HTTP 200, and a stale nginx.conf answers the
+#     same 200 as a fresh one.
+#
+# Result: a deploy that added five security headers logged "done in 168s" and
+# served none of them.
+#
+# The fix has two halves, and both are needed:
+#   1. RECONCILE -- compare the file in the checkout with the file the running
+#      container actually has, and `up -d --force-recreate --no-deps web` when
+#      they differ. Only a new container makes nginx re-open the path. The --no-deps
+#      is deliberate: the database and the app are not restarted for an nginx
+#      config change, so the price is one `nginx` restart.
+#   2. GATE -- re-read the container's copy afterwards and FAIL the deploy (and so
+#      roll back, and so alert) when it still does not match the checked-out tag.
+#      Without this half, half a fix is indistinguishable from a fix.
+#
+# The comparison is on content, not on timestamps or on the compose service
+# definition, which is what makes it work both ways: an unchanged nginx.conf costs
+# two `docker exec`s and no restart, and a changed one is caught however it got
+# there (the checkout, a hand edit, a rollback).
+
+nginx_conf_path() {
+    printf '%s\n' "$APP_DIR/$NGINX_CONF_FILE"
+}
+
+# sha256 of the mount source in the checkout; empty (and non-zero) when it is not
+# readable, which is itself a deploy failure rather than "no change".
+checkout_conf_hash() {
+    local file
+    file="$(nginx_conf_path)"
+    [[ -f "$file" ]] || return 1
+    sha256sum -- "$file" 2>/dev/null | cut -d' ' -f1
+}
+
+# sha256 of the file the RUNNING web container has, computed inside it. Deliberately
+# not `docker inspect` of the mount and not a host-side hash: the file nginx parses
+# is the one in the container's own mount namespace, which is exactly the thing that
+# goes stale. Empty (and non-zero) when the container is missing or stopped.
+served_conf_hash() {
+    local out
+    out="$(docker exec "$WEB_CONTAINER" sha256sum "$NGINX_CONF_MOUNT" 2>/dev/null)" || return 1
+    printf '%s\n' "$out" | cut -d' ' -f1
+}
+
+# Best-effort syntax check of the file BEFORE it is put in front of the site. A
+# config nginx refuses to load takes the site down until the rollback has reconciled
+# `web`, and a rollback is a bad place to discover a typo. The check runs in a
+# throwaway container on the stack's own network because the file names `app:9000`
+# and `nginx -t` resolves that name while parsing it.
+#
+# Advisory only where it cannot run at all (image not local, network absent): the
+# health gate still catches a config nginx will not load, so a missing prerequisite
+# here must not block an otherwise fine deploy.
+nginx_conf_valid() {
+    local file net out
+    file="$(nginx_conf_path)"
+    net="${INSTANCE_PROJECT}_default"
+    if ! docker image inspect "$WEB_IMAGE" >/dev/null 2>&1; then
+        log "webconf: skipping the nginx -t pre-check, $WEB_IMAGE is not in the local image store"
+        return 0
+    fi
+    if ! docker network inspect "$net" >/dev/null 2>&1; then
+        log "webconf: skipping the nginx -t pre-check, network $net does not exist"
+        return 0
+    fi
+    if out="$(docker run --rm --network "$net" -v "$file:$NGINX_CONF_MOUNT:ro" \
+        "$WEB_IMAGE" nginx -t 2>&1)"; then
+        log "webconf: nginx -t accepts $NGINX_CONF_FILE (throwaway $WEB_IMAGE on $net)"
+        return 0
+    fi
+    log "webconf: nginx -t REJECTED $NGINX_CONF_FILE: $(printf '%s' "$out" | tail -n 3 | tr '\n' ' ')"
+    return 1
+}
+
+recreate_web() {
+    # --no-deps: an nginx config change is not a reason to restart MySQL or PHP-FPM.
+    compose up -d --force-recreate --no-deps web
+}
+
+# RECONCILE. Idempotent and cheap when nothing changed. Called by deploy_forward()
+# and by rollback(): a rollback checks the previous tag out, which rewrites the same
+# bind-mount source, so it needs the same treatment in the other direction.
+ensure_web_conf_current() {
+    local want got
+    want="$(checkout_conf_hash)" || want=""
+    if [[ -z "$want" ]]; then
+        log "webconf: $APP_DIR/$NGINX_CONF_FILE is not readable (deploying ${TARGET:-?}) - cannot verify what nginx serves"
+        return 1
+    fi
+    got="$(served_conf_hash)" || got=""
+    if [[ "$got" == "$want" ]]; then
+        log "webconf: $WEB_CONTAINER serves the checkout's $NGINX_CONF_FILE (sha256 ${want:0:12})"
+        return 0
+    fi
+    log "webconf: $WEB_CONTAINER serves ${got:-<unreadable>} but the checkout has ${want:0:12} - recreating the web container (a single-file bind mount pins the old inode, so up -d and reload both miss it)"
+    nginx_conf_valid || return 1
+    recreate_web || { log "webconf: could not recreate $WEB_CONTAINER"; return 1; }
+    got="$(served_conf_hash)" || got=""
+    if [[ "$got" != "$want" ]]; then
+        log "webconf: after recreating $WEB_CONTAINER it STILL serves ${got:-<unreadable>} instead of ${want:0:12} - is $WEB_CONTAINER running, and does its image provide sha256sum?"
+        return 1
+    fi
+    log "webconf: $WEB_CONTAINER now serves the checkout's $NGINX_CONF_FILE (sha256 ${want:0:12})"
+    return 0
+}
+
+# GATE. The same comparison with no repair path, run after the health gate. Paths
+# are relative to the checkout, which is on $TARGET by then, so this is exactly
+# "does the served configuration match the tag being deployed".
+assert_web_conf_served() {
+    local want got
+    want="$(checkout_conf_hash)" || want=""
+    got="$(served_conf_hash)" || got=""
+    if [[ -z "$want" || "$got" != "$want" ]]; then
+        log "webconf: GATE FAILED - checkout has ${want:-<unreadable>}, $WEB_CONTAINER serves ${got:-<unreadable>}"
+        return 1
+    fi
+    log "webconf: gate OK - $WEB_CONTAINER serves this tag's $NGINX_CONF_FILE (sha256 ${want:0:12})"
+    return 0
+}
+
 deploy_forward() {
     log "checkout: $TARGET"
     checkout_ref "$TARGET" || return 1
@@ -765,6 +916,11 @@ deploy_forward() {
     compose up -d || return 1
     STACK_TOUCHED=1
     ensure_app_on_latest || return 1
+    # `up -d` above cannot see this one: the web service's definition is unchanged
+    # when only nginx.conf's CONTENT changed, and the single-file bind mount still
+    # points at the inode the previous container was created with. See the comment
+    # block on ensure_web_conf_current().
+    ensure_web_conf_current || return 1
     return 0
 }
 
@@ -811,6 +967,14 @@ rollback() {
     # enough, the container has to be replaced onto it.
     ensure_app_on_latest || { log "rollback: could not move the app container back"; return 1; }
 
+    # And the same inode caveat as deploy_forward, in reverse: the `git checkout`
+    # above rewrote the bind-mount source, so without this the `web` container would
+    # keep serving whatever nginx.conf the FAILED deploy mounted.
+    ensure_web_conf_current || {
+        log "rollback: $WEB_CONTAINER does not serve $PREV_REF's $NGINX_CONF_FILE"
+        return 1
+    }
+
     if ((MIGRATIONS_ADDED == 1)); then
         if [[ -n "$DUMP_FILE" ]] && restore_database "$DUMP_FILE"; then
             log "rollback: restarting app on the restored schema"
@@ -827,6 +991,19 @@ rollback() {
     fi
     log "rollback: the health gate still fails after returning to $PREV_REF"
     return 1
+}
+
+# A failed forward step: put the previous tag back, record it, alert once and exit
+# non-zero. Both gates in main() fail this way, so the message must name the gate.
+# The rollback is itself allowed to fail: a rollback that also fails is alerted
+# separately and must not replace the original reason in the log.
+fail_and_roll_back() {
+    local reason="$1" summary="$2"
+    rollback "$reason" ||
+        alert_once "$(printf 'Sijilna CRM rollback FAILED on %s at %s: %s is running and the gate does not pass\nsee %s' \
+            "$(hostname)" "$(date -Is)" "$PREV_REF" "$LOG_FILE")"
+    write_state "$PREV_REF" || true
+    die "$summary"
 }
 
 # Re-install the runner from the checkout when the tag being deployed carries a
@@ -873,7 +1050,7 @@ preflight() {
     # fetched, checked out, dumped or restarted: the live instance must not be
     # re-resolved. See refuse_instance_identity_keys above.
     refuse_instance_identity_keys
-    for bin in git docker curl flock; do
+    for bin in git docker curl flock sha256sum; do
         command -v "$bin" >/dev/null 2>&1 || missing+=("$bin")
     done
     if ((${#missing[@]} > 0)); then
@@ -1020,11 +1197,20 @@ main() {
 
     # ---- 7. health gate ---------------------------------------------------
     if ! wait_healthy "forward"; then
-        rollback "health gate failed after deploying $TARGET" ||
-            alert_once "$(printf 'Sijilna CRM rollback FAILED on %s at %s: %s is running and the health gate does not pass\nsee %s' \
-                "$(hostname)" "$(date -Is)" "$PREV_REF" "$LOG_FILE")"
-        write_state "$PREV_REF" || true
-        die "deploy of $TARGET failed the health gate; rolled back to $PREV_REF"
+        fail_and_roll_back "health gate failed after deploying $TARGET" \
+            "deploy of $TARGET failed the health gate; rolled back to $PREV_REF"
+    fi
+
+    # ---- 7b. the served nginx configuration is THIS tag's ------------------
+    # The health gate above cannot see this: an nginx serving a stale config
+    # answers the same HTTP 200 as one serving the new one, which is how crm-bed
+    # recorded "done" while serving none of the tag's five security headers.
+    # ensure_web_conf_current() already reconciled before the health gate, so a
+    # mismatch here means the reconciliation did not take -- fail loudly instead of
+    # logging success.
+    if ! assert_web_conf_served; then
+        fail_and_roll_back "the running web container does not serve $TARGET's $NGINX_CONF_FILE" \
+            "deploy of $TARGET left a stale nginx configuration in $WEB_CONTAINER; rolled back to $PREV_REF"
     fi
 
     # ---- 8. commit the run ------------------------------------------------
