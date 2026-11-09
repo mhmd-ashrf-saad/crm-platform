@@ -1,0 +1,42 @@
+# crm-platform-backup.service -- nightly dump of the live CRM database.
+#
+# A systemd USER unit, because that is how scheduled work already runs on this machine: the homelab
+# host's nightly restic run is `homelab-backup.timer` and the offsite pull is
+# `~/.config/systemd/user/homelab-pull.timer` (03:30, Persistent). There is no other scheduler in play
+# here -- nothing in this repository installs Laravel's `schedule:run`, and the project's own
+# documentation says so (docs/ops/README.md, docs/client-guide/ar/16-limits-and-provider.md), so a cron
+# entry or a Laravel schedule would be a second mechanism competing with the documented one.
+#
+# This is a TEMPLATE. @CHECKOUT@ is replaced with the absolute path of this checkout at install time --
+# a user unit cannot express "the checkout beside this file", and the precedent on this host
+# (`sijilna-deploy.service`) is an absolute path too. Install with the commands in
+# docs/ops/incident-response.md section 6, or:
+#
+#   mkdir -p ~/.config/systemd/user
+#   sed "s|@CHECKOUT@|$PWD|g" scripts/systemd/crm-platform-backup.service \
+#     > ~/.config/systemd/user/crm-platform-backup.service
+#   sed "s|@CHECKOUT@|$PWD|g" scripts/systemd/crm-platform-backup.timer \
+#     > ~/.config/systemd/user/crm-platform-backup.timer
+#   systemctl --user daemon-reload && systemctl --user enable --now crm-platform-backup.timer
+#
+# The script owns its own refusals (no container, no database, no credential, a backup directory inside
+# the checkout that is not gitignored), so a broken instance fails loudly in the journal rather than
+# writing a dump of something else.
+[Unit]
+Description=Sijilna CRM nightly database dump (crm-platform-mysql) with manifest and retention
+Documentation=file:@CHECKOUT@/scripts/README.md
+Documentation=file:@CHECKOUT@/docs/ops/incident-response.md
+# docker.service is a SYSTEM unit; a user unit cannot order itself after it in a way systemd will
+# honour across a reboot, so the script checks that the container is running instead of trusting start
+# ordering.
+After=network-online.target
+
+[Service]
+Type=oneshot
+WorkingDirectory=@CHECKOUT@
+ExecStart=/bin/bash @CHECKOUT@/scripts/backup-db.sh
+# A dump of this instance takes well under a second at the current size; the bound is for the version
+# of it that does not, so a hung mysqldump cannot pin the unit forever.
+TimeoutStartSec=15min
+Nice=10
+IOSchedulingClass=idle

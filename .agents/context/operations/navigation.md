@@ -11,7 +11,7 @@ How this checkout is provisioned, served, stored and reset on this machine.
 | [environment-and-deployment.md](environment-and-deployment.md) | Branch model, Docker container and named volume, port, dev server, secrets, NTFS mount |
 | [deployment-homelab.md](deployment-homelab.md) | The live demo deployment on the homelab: three containers, loopback port 3102, tunnel route, boot sequence and its idempotency marker, memory budget, open risks |
 | [provisioning.md](provisioning.md) | `scripts/provision-dev.sh` flags and guards, `scripts/create-admin.php`, second install, `APP_KEY` rotation |
-| [database.md](database.md) | Live vs test database, migration locations, `db-reset` guards, backup/restore reality |
+| [database.md](database.md) | Live vs test database, migration locations, `db-reset` guards, the nightly backup regimen (`make backup`/`-verify`/`-rehearse`), its retention and its schedule |
 | [demo-dataset.md](demo-dataset.md) | The demo seeder: what the wipe destroys, the reserved-domain user boundary, demo accounts and their roles, the clear-text credentials file, idempotency |
 | [brand.md](brand.md) | Product name and Arabic form, domain, approved tagline and its placement, palette roles, logo asset paths, Arabic font and licence |
 

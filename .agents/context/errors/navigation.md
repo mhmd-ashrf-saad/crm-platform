@@ -11,6 +11,7 @@ and the check that catches each one.
 | ---- | ----- |
 | [lands-from-experience.md](lands-from-experience.md) | Eight diagnosed failures: dangling storage symlink, hardcoded credential, DB name mismatch, installer hang, unanchored `pkill`, tracked cache file, read-only-store illusion, cached-config guard/wipe disagreement |
 | [installer-ignores-env-override.md](installer-ignores-env-override.md) | The 2026-11-08 incident: `krayin-crm:install` discards `DB_DATABASE` and ran `migrate:fresh` against the live `krayin` database |
+| [shared-evidence-directory-deleted.md](shared-evidence-directory-deleted.md) | The 2026-11-09 deletion of `storage/backups/`: an `rm -rf` of shared screenshot evidence and the in-checkout recovery dump, and the delete-only-what-you-created rule |
 
 ## Related
 

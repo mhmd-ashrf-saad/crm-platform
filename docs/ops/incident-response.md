@@ -1,7 +1,8 @@
 # Incident response — data loss, database outage, and the order people are told
 
-> **Status:** draft for operator review. §6 (restore rehearsal) has **not been
-> performed** — the procedure is written and the result field is empty on purpose.
+> **Status:** draft for operator review. §6 (restore rehearsal) **has been
+> performed** on 2026-11-09 against this checkout's live database, and its result
+> row is filled in with measured counts and timings.
 > **Applies to:** any client instance, and the vendor's own demo instance.
 > **Companions:** [support-sla.md](support-sla.md) (severity and hours),
 > [security-review.md](security-review.md),
@@ -97,9 +98,18 @@ swap.** Never restore over the live database and hope.
 ```bash
 # 0. You are here only after §3 has copied the current state.
 
-# 1. Find the newest dump that predates the incident.
+# 1. Find the newest dump that predates the incident, and verify it before you trust it.
 ls -lt /opt/<project>/backups/ | head          # pre-deploy dumps, 10 kept
 #    (or the nightly set's mysqldump, per ../legal/data-residency.md §4)
+
+# For THIS checkout the nightly set is the one `make backup` writes, and it lives outside the
+# repository in $HOME/backups/crm-platform/:
+make backup-verify                            # sha256, size, gzip, completeness, table count
+bash scripts/backup-db.sh --list              # what retention keeps, and what it would drop
+#    Each dump has a sibling `<dump>.manifest` recording the sha256, both byte sizes, the database
+#    name, the table count and the row counts of leads, persons, organizations, products, quotes,
+#    quote_items, activities, emails and users. `backup-verify` re-checks the file against it; the
+#    rehearsal in §6 proves the counts by restoring. Full behavior: scripts/README.md §Backups.
 
 # 2. Restore it into a SCRATCH database first — never into the live one.
 docker exec -e MYSQL_PWD="$DB_ROOT_PASSWORD" <project>-db \
@@ -136,34 +146,136 @@ administrator, open a lead with an attachment, and export one quote PDF under th
 Arabic locale (the mPDF temporary directory is the failure that already happened
 once — `.agents/context/operations/deployment-homelab.md`).
 
-## 6. The rehearsal — required, and not yet done
+## 6. The rehearsal — performed, and repeatable
 
-The acceptance criterion for this runbook is **a restore rehearsed following these
-steps**. It has not been performed. What follows is the exact script, so that it
-is a rehearsal and not an improvisation.
+**Why this section is not a table of good intentions.** On 2026-11-08 the live
+database was destroyed by a misaimed installer, and the entire recovery capability
+at that moment was one stray dump in `/var/tmp/pi-scratch/<run>/krayin.sql` — a
+directory a 48-hour reaper deletes. It was three days old, so three days of writes
+were lost. There was no schedule, no retention policy and no rehearsed restore.
+All three exist now, and the restore below has been run against the live data.
 
-**Rules for the rehearsal:** a scratch database on the development host, never the
-live one; never on a client instance; the dump can be synthetic.
+### The three commands
 
-1. Take a dump of a disposable database with the command shape in
-   `.agents/context/operations/database.md` (with `--no-tablespaces`).
-2. Note the row counts of `leads`, `quotes`, `persons`, `users`, `activities`.
-3. Drop the table set, or create a fresh scratch database.
-4. Restore the dump into it following §5 step 2.
-5. Re-count the same five tables and compare with step 2. Equal counts = pass.
-6. Record the elapsed time from "dump exists" to "verified restore" — that number
-   is the only honest restoration time the operator can quote, and it belongs in
-   [support-sla.md](support-sla.md) §3 as the basis for a severity-1 target.
-7. Write the result in the table below, with the date and the counts.
+```bash
+make backup            # dump + manifest, retention enforced             (~1 s here)
+make backup-verify     # re-check the newest dump against its manifest   (~0.2 s here)
+make backup-rehearse   # restore into a throwaway database and prove it (~4.5 s here)
+```
+
+What each one is allowed to touch:
+
+| Command | Reads | Writes |
+| --- | --- | --- |
+| `make backup` | the live database, through `mysqldump` inside `crm-platform-mysql` | `$HOME/backups/crm-platform/<db>-<UTC timestamp>.sql.gz` and its `.manifest` |
+| `make backup-verify` | the dump and its manifest | nothing |
+| `make backup-rehearse` | the dump, its manifest, the live database (SELECT only) | a throwaway database named `*_rehearsal`, which it drops before it exits |
+
+Neither the verify nor the rehearsal writes to the live database. The rehearsal
+re-reads the live row counts at the end and fails if any of them moved, which is
+how it proves the import stayed in the throwaway database rather than asserting it.
+
+### Retention, stated and enforced
+
+The dump script keeps the newest dump of each of the last **14 days**, plus the
+newest of each of the last **8 ISO weeks**, plus the newest of each of the last
+**6 calendar months** — restic's `forget --keep-daily/--keep-weekly/--keep-monthly`
+semantics, the same policy the homelab offsite pull uses: a dump kept by *any* of
+the three rules is kept. At one dump a day that settles at roughly 20-24 files.
+Override with `KEEP_DAILY`, `KEEP_WEEKLY` and `KEEP_MONTHLY`.
+
+Retention only ever deletes files matching `<db>-<YYYYMMDDTHHMMSSZ>.sql.gz` and
+their manifests. A hand-taken dump — the emergency copy
+`/home/mohamed/backups/crm-platform/krayin-2026-11-05-1422.sql` is one — never
+matches and is never deleted by it.
+
+### Where the dumps live, and what protects them
+
+`$HOME/backups/crm-platform/`, outside the checkout and outside `/tmp` and
+`/var/tmp/pi-scratch/`, so no reaper can reach them. A dump holds live client CRM
+rows and every user's bcrypt password hash, so the directory is created mode 700
+and each file 600, and the script **refuses** to write into a `BACKUP_DIR` inside
+the checkout unless `git check-ignore` proves the path is ignored
+(`storage/backups/` is, at `.gitignore:37`).
+
+### Scheduling
+
+`scripts/systemd/crm-platform-backup.timer` runs it nightly at 02:40 — a systemd
+**user** timer, because that is how scheduled work already runs on this host
+(`homelab-pull.timer` pulls the offsite restic repository at 03:30, and
+`homelab-backup.timer` runs the homelab host's own backup at 03:00). Nothing in
+this repository installs Laravel's `schedule:run`, so adding a cron entry or a
+Laravel schedule would have been a second mechanism competing with the documented
+one. Install it once (the checkout path is substituted in at install time):
+
+```bash
+mkdir -p ~/.config/systemd/user
+sed "s|@CHECKOUT@|$PWD|g" scripts/systemd/crm-platform-backup.service \
+  > ~/.config/systemd/user/crm-platform-backup.service
+sed "s|@CHECKOUT@|$PWD|g" scripts/systemd/crm-platform-backup.timer \
+  > ~/.config/systemd/user/crm-platform-backup.timer
+systemctl --user daemon-reload && systemctl --user enable --now crm-platform-backup.timer
+systemctl --user list-timers crm-platform-backup.timer     # next run, last run
+journalctl --user -u crm-platform-backup.service           # what each night did
+systemctl --user start crm-platform-backup.service         # once, now
+```
+
+`Persistent=true` in the timer means a night the machine was off is not a silent
+gap: the unit runs as soon as the timer is next active.
+
+### The rehearsal result
+
+Run on this checkout, `2026-11-09`, against the live database `krayin` (61 tables)
+and MySQL 8.4.11 in `crm-platform-mysql`:
+
+1. `make backup` — dump of `krayin`, 52 079 bytes gzipped (355 120 uncompressed),
+   taken in **0.33 s**. Manifest records sha256, both sizes, 61 tables and the
+   nine row counts below, with `counts_stable=yes`.
+2. `make backup-verify` — sha256, byte size, gzip integrity, the `-- Dump completed`
+   trailer and the `CREATE TABLE` count all matched the manifest (7/7 PASS,
+   **0.11 s**).
+3. `make backup-rehearse` restored it into `krayin_backup_rehearsal` — never into
+   `krayin`, never into `krayin_test` — after stripping the dump's own
+   `CREATE DATABASE`/`USE` statements and asserting none were left, because
+   importing them unchanged would have written to the live database. Import took
+   **2.13 s**.
+4. Restored counts matched the manifest exactly (9/9 tables, 61/61 tables) and
+   equalled the live values: leads 27, persons 19, organizations 8, products 12,
+   quotes 10, quote_items 22, activities 486, emails 9, users 14.
+5. A real login against the restored data (**0.69 s**): all 14 restored `users`
+   rows carried a 60-character bcrypt cost-10 hash; the restored hash for user id
+   1 rejected a wrong password (negative control); `Hash::check()` accepted a
+   password read back from the restored row after writing it; `Auth::guard('user')->attempt()`
+   authenticated user id 1; and `bouncer()->hasPermission('dashboard')` resolved
+   the restored role. **PASS.**
+6. The live database's table count and nine row counts were identical before and
+   after. **PASS.**
+7. `krayin_backup_rehearsal` was dropped and confirmed absent from
+   `information_schema`. **PASS.**
+
+End to end: **4.5 seconds** for 61 tables and 14 users. That is the only
+truthful restoration figure this runbook can quote, and it is the figure for *this*
+instance at *this* size — it is not a promise about a client instance whose
+database is a thousand times larger.
 
 | Rehearsal | Date | Dump source | Row counts before/after | Elapsed | Result |
 | --- | --- | --- | --- | --- | --- |
-| 1 | **not performed** | — | — | — | — |
+| 1 | 2026-11-09 | `make backup` of live `krayin` (61 tables, 52 KB gz) restored into `krayin_backup_rehearsal` | leads 27/27, persons 19/19, organizations 8/8, products 12/12, quotes 10/10, quote_items 22/22, activities 486/486, emails 9/9, users 14/14, tables 61/61 | 4.5 s wall clock (dump 0.3 s, verify 0.1 s, restore 2.1 s, login 0.7 s) | **PASS** — manifest verified, counts equal, administrator signed in, live database unchanged, scratch database dropped |
 
-**Until row 1 is filled:** no restore time is quoted to a client, and
-[../legal/terms-of-service.md](../legal/terms-of-service.md) §9.3 stays as written
-— recovery is limited to the practiced procedure, and there is no practiced
-procedure yet.
+**How to re-run it** (do this before quoting a restore time to anyone, and after
+any change to the schema or the container): `make backup && make backup-rehearse`.
+A rehearsal that fails names the check it failed and drops the throwaway database
+anyway. To leave it in place for inspection, run the script directly:
+`bash scripts/restore-rehearsal.sh --keep`.
+
+**What is still not rehearsed**, and must not be claimed: a restore into a *client*
+instance, a restore that has to also replace `APP_KEY` and `storage/`, and a
+restore from **off this host**. Every dump this repository produces sits on the
+same disk as the database it came from; the offsite leg is still open, and until
+it exists a fire, a stolen laptop or a dead disk still takes the database and its
+backups together. The dump's manifest records `app_key_sha256` so that an operator
+can prove they hold the matching `APP_KEY` (which is what decrypts encrypted
+columns) without the key being written next to the data.
 
 ## 7. Deletion on termination — the executable version
 
@@ -221,6 +333,10 @@ hours — starts when the vendor becomes aware, not when the cause is known.
 
 - `.agents/context/operations/database.md` — dumps, `--no-tablespaces`, verify by
   restoring, keep `APP_KEY` with the dump.
+- `scripts/backup-db.sh` — the dump, the manifest it writes and the retention it
+  enforces; `scripts/restore-rehearsal.sh` and `scripts/verify-restored-login.php`
+  — the rehearsal and the login proof; `scripts/systemd/crm-platform-backup.timer`
+  — the nightly schedule. Behaviour and flags: `scripts/README.md` §Backups.
 - `.agents/context/operations/deployment-homelab.md` — `storage/installed`
   kill-switch, deploy/rollback, health gate, mPDF failure.
 - `.agents/context/operations/environment-and-deployment.md` — prune rules,

@@ -10,7 +10,7 @@ be shared with a client — and only after its `DECISION` blocks are filled in
 | File | What it is | Share with a client? |
 | --- | --- | --- |
 | [`support-sla.md`](support-sla.md) | The support channel, hours, severity table with response and resolution targets, in/out of scope, the report template the client fills, the per-client handover sheet | **Yes**, once D5–D9 are closed |
-| [`incident-response.md`](incident-response.md) | What happens in the first five minutes, who is told in what order, the known total-loss vectors, the restore procedure with its verification, the restore rehearsal, the deletion-on-termination procedure, the after-action review | **Partly** — §2 (who is told, within what time) is quotable; the rest is ours |
+| [`incident-response.md`](incident-response.md) | What happens in the first five minutes, who is told in what order, the known total-loss vectors, the restore procedure with its verification, the nightly backup and its enforced retention, the rehearsed restore with measured counts and timings, the deletion-on-termination procedure, the after-action review | **Partly** — §2 (who is told, within what time) is quotable; the rest is ours |
 | [`security-review.md`](security-review.md) | Source review plus `composer audit --locked` results: 16 advisories across 9 packages (1 critical, 6 high, 7 medium, 2 low), the config and authorisation findings, and the fix list with exact commands | **Yes, in summary** — a security questionnaire is answered from §2 and §3. Do not hand over the full file without a fix date |
 | [`secrets-handling.md`](secrets-handling.md) | Every secret the product holds, per-instance provisioning, per-secret rotation with its blast radius, access control, leak response, the operator checklist | **No** — it names every key and what rotating it breaks |
 | [`decisions-to-confirm.md`](decisions-to-confirm.md) | The one checklist of commitments the owner has not made, with what closing each unlocks | No |
@@ -31,8 +31,11 @@ A statement that is a target rather than a fact is written as a target, and a
 commitment the owner has not made is written as a **DECISION** block, never as a
 default. Two examples that must not be softened:
 
-- **No restore from backup has been rehearsed yet**, so no restore time is quoted
-  ([`incident-response.md`](incident-response.md) §6).
+- **A restore has been rehearsed on this checkout (2026-11-09), and that is all.**
+  The rehearsal and its measured timings are in
+  [`incident-response.md`](incident-response.md) §6. It has not been done for a
+  client instance, and there is still **no copy of any dump off this host**, so no
+  restore time is quoted as a commitment and no backup is described as offsite.
 - **This is a one-operator business.** No document here promises 24/7 cover, an
   uptime percentage, or a fix time the operator cannot control
   ([`support-sla.md`](support-sla.md) §5).
@@ -49,7 +52,7 @@ database on the next container start, silently
 
 ## Related runbooks outside this folder
 
-- `scripts/README.md` — provisioning.
+- `scripts/README.md` — provisioning, and the backup/verify/rehearse scripts.
 - `deploy/README.md` — deployment, rollback, drills.
 - `Makefile` — the sanctioned command surface (`make` with no arguments lists it).
 - `AGENTS.md` — hard rules; `.agents/context/operations/` — the operation of this

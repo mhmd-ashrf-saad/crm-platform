@@ -219,20 +219,22 @@ one. See `scripts/README.md` for the full runbook.
   administrator row for `KRAYIN_ADMIN_EMAIL`, `storage/installed`, and
   `core_config installation.completed=1`, all written by
   `scripts/create-admin.php` — so a reset never leaves a half-installed instance.
-- **Never aim `php artisan krayin-crm:install` at any database.** It does not
-  honour `DB_DATABASE` or any other environment override.
-  `packages/Webkul/Installer/src/Console/Commands/Installer.php` re-reads the
-  `.env` **file** directly in `loadEnvConfigAtRuntime()`, writes
-  `database.connections.mysql.database` from it and calls `DB::purge()`, then
-  runs `migrate:fresh` against whatever `.env` names. A pre-flight `tinker` check
-  that prints the right database proves nothing, because the override is
-  discarded one line before the migrate. On 2026-11-08 a scratch-database
-  install done this way wiped the live `krayin` database — 27 leads, 19
-  contacts, 10 quotes, 486 activities — which had to be restored from a
-  three-day-old dump. It also rotates `APP_KEY` via `key:generate`. To install
-  into a scratch database, change `.env`'s `DB_DATABASE` (backing up `.env` and
-  the original `APP_KEY` first), or install from a throwaway copy of the
-  checkout. The incident record is
+- **Aim `php artisan krayin-crm:install` with `--target-database=<name>`, and
+  never at the live database.** The command used to discard every environment
+  override: `loadEnvConfigAtRuntime()` re-read the `.env` **file**, wrote
+  `database.connections.mysql.database` from it and purged the connection one
+  line before `migrate:fresh`, so a pre-flight `tinker` check proved nothing
+  about where the migrate would land. On 2026-11-08 a scratch install done that
+  way wiped the live `krayin` database — 27 leads, 19 contacts, 10 quotes, 486
+  activities — and rotated `APP_KEY`; it had to be restored from a three-day-old
+  dump. The connection now comes from `config()` as the application resolved it
+  at boot (an exported `DB_DATABASE` or `--target-database` is honoured, `.env`
+  is only the fallback), and the command refuses to run when that connection
+  cannot be reached, when it disagrees with the configured target, or when the
+  target already holds an installed application (administrator rows or
+  `installation.completed`). `--discard-existing-data` is the only way past that
+  last refusal. A scratch install therefore needs no `.env` edit; what is still
+  forbidden is pointing it at `krayin` to try it out. Incident record:
   [.agents/context/errors/installer-ignores-env-override.md](.agents/context/errors/installer-ignores-env-override.md).
 - **`APP_ENV` is read from `.env` only, deliberately.** Setting `APP_ENV` in the
   caller's environment does not make the guard refuse: a live instance whose

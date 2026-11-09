@@ -65,12 +65,38 @@ gone for good.
 - The binlogs could not close the gap — `mysqlbinlog` is absent from the
   container, so they could not be replayed.
 
+## 6. Fixed — 2026-11-09 (`crm-7ov`)
+
+- `loadEnvConfigAtRuntime()` no longer reads `.env`: every `DB_*` connection
+  setting comes from the `config()` the application resolved at boot, so an
+  exported value wins and the file is only the fallback. `--target-database=<name>`
+  names the target outright, and the interactive wizard's answers are recorded as
+  it writes them because they exist in no configuration yet.
+- The destructive half is fenced twice, both checks resolved from the
+  configuration and probed through the connection `migrate:fresh` inherits, so
+  they cannot describe a different connection from the one the wipe uses. The
+  command refuses when the connection cannot be reached or disagrees with the
+  configured target, and refuses to wipe a target that already holds an installed
+  application (administrator rows, or `installation.completed`) unless
+  `--discard-existing-data` is passed. In this incident's shape — nothing
+  overridden, target = live database — that last refusal is the only one that
+  fires, which is why the fence is the data and not a name comparison.
+- Evidence: `tests/Feature/Security/InstallerTargetDatabaseTest.php`. Against the
+  old code it resolves `krayin` where a scratch target was configured and stops
+  before `migrate:fresh`; against this code `migrate:fresh` lands in the throwaway
+  database, a canary database keeps its marker row, and `krayin` and `krayin_test`
+  keep their table and row counts. No test in it touches either of those.
+- Not covered by the fix, still true of the command: it rotates `APP_KEY` via
+  `key:generate` (the guard runs before it, so a refused run leaves the key
+  alone), and the web installer's own `migrate:fresh` step
+  (`DatabaseManager::migration()`) is fenced by `CanInstall` rather than by these
+  checks.
+
 ## Related
 
-- The rule this produced → `AGENTS.md`, "Never aim
-  `php artisan krayin-crm:install` at any database".
-- `bd show crm-7ov` — the hazard itself: patch `loadEnvConfigAtRuntime()` to
-  honour the resolved config, or wrap the installer in a guard.
+- The rule this produced → `AGENTS.md`, "Aim `php artisan krayin-crm:install`
+  with `--target-database=<name>`, and never at the live database".
+- `bd show crm-7ov` — the hazard itself; fixed as above.
 - `bd show crm-avm` — the backup gap this exposed (see also `crm-7rj`).
 - `bd show crm-zhp` — the fresh-install demo render check that caused this is
   still unverified.

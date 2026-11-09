@@ -1,0 +1,26 @@
+# crm-platform-backup.timer -- run the nightly dump at 02:40, and catch up if the machine was off.
+#
+# 02:40 is deliberately before the two backup windows this host already has (the homelab host's restic
+# run at 03:00, this laptop's offsite pull at 03:30), so the dump is not competing with either for disk
+# or for MySQL. `Persistent=true` means a night the machine was switched off is not a silent gap: the
+# unit runs as soon as the timer is next active, and the dump's own filename says when it was taken.
+#
+# This is a TEMPLATE; see crm-platform-backup.service for the @CHECKOUT@ substitution and the install
+# commands. Verify it after installing with `systemctl --user list-timers crm-platform-backup.timer`,
+# which prints the next and last run, and `journalctl --user -u crm-platform-backup.service`.
+[Unit]
+Description=Nightly Sijilna CRM database dump
+Documentation=file:@CHECKOUT@/scripts/README.md
+Documentation=file:@CHECKOUT@/docs/ops/incident-response.md
+
+[Timer]
+OnCalendar=*-*-* 02:40:00
+Persistent=true
+# A few minutes of jitter, so N client instances on one host do not all start mysqldump in the same
+# second.
+RandomizedDelaySec=300
+AccuracySec=1min
+Unit=crm-platform-backup.service
+
+[Install]
+WantedBy=timers.target

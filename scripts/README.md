@@ -25,6 +25,9 @@ make admin      # php scripts/create-admin.php with credentials from the environ
 make logs       # tail -f the dev server log
 make db-reset   # DESTRUCTIVE: wipe the dev database, rebuild it and recreate the admin (CONFIRM + KRAYIN_ADMIN_* required)
 make db-shell   # MySQL shell on the live database as the .env user
+make backup     # dump the live database with a manifest, enforcing retention (read-only against the live db)
+make backup-verify   # check the newest dump against its manifest
+make backup-rehearse # restore the newest dump into a throwaway database, prove it, drop it
 ```
 
 | Target | What it does |
@@ -42,6 +45,9 @@ make db-shell   # MySQL shell on the live database as the .env user
 | `logs` | `tail -f storage/logs/serve.log`; `LOG=storage/logs/laravel.log` for application errors. |
 | `db-reset` | Drops every table in the development database, re-migrates it, re-seeds it and recreates the administrator from `KRAYIN_ADMIN_EMAIL`/`KRAYIN_ADMIN_PASSWORD`, so it always ends fully installed. Its confirmation must be that database's name (`CONFIRM=krayin`) and both credentials must be set. See the guards below. |
 | `db-shell` | A MySQL shell on the live database as the `.env` user. |
+| `backup` | Runs `scripts/backup-db.sh`: a consistent gzipped dump of the live database into `$HOME/backups/crm-platform/` with a sibling manifest (sha256, sizes, database, table and row counts), then enforces retention. Reads the live database; writes only the dump. See [Backups](#backups-dump-verify-rehearse). |
+| `backup-verify` | Runs `scripts/backup-db.sh --verify`: re-checks the newest dump's sha256, byte size, gzip integrity, `-- Dump completed` trailer and table count against its manifest. Writes nothing. |
+| `backup-rehearse` | Runs `scripts/restore-rehearsal.sh`: verifies the newest dump, restores it into a throwaway `*_rehearsal` database, compares the restored counts with the manifest, proves an administrator signs in, proves the live database did not change, and drops the throwaway database. Never writes to the live database or to `krayin_test`. |
 
 Nothing in the Makefile is a credential: every password is read from `.env` at run time and handed to
 `docker`/`mysql` through the environment (`MYSQL_PWD`), never as a `-p<password>` argument.
@@ -436,7 +442,94 @@ with the old key (`APP_KEY`-encrypted columns, any `Crypt::encrypt` data) become
 every active session is invalidated so all users are logged out. Never run the installer — with or
 without `--reinstall` — against a client instance that holds data.
 
-## Backup and restore a per-client database
+## Backups: dump, verify, rehearse
+
+The product has three backup commands and one rule: **a dump nobody has restored is a hypothesis.**
+`scripts/backup-db.sh` writes the dump and the manifest that describes it, `scripts/restore-rehearsal.sh`
+proves a dump restores, and `scripts/verify-restored-login.php` (called by the rehearsal) proves an
+administrator can actually sign in against the restored rows. The operator procedure, the retention
+policy and the measured rehearsal result are in `docs/ops/incident-response.md` §5–§6.
+
+```bash
+make backup            # -> bash scripts/backup-db.sh
+make backup-verify     # -> bash scripts/backup-db.sh --verify
+make backup-rehearse   # -> bash scripts/restore-rehearsal.sh
+```
+
+### `scripts/backup-db.sh`
+
+| | |
+| --- | --- |
+| Writes | `$HOME/backups/crm-platform/<db>-<YYYYMMDDTHHMMSSZ>.sql.gz` and `<same>.manifest` |
+| Reads | the live database with `mysqldump` inside the container, as the `.env` user |
+| Flags | `--verify [FILE]`, `--list`, `--help` |
+| Environment | `BACKUP_DIR` (`$HOME/backups/crm-platform`), `KEEP_DAILY` 14, `KEEP_WEEKLY` 8, `KEEP_MONTHLY` 6, `DB_CONTAINER`, and the usual `DB_*` (caller's environment wins over `.env`) |
+
+Details that matter:
+
+- **Consistent, and it does not lock the CRM.** `--single-transaction` gives an InnoDB snapshot without
+  table locks, `--quick` streams instead of buffering a table, `--routines --triggers --events` keep
+  what a plain data dump drops, `--databases` makes the file self-contained, `--no-tablespaces`
+  silences the `PROCESS` warning below, and `--set-gtid-purged=OFF` keeps the file importable without
+  `SUPER` if GTID is ever enabled.
+- **A dump is validated before it is promoted.** gzip must accept it and it must end with mysqldump's
+  `-- Dump completed` trailer, which is written last. A truncated file is deleted, never renamed,
+  because a half-written `.sql` is worse than none.
+- **The manifest records what a restore must reproduce**: `dump_sha256`, `dump_bytes`,
+  `uncompressed_bytes`, `database`, `container`, `server_version`, `tables`, the `rows_*` counts for
+  `leads`, `persons`, `organizations`, `products`, `quotes`, `quote_items`, `activities`, `emails` and
+  `users`, the flags used, the `dump_duration`, the `checkout_commit` (and `checkout_dirty`), and
+  `app_key_sha256` — a fingerprint of `APP_KEY`, never the key. The counts are read immediately before
+  the dump and read again after it; a difference is recorded as `counts_stable=no` rather than hidden.
+- **Retention is enforced here, not hoped for**: the newest dump per day for `KEEP_DAILY` days, per
+  ISO week for `KEEP_WEEKLY` weeks, and per calendar month for `KEEP_MONTHLY` months — the union, as
+  restic does it, so any policy that keeps a file keeps it. At one dump a day that settles at roughly
+  20–24 files. Only names matching the timestamp pattern are ever deleted; a hand-taken dump such as
+  `krayin-2026-11-05-1422.sql` does not match and is never touched (`--list` says so explicitly).
+- **The destination is checked, not assumed.** The directory is created mode 700 and each file 600,
+  because a dump holds live client rows and every user's bcrypt password hash. A `BACKUP_DIR` inside
+  the checkout is refused unless `git check-ignore` proves the path is ignored — `storage/backups/`
+  qualifies at `.gitignore:37`, and the script prints the `.gitignore` line it matched.
+
+### `scripts/restore-rehearsal.sh`
+
+Restores the newest dump (or `--dump FILE`) into a throwaway database and proves the restore is real:
+
+1. verifies the dump against its manifest, with the same code `make backup-verify` runs;
+2. records the live table count and row counts **before** creating anything;
+3. creates the throwaway database — its name **must end in `_rehearsal`**, and it is refused if it is
+   the live database, the database `phpunit.xml` pins, or a MySQL system schema;
+4. strips the dump's own `CREATE DATABASE` / `USE` statements and **asserts none are left before
+   importing**, because `--databases` output would otherwise write to the live database. This is the
+   guard that stops a rehearsal becoming a second 2026-11-08;
+5. compares the restored counts with the manifest, table by table, and fails on any difference;
+6. proves a real login against the restored data (see below), then re-reads the live counts and fails
+   if they moved — the evidence that the import stayed in the throwaway database;
+7. drops the throwaway database and confirms it is gone from `information_schema`. `--keep` leaves it.
+
+It refuses to run at all while `bootstrap/cache/config.php` exists, because a cached config beats the
+`DB_DATABASE` the rehearsal exports, and the login proof **writes** a password into a users row.
+
+### `scripts/verify-restored-login.php`
+
+The row count is not the proof; the password column is bcrypt, so bcrypt is the proof. Against the
+restored database only, and with a password generated per run that is never printed: every restored
+`users` row must carry a 60-character bcrypt cost-10 hash; the restored hash for the chosen
+administrator must *reject* a wrong password (negative control); `Hash::check()` must accept the
+rehearsal password read back from that row after writing it; `Auth::guard('user')->attempt()` — the
+same guard the login controller calls — must authenticate it; and
+`bouncer()->hasPermission('dashboard')` must resolve the restored `roles` row.
+
+### Scheduling
+
+`scripts/systemd/crm-platform-backup.timer` runs `make backup` nightly at 02:40 as a systemd **user**
+timer (`Persistent=true`), which is how scheduled work already runs on this host — `homelab-pull.timer`
+pulls the offsite restic repository at 03:30 and `homelab-backup.timer` runs the homelab host's own
+backup at 03:00. Nothing in this repository installs Laravel's `schedule:run`, so there is no second
+mechanism. The units are templates with `@CHECKOUT@`; install them with the commands in
+`docs/ops/incident-response.md` §6.
+
+### The raw commands, and what is still not covered
 
 `mysqldump` run as the application user prints this and still succeeds:
 
@@ -450,25 +543,27 @@ The line is **noise, not failure**: the command exits `0` and the dump is comple
 tablespace metadata, which the application user does not have — the data itself is unaffected. Add
 `--no-tablespaces` to silence it; the dump is otherwise identical.
 
-Dump (substitute the container, application user and database name from the instance's `.env`):
+Dump and restore by hand (substitute the container, application user and database name from the
+instance's `.env`), for a machine with no `make`:
 
 ```bash
 docker exec -e MYSQL_PWD="<app-password>" <container> \
   mysqldump -u<app-user> --no-tablespaces --databases <db-name> \
-  > "<db-name>-$(date +%Y%m%dT%H%M%S).sql"
-```
+  | gzip -9 > "<db-name>-$(date -u +%Y%m%dT%H%M%SZ).sql.gz"
 
-Restore (into the same or a recreated database):
-
-```bash
-docker exec -i -e MYSQL_PWD="<app-password>" <container> \
-  mysql -u<app-user> <db-name> < "<db-name>-<timestamp>.sql"
+gzip -dc "<db-name>-<timestamp>.sql.gz" \
+  | docker exec -i -e MYSQL_PWD="<app-password>" <container> mysql -u<app-user> <db-name>
 ```
 
 For the default provisioned instance that is container `crm-platform-mysql`, user `krayin`, database
 `krayin`; a second install uses the `KRAYIN_DB_CONTAINER` / `KRAYIN_DB_USER` / `KRAYIN_DB_NAME` values
-from its own recipe above. Keep `APP_KEY` with the dump: restoring the data without it leaves
-encrypted values unreadable.
+from its own recipe above, and `scripts/backup-db.sh` picks those up from its own `.env` with no flags.
+
+Two things this repository still does not do, and never claims: **no dump is copied off this host**
+(the database and its backups share one disk, so a dead disk takes both), and **no restore has been
+rehearsed on a client instance** — only on the development database. Keep `APP_KEY` with the dump:
+restoring the data without it leaves encrypted values unreadable, and the manifest's `app_key_sha256`
+is how you check you have the right one.
 
 ## Known gaps in the generated `.env`
 

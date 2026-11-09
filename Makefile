@@ -20,6 +20,15 @@
 #     command line of every process, and has already killed the shell that mentioned it. Server
 #     processes are identified by the socket they own plus /proc/<pid>/cwd pointing into this
 #     checkout.
+#   * `make backup` only READS the live database (mysqldump inside the MySQL container, as the .env
+#     user) and writes a gzipped dump plus a manifest of its sha256, sizes, database name and row
+#     counts to $HOME/backups/crm-platform -- outside the checkout and outside /tmp, with retention
+#     enforced by the script. `make backup-verify` re-checks the newest dump against that manifest and
+#     writes nothing. `make backup-rehearse` restores into a throwaway database whose name must end in
+#     `_rehearsal`, compares the restored counts with the manifest, proves an administrator can
+#     actually sign in, and then drops it: it never writes to the live database and never to
+#     `krayin_test`. A backup nobody has restored is a hypothesis, which is why the rehearsal is a
+#     target rather than a paragraph.
 #
 # This file is a Makefile, not a shell script. Anything that pipes it through shellcheck with
 # `-s bash` reports make-only syntax, `$`-doubled shell expansions (shellcheck reads the double
@@ -68,7 +77,7 @@ LOG ?= storage/logs/serve.log
 # operator can actually receive it, and a hardcoded address would prove nothing.
 MAIL_TO ?=
 
-.PHONY: help setup serve stop restart status test test-db lint lint-check lint-arabic admin logs db-reset db-shell mail-test
+.PHONY: help setup serve stop restart status test test-db lint lint-check lint-arabic admin logs db-reset db-shell mail-test backup backup-verify backup-rehearse
 
 help: ## List the make targets (default target)
 	@printf '\nKrayin CRM dev commands  (checkout: %s)\n\n' '$(ROOT)'
@@ -262,6 +271,18 @@ lint-check: ## Check PHP formatting with Pint without changing files
 
 lint-arabic: ## Check Arabic strings against the terminology glossary (scripts/check-arabic-glossary.php)
 	@cd '$(ROOT)' && php scripts/check-arabic-glossary.php
+
+backup: ## Dump the live database to $HOME/backups/crm-platform with a sha256/counts manifest, enforcing retention
+	@cd '$(ROOT)'
+	bash scripts/backup-db.sh
+
+backup-verify: ## Verify the newest dump against its manifest (sha256, size, gzip, completeness, table count)
+	@cd '$(ROOT)'
+	bash scripts/backup-db.sh --verify
+
+backup-rehearse: ## Restore the newest dump into a throwaway _rehearsal database, prove it, then drop it
+	@cd '$(ROOT)'
+	bash scripts/restore-rehearsal.sh
 
 admin: ## Create/update the admin account (requires KRAYIN_ADMIN_EMAIL and KRAYIN_ADMIN_PASSWORD)
 	@cd '$(ROOT)'

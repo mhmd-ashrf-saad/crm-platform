@@ -6,6 +6,7 @@ use Illuminate\Console\Command;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\File;
+use Throwable;
 use Webkul\Core\Providers\CoreServiceProvider;
 use Webkul\Installer\Database\Seeders\DatabaseSeeder as KrayinDatabaseSeeder;
 use Webkul\Installer\Events\ComposerEvents;
@@ -24,7 +25,9 @@ class Installer extends Command
      */
     protected $signature = 'krayin-crm:install
         { --skip-env-check : Skip env check. }
-        { --skip-admin-creation : Skip admin creation. }';
+        { --skip-admin-creation : Skip admin creation. }
+        { --target-database= : Install into this database, instead of the one the resolved configuration names. }
+        { --discard-existing-data : Allow wiping a database that already holds an installed application. }';
 
     /**
      * The console command description.
@@ -32,6 +35,18 @@ class Installer extends Command
      * @var string
      */
     protected $description = 'krayin installer.';
+
+    /**
+     * Values this run's interactive wizard wrote to `.env`, by key.
+     *
+     * The console application resolved `config()` from the environment (and `.env`) before this
+     * command ran, so an answer given to the wizard exists only in the file it was written to.
+     * Recording it here is what lets `loadEnvConfigAtRuntime()` take the database connection from the
+     * already-resolved configuration without losing the installer's own answers.
+     *
+     * @var array<string, string>
+     */
+    protected $wizardAnswers = [];
 
     /**
      * Locales list.
@@ -133,10 +148,26 @@ class Installer extends Command
 
         $this->loadEnvConfigAtRuntime();
 
+        /**
+         * Asked twice on purpose. The first call runs before `key:generate`, so a refused run never
+         * rotates `APP_KEY` — losing it is damage of its own, and the 2026-11-08 incident did it. The
+         * second runs immediately before `migrate:fresh`, which is the call that destroys data: it
+         * re-resolves the connection from scratch, so what it proves is what the wipe inherits rather
+         * than what some earlier step believed.
+         */
+        if (! $this->guardDestructiveTarget()) {
+            return self::FAILURE;
+        }
+
         $this->warn('Step: Generating key...');
         $this->call('key:generate');
 
         $this->warn('Step: Migrating all tables...');
+
+        if (! $this->guardDestructiveTarget()) {
+            return self::FAILURE;
+        }
+
         $this->call('migrate:fresh');
 
         $this->warn('Step: Seeding basic data for Krayin kickstart...');
@@ -433,21 +464,152 @@ class Installer extends Command
 
         /**
          * Setting database configurations.
+         *
+         * Every one of these is taken from the configuration this application resolved when it
+         * booted, not re-read from the `.env` file. That file is what made the installer ignore
+         * `DB_DATABASE`: an exported value was overwritten with the file's own one line before
+         * `migrate:fresh` ran, so a caller could not retarget the command at all and a populated
+         * database was destroyed with it. See
+         * .agents/context/errors/installer-ignores-env-override.md.
          */
-        $databaseConnection = $this->getEnvAtRuntime('DB_CONNECTION');
+        $databaseConnection = $this->wizardAnswers['DB_CONNECTION'] ?? config('database.default');
 
         config([
-            "database.connections.{$databaseConnection}.host" => $this->getEnvAtRuntime('DB_HOST'),
-            "database.connections.{$databaseConnection}.port" => $this->getEnvAtRuntime('DB_PORT'),
-            "database.connections.{$databaseConnection}.database" => $this->getEnvAtRuntime('DB_DATABASE'),
-            "database.connections.{$databaseConnection}.username" => $this->getEnvAtRuntime('DB_USERNAME'),
-            "database.connections.{$databaseConnection}.password" => $this->getEnvAtRuntime('DB_PASSWORD'),
-            "database.connections.{$databaseConnection}.prefix" => $this->getEnvAtRuntime('DB_PREFIX'),
+            "database.connections.{$databaseConnection}.host" => $this->getDatabaseSettingAtRuntime($databaseConnection, 'host', 'DB_HOST'),
+            "database.connections.{$databaseConnection}.port" => $this->getDatabaseSettingAtRuntime($databaseConnection, 'port', 'DB_PORT'),
+            "database.connections.{$databaseConnection}.database" => $this->getDatabaseSettingAtRuntime($databaseConnection, 'database', 'DB_DATABASE', $this->option('target-database')),
+            "database.connections.{$databaseConnection}.username" => $this->getDatabaseSettingAtRuntime($databaseConnection, 'username', 'DB_USERNAME'),
+            "database.connections.{$databaseConnection}.password" => $this->getDatabaseSettingAtRuntime($databaseConnection, 'password', 'DB_PASSWORD'),
+            "database.connections.{$databaseConnection}.prefix" => $this->getDatabaseSettingAtRuntime($databaseConnection, 'prefix', 'DB_PREFIX'),
         ]);
 
         DB::purge($databaseConnection);
 
         $this->info('Configuration loaded...');
+    }
+
+    /**
+     * One `database.connections` setting, resolved the way the rest of the application resolves it.
+     *
+     * Three sources, in order: an explicit `--target-database` (the database name only), an answer
+     * this run's wizard gave, and the value the application already resolved into `config()` at boot
+     * — which is the caller's exported `DB_*` when there is one and the `.env` value otherwise.
+     *
+     * The `.env` **file** is deliberately not consulted. Re-reading it here is exactly the defect: it
+     * makes the connection the installer migrates depend on a file the caller did not change, so no
+     * environment override could bound the command.
+     */
+    protected function getDatabaseSettingAtRuntime(string $connection, string $setting, string $envKey, ?string $explicit = null): mixed
+    {
+        if ($explicit) {
+            return $explicit;
+        }
+
+        if (array_key_exists($envKey, $this->wizardAnswers)) {
+            return $this->wizardAnswers[$envKey];
+        }
+
+        return config("database.connections.{$connection}.{$setting}");
+    }
+
+    /**
+     * Why the database this run would migrate must not be wiped, or `null` when it may be.
+     *
+     * Read by `guardDestructiveTarget()`, which is called immediately before `migrate:fresh`. It
+     * resolves the connection from the configuration at the moment of the call and probes it, so the
+     * answer describes the connection the destructive sub-call will inherit rather than what some
+     * earlier step believed: a check made before `loadEnvConfigAtRuntime()` purged the connection is
+     * decoration, because the purge is what replaced the connection the check had looked at.
+     *
+     * The second fence is deliberately not a name comparison. Refusing on a *mismatch* between the
+     * configured target and `.env` passes in precisely the case that destroyed the live database —
+     * nothing overridden, so both sides name the live database. What makes a wipe harmful is the data
+     * already in the target, so that is what is measured, and no name can satisfy it by accident.
+     */
+    public function destructiveTargetProblem(bool $discardExistingData = false): ?string
+    {
+        $connection = $this->wizardAnswers['DB_CONNECTION'] ?? config('database.default');
+
+        $target = config("database.connections.{$connection}.database");
+
+        try {
+            $probe = DB::connection($connection);
+
+            /**
+             * Opening the connection is the point of the probe: an unreachable server or a database
+             * that does not exist is refused here instead of failing halfway through the wipe.
+             */
+            $probe->getPdo();
+
+            $resolved = $probe->getDatabaseName();
+        } catch (Throwable $e) {
+            return sprintf(
+                'Refusing to install: the "%s" connection cannot be reached (%s). Nothing has been migrated.',
+                $connection,
+                $e->getMessage()
+            );
+        }
+
+        if ($resolved !== $target) {
+            return sprintf(
+                'Refusing to install: the "%s" connection points at "%s" while the installer would migrate "%s". Nothing has been migrated.',
+                $connection,
+                $resolved,
+                $target
+            );
+        }
+
+        if ($discardExistingData) {
+            return null;
+        }
+
+        $database = app(DatabaseManager::class);
+
+        try {
+            $populated = $database->isInstalled();
+
+            $completed = $database->isInstallationCompleted();
+        } catch (Throwable $e) {
+            return sprintf(
+                'Refusing to install: could not tell whether "%s" already holds data (%s). Nothing has been migrated.',
+                $target,
+                $e->getMessage()
+            );
+        }
+
+        if ($populated || $completed) {
+            return sprintf(
+                'Refusing to wipe "%s": it already holds an installed application (%s). Nothing has been migrated. Pass --discard-existing-data only if that data is disposable.',
+                $target,
+                $populated ? 'administrator rows present' : 'installation.completed recorded'
+            );
+        }
+
+        return null;
+    }
+
+    /**
+     * Report the database this run will migrate, and stop when wiping it cannot be justified.
+     */
+    protected function guardDestructiveTarget(): bool
+    {
+        $connection = $this->wizardAnswers['DB_CONNECTION'] ?? config('database.default');
+
+        $problem = $this->destructiveTargetProblem((bool) $this->option('discard-existing-data'));
+
+        if ($problem !== null) {
+            $this->error($problem);
+
+            return false;
+        }
+
+        $this->info(sprintf(
+            'Target database: %s (connection %s)',
+            config("database.connections.{$connection}.database"),
+            $connection
+        ));
+
+        return true;
     }
 
     /**
@@ -497,6 +659,12 @@ class Installer extends Command
         $data = preg_replace("/$key=(.*)/", "$key=$value", $data);
 
         file_put_contents(base_path('.env'), $data);
+
+        /**
+         * Recorded as well as written: the connection this run migrates is taken from the resolved
+         * configuration, and an answer given now is not in it yet.
+         */
+        $this->wizardAnswers[$key] = $value;
     }
 
     /**
