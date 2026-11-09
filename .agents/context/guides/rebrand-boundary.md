@@ -1,4 +1,4 @@
-<!-- Context: guides/rebrand-boundary.md | Priority: high | Version: 1.7 | Updated: 2026-11-02 -->
+<!-- Context: guides/rebrand-boundary.md | Priority: high | Version: 1.8 | Updated: 2026-11-09 -->
 
 # Rebrand Boundary
 
@@ -65,6 +65,7 @@ Every core Krayin file this tree changes on purpose is listed here; merge debt i
 | `packages/Webkul/Automation/src/Helpers/Entity/Activity.php` | One line, 318: the iCal `PRODID`, `PRODID:-//Krayincrm//Krayincrm//EN` → `PRODID:-//Sijilna//Sijilna//EN` | The string is hardcoded in a helper with no config key, view or lang surface, and calendar clients render it. |
 | `tests/Feature/Security/HtmlSanitizationTest.php` | The sanitisation fixture's URL and text swapped to the brand domain (`krayincrm.com`/`Krayin` → `sijilna.com`/`Sijilna`) | A test fixture has no view or config surface to override; the file sits at an upstream path a `2.2` merge also owns. |
 | `AGENTS.md` | Fork identity in the header (3 lines) plus a 17-line "Rebrand boundary" subsection, on a file the fork had already expanded from upstream's 70 lines to 274 at `HEAD` (+204 lines, commit `b9d80f3a`); 297 lines in the working tree | Agent instructions are read directly; nothing loads them as an overridable surface. A merge collides on the whole fork project section, rebrand or not. |
+| `packages/Webkul/Admin/src/Resources/views/quotes/pdf.blade.php` | The header now prints the brand wordmark — `packages/Sijilna/Brand/resources/assets/sijilna-wordmark-ar.svg` for a right-to-left document, `sijilna-wordmark.svg` otherwise, chosen the way the login, mail and error blades choose theirs — resolved with `base_path()` and guarded by `is_file()`, in normal flow above the title; and the line-item table states every column's width while its six figure columns give up 12px of horizontal padding each, so the product-name column holds ~173pt of content instead of ~26pt. `crm-892`; carries the commit that adds this row | The brand *mark* is reached from core code here rather than from an override because the fix is not only the mark: the same view's line-item table was over-constrained, and a whole-file copy of a 700-line PDF template to add a logo would fork a document that upstream owns in full — the copy would then miss upstream's own changes to it. The asset is read as a local `base_path()` path, never the `sijilna.asset` route, because dompdf fetches no remote URLs and mPDF would issue an HTTP request into the application it renders inside. |
 
 A `2.2` merge sees more than this table: `git diff --name-only upstream/2.2`
 also lists pre-existing fork work the rebrand did not touch — `.agents/context/**`,

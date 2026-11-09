@@ -9,6 +9,8 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Str;
+use Webkul\Admin\Helpers\Dashboard;
+use Webkul\Admin\Helpers\Reporting\AbstractReporting;
 use Webkul\Installer\Database\Seeders\DatabaseSeeder as InstallerSeeder;
 use Webkul\User\Models\User;
 
@@ -460,6 +462,81 @@ it('leaves installed reference data exactly as the installer seeded it', functio
         ->and(DB::table('roles')->count())->toBe($roles)
         ->and(DB::table('email_templates')->whereIn('name', ['Activity created', 'Activity modified'])->count())
         ->toBe(2);
+});
+
+it('opens the dashboard on a window that covers the dataset it seeds', function () {
+    /**
+     * A freshly installed instance holds no row for the dashboard range: the settings screen has
+     * never been saved, so `SystemConfig` answers the field's own default and the dashboard falls
+     * back to one month. That is the state the first screen of a demo used to open in -- won
+     * `US$ 0.00`, lost `US$ 0.00`, «إجمالي المؤسسات» `0` and two «لا توجد بيانات متاحة» panels --
+     * because the fixtures reach 75 days back (bead `crm-703`).
+     */
+    DB::table('core_config')->where('code', DemoSeeder::DASHBOARD_RANGE_SETTING)->delete();
+
+    expect(core()->getConfigData(DemoSeeder::DASHBOARD_RANGE_SETTING))->toBe('1_month');
+
+    seedDemoDataset();
+
+    expect(core()->getConfigData(DemoSeeder::DASHBOARD_RANGE_SETTING))->toBe(DemoSeeder::DASHBOARD_RANGE)
+        ->and(DB::table('core_config')->where('code', DemoSeeder::DASHBOARD_RANGE_SETTING)->pluck('value')->all())
+        ->toBe([DemoSeeder::DASHBOARD_RANGE]);
+
+    /**
+     * The setting is only worth writing if the window it produces is the one the date control
+     * starts on, so the reporting helper's own default is read rather than a copy of the rule.
+     */
+    $reporting = new class extends AbstractReporting {};
+
+    expect($reporting->getDefaultStartDate())->toEqual(now()->subMonths(3)->startOfDay())
+        ->and($reporting->getDefaultStartDate()->lessThanOrEqualTo(now()->subDays(75)))->toBeTrue();
+
+    /**
+     * And the numbers the dashboard reports on that untouched first load are the ones the tiles
+     * print: nothing here passes a `start` or `end`, exactly as a browser that lands on
+     * `/admin/dashboard` passes none.
+     */
+    $dashboard = app(Dashboard::class);
+
+    $revenue = $dashboard->getRevenueStats();
+    $overall = $dashboard->getOverAllStats();
+
+    expect($revenue['total_won_revenue']['current'])->toBeGreaterThan(0)
+        ->and($revenue['total_lost_revenue']['current'])->toBeGreaterThan(0)
+        ->and($overall['total_organizations']['current'])->toBeGreaterThan(0)
+        ->and($dashboard->getLeadsStatsBySources())->not->toBeEmpty()
+        ->and($dashboard->getLeadsStatsByTypes())->not->toBeEmpty();
+});
+
+it('records the dashboard window once and never overwrites one the installation already holds', function () {
+    DB::table('core_config')->where('code', DemoSeeder::DASHBOARD_RANGE_SETTING)->delete();
+
+    seedDemoDataset();
+
+    expect(DB::table('core_config')->where('code', DemoSeeder::DASHBOARD_RANGE_SETTING)->count())->toBe(1);
+
+    /**
+     * `core_config` has no unique index on `code`, so a second row is possible and would leave
+     * `findOneWhere()` free to answer either one. A re-run must not add one.
+     */
+    seedDemoDataset();
+
+    expect(DB::table('core_config')->where('code', DemoSeeder::DASHBOARD_RANGE_SETTING)->count())->toBe(1)
+        ->and(DB::table('core_config')->where('code', DemoSeeder::DASHBOARD_RANGE_SETTING)->value('value'))
+        ->toBe(DemoSeeder::DASHBOARD_RANGE);
+
+    /**
+     * A range the operator saved afterwards is an installation decision, and a seeder that can be
+     * re-run must not move it: the same rule the installer's own locale seeder follows.
+     */
+    DB::table('core_config')
+        ->where('code', DemoSeeder::DASHBOARD_RANGE_SETTING)
+        ->update(['value' => '9_months']);
+
+    seedDemoDataset();
+
+    expect(DB::table('core_config')->where('code', DemoSeeder::DASHBOARD_RANGE_SETTING)->pluck('value')->all())
+        ->toBe(['9_months']);
 });
 
 it('keeps the credentials file authenticating against the rows after two consecutive runs', function () {

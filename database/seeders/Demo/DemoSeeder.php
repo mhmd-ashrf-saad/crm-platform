@@ -30,6 +30,8 @@ use Webkul\User\Models\User;
  *   the same transaction as the rebuild.
  * - **Dates are relative to today,** so the dashboard date-range report, "this month" and the
  *   activity calendar are never empty however long after this file was written it runs.
+ * - **The dashboard's first load shows the dataset.** The fixtures reach 75 days back, so the
+ *   seeder records a dashboard window that covers them (see `seedDashboardRange()`).
  */
 class DemoSeeder extends Seeder
 {
@@ -42,6 +44,20 @@ class DemoSeeder extends Seeder
      * SQL LIKE pattern matching exactly the addresses on the reserved domain.
      */
     public const RESERVED_EMAIL_PATTERN = DemoIdentity::RESERVED_EMAIL_PATTERN;
+
+    /**
+     * The `core_config` row that sets the dashboard's default reporting window.
+     *
+     * Read by `AbstractReporting::getDefaultStartDate()`; the field it belongs to is declared in
+     * `Webkul/Admin/src/Config/core_config.php` under the key `general.settings.dashboard`.
+     */
+    public const DASHBOARD_RANGE_SETTING = 'general.settings.dashboard.date_range';
+
+    /**
+     * The range this dataset declares, and the widest one the dashboard control offers short of
+     * nine months. See `seedDashboardRange()` for why the seeder sets it at all.
+     */
+    public const DASHBOARD_RANGE = '3_months';
 
     /**
      * Rows the seeder writes, in the order the report prints them.
@@ -71,6 +87,11 @@ class DemoSeeder extends Seeder
         'web_form_attributes',
         'attribute_values',
     ];
+
+    /**
+     * What `seedDashboardRange()` found or did, for the report.
+     */
+    protected string $dashboardRangeOutcome = '';
 
     /**
      * Create a new seeder instance.
@@ -109,6 +130,12 @@ class DemoSeeder extends Seeder
             $context = app(DemoSalesSeeder::class)->seed($context);
 
             $this->seedMail($context);
+
+            /**
+             * Inside the transaction on purpose: a run that fails later must not leave the
+             * installation pointing its dashboard at a window it never chose.
+             */
+            $this->seedDashboardRange();
 
             return $this->countRows();
         });
@@ -331,6 +358,51 @@ class DemoSeeder extends Seeder
     }
 
     /**
+     * Record a dashboard window wide enough for the data this file seeds.
+     *
+     * The fixtures are backdated up to 75 days (organizations and contacts across the whole span,
+     * won and lost revenue across most of it), while the product's default window is one month:
+     * `AbstractReporting::getDefaultStartDate()` falls back to `now()->subMonth()` whenever no
+     * `general.settings.dashboard.date_range` row exists, and a freshly installed instance has no
+     * such row. The dashboard's first load then reported won `0.00`, lost `0.00`,
+     * «إجمالي المؤسسات» `0` and two «لا توجد بيانات متاحة» panels until somebody switched the
+     * range by hand -- the first screen of the first meeting, empty (bead `crm-703`).
+     *
+     * The dataset is what is backdated, so the dataset is what declares a window that covers it.
+     * The product default is deliberately not touched: one month is defensible for a client whose
+     * data is recent, and moving it would move every existing instance's reporting window.
+     *
+     * A row the installation already holds is never rewritten. `core_config` records decisions an
+     * operator made -- the installer's own `seedLocaleSetting()` leaves an existing locale row
+     * alone for the same reason -- and a seeder re-run on an instance that has been trading since
+     * must not silently move its reporting window. This writes nothing on a non-demo instance,
+     * because nothing runs this seeder there.
+     */
+    protected function seedDashboardRange(): void
+    {
+        $existing = DB::table('core_config')
+            ->where('code', self::DASHBOARD_RANGE_SETTING)
+            ->value('value');
+
+        if ($existing !== null) {
+            $this->dashboardRangeOutcome = $existing === self::DASHBOARD_RANGE
+                ? self::DASHBOARD_RANGE.' (already recorded)'
+                : $existing.' (left as recorded, not overwritten)';
+
+            return;
+        }
+
+        DB::table('core_config')->insert([
+            'code' => self::DASHBOARD_RANGE_SETTING,
+            'value' => self::DASHBOARD_RANGE,
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        $this->dashboardRangeOutcome = self::DASHBOARD_RANGE.' (recorded; the installation had not chosen one)';
+    }
+
+    /**
      * Row counts for the report.
      *
      * @return array<string, int>
@@ -368,6 +440,10 @@ class DemoSeeder extends Seeder
         foreach ($fixtureUsers as $fixture) {
             $this->command?->line(sprintf('  %-32s %s', $fixture['email'], $this->credentials->password($fixture['key'])));
         }
+
+        $this->command?->newLine();
+        $this->command?->line('Dashboard default range: '.$this->dashboardRangeOutcome);
+        $this->command?->line('Change it in Configuration -> General -> Settings; a later run of this seeder leaves it alone.');
 
         $this->command?->newLine();
         $this->command?->line('Credentials file: '.$credentialsPath);

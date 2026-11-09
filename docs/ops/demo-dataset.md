@@ -250,6 +250,32 @@ contacts backdated across a 75-day window, activities from −24 to +12 days), s
 dashboard date ranges, "this month" reports and the activity calendar have content
 however long after this file was written the seeder runs.
 
+### The dashboard window the dataset declares
+
+The backdating is why the seeder also writes one setting: a one-month window over data
+spanning 75 days renders the dashboard empty, so `DemoSeeder::seedDashboardRange()`
+records `general.settings.dashboard.date_range = 3_months` in `core_config`, inside the
+same transaction as the dataset.
+
+- **It only writes when the installation holds no such row.** An operator's own saved
+  range is never overwritten, so a re-seed on an instance that has been trading since
+  leaves the reporting window where the operator put it. A row already holding
+  `3_months` is reported as already recorded; a row holding anything else is reported
+  as left as recorded.
+- **The product-wide default is unchanged: one month.**
+  `AbstractReporting::getDefaultStartDate()` still falls back to `now()->subMonth()`
+  when no row exists, which is the right window for a client whose data is recent.
+  This is the demo dataset's behaviour, not a change for real clients: a non-demo
+  instance runs no part of this seeder, so nothing here writes to it.
+- **Every preset still overrides it.** Choosing «آخر 30 يومًا» gives the 30-day window
+  (and its empty panels) and «آخر 3 أشهر» restores the populated one, in both
+  directions.
+- **It is visible in the seed report.** The run prints the outcome —
+  `3_months (recorded; the installation had not chosen one)`, `… (already recorded)` or
+  `… (left as recorded, not overwritten)` — beside the row counts and the credentials
+  path.
+
+
 ## 6. Full reset of the demo
 
 > ### ⚠ `make db-reset` destroys the named database. There is no undo.

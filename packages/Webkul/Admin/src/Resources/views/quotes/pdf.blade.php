@@ -80,6 +80,35 @@
                 margin: 0;
             }
 
+            /*
+                The document's wordmark.
+
+                The header carried only the document title, so the quote a buyer receives and
+                forwards internally named no product at all, while the admin header, the login
+                screen and the branded error pages all carry the wordmark.
+
+                It is stacked above the title rather than absolutely positioned in a corner: the
+                mark, the title, the information block and the address tables are then separate
+                blocks in normal flow, so no padding or font-size change can slide the mark onto
+                the date, the quote number or the customer block. The stock `.logo-container` rule
+                above is absolute and unused, and mPDF's absolute box model is the one part of it
+                this template cannot verify, which is why it is not revived here.
+
+                Width in px, height auto: both renderers keep the SVG's 256-unit height and the
+                600x256 (ar: 560x256) aspect, and 150px gives a mark about 112pt wide — legible on
+                a printed A4 page without competing with the 24px title under it.
+            */
+            .brand-wordmark {
+                text-align: center;
+                margin-bottom: 6px;
+                line-height: 0;
+            }
+
+            .brand-wordmark img {
+                width: 150px;
+                height: auto;
+            }
+
             .logo-container {
                 position: absolute;
                 top: 20px;
@@ -136,6 +165,46 @@
 
             table.rtl tbody tr td {
                 text-align: right;
+            }
+
+            /*
+                Line-item column widths.
+
+                The product-name column used to be crushed to its narrowest allowed width: mPDF
+                lays an over-constrained table out by shrinking each column towards its minimum,
+                and a multi-word cell has a huge range between that minimum (its widest single
+                word) and its natural width, while a figure column's minimum is already its natural
+                width. So every column kept its size and the one elastic column absorbed the whole
+                shortfall. The demo dataset's longest name, `رخصة نظام إدارة العملاء — أساسية`, needs
+                97.33pt of glyphs plus five word spaces, but the column's content box measured
+                26pt — narrower than most of the words in it — and the name printed as six stacked
+                single words.
+
+                Two changes, measured against the 577.28pt table (A4 minus the 12px page padding):
+
+                  - the six figure columns give up 12px of their 36px horizontal padding each, 90pt
+                    in all, which is the space the name needs. Their content is digits and a
+                    currency token, so the padding bought nothing but air;
+                  - every column states its width, so the layout no longer has to guess which one
+                    should absorb the shortfall. The product-name column is given the remainder,
+                    ~173pt of content, which is the ~108pt the longest name needs plus room for the
+                    next-longest one.
+
+                Fonts and figure values are untouched, and the columns still sum to the same table
+                width, so no total moves.
+            */
+            .items th {
+                padding: 6px 9px;
+            }
+
+            .items td {
+                padding: 9px 9px;
+            }
+
+            .items th.col-product-name,
+            .items td.col-product-name {
+                padding-left: 18px;
+                padding-right: 18px;
             }
 
             .summary {
@@ -199,6 +268,45 @@
         <div class="page">
             <!-- Header -->
             <div class="page-header">
+                @php
+                    /**
+                     * The brand wordmark, from the one place this fork keeps its marks: the brand
+                     * package's `resources/assets/`, which is what
+                     * `App\Providers\BrandingServiceProvider` serves the in-page wordmarks from and
+                     * what its `Sijilna\Brand\Brand` constants name. Resolved with `base_path()`,
+                     * so it is the checkout's own path on any host — not an absolute path baked for
+                     * one machine and not a URL.
+                     *
+                     * A local path, not `route('sijilna.asset')`: the English document is rendered by
+                     * dompdf with remote fetching off, and the Arabic one by mPDF, which would make
+                     * the PDF renderer issue an HTTP request to the application it is running
+                     * inside. Probed in both engines: each renders the SVG from a file path.
+                     *
+                     * The SVG and not `Brand::PUBLISHED_LOGO_PATH`: that raster is cut on a
+                     * `#FAF7F1` paper surface for the dashboard report, so it prints a cream block
+                     * on this white page, and it is the Latin lockup only. The SVGs are transparent
+                     * and come in a per-script cut, chosen the same way the login, mail and error
+                     * blades choose theirs.
+                     *
+                     * `is_file()` keeps a checkout without the brand package rendering the
+                     * document it rendered before this header carried a mark, instead of a
+                     * broken-image placeholder.
+                     */
+                    $brandWordmark = base_path(
+                        'packages/Sijilna/Brand/resources/assets/'
+                        .(in_array($locale, ['ar', 'fa']) ? 'sijilna-wordmark-ar.svg' : 'sijilna-wordmark.svg')
+                    );
+                @endphp
+
+                @if (is_file($brandWordmark))
+                    <div class="brand-wordmark">
+                        <img
+                            src="{{ $brandWordmark }}"
+                            alt="{{ config('sijilna.name', 'Sijilna') }}"
+                        >
+                    </div>
+                @endif
+
                 <b>@lang('admin::app.quotes.index.pdf.title')</b>
             </div>
 
@@ -436,35 +544,38 @@
                     <table class="{{ $direction }}">
                         <thead>
                             <tr>
-                                <th>
+                                <th style="width: 12%;">
                                     @lang('admin::app.quotes.index.pdf.sku')
                                 </th>
 
-                                <th>
+                                <th
+                                    class="col-product-name"
+                                    style="width: 31%;"
+                                >
                                     @lang('admin::app.quotes.index.pdf.product-name')
                                 </th>
 
-                                <th>
+                                <th style="width: 11.5%;">
                                     @lang('admin::app.quotes.index.pdf.price')
                                 </th>
 
-                                <th>
+                                <th style="width: 5.5%;">
                                     @lang('admin::app.quotes.index.pdf.quantity')
                                 </th>
 
-                                <th>
+                                <th style="width: 11.5%;">
                                     @lang('admin::app.quotes.index.pdf.amount')
                                 </th>
 
-                                <th>
+                                <th style="width: 7%;">
                                     @lang('admin::app.quotes.index.pdf.discount')
                                 </th>
 
-                                <th>
+                                <th style="width: 10%;">
                                     @lang('admin::app.quotes.index.pdf.tax')
                                 </th>
 
-                                <th>
+                                <th style="width: 11.5%;">
                                     @lang('admin::app.quotes.index.pdf.grand-total')
                                 </th>
                             </tr>
@@ -475,7 +586,7 @@
                                 <tr>
                                     <td>{{ $item->sku }}</td>
 
-                                    <td>
+                                    <td class="col-product-name">
                                         {{ $item->name }}
                                     </td>
 

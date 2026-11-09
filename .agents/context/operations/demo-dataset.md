@@ -1,4 +1,4 @@
-<!-- Context: operations/demo-dataset.md | Priority: high | Version: 1.2 | Updated: 2026-11-08 -->
+<!-- Context: operations/demo-dataset.md | Priority: high | Version: 1.3 | Updated: 2026-11-09 -->
 
 # Demo dataset
 
@@ -45,6 +45,16 @@ calls only the installer's seeder.
    `KRAYIN_ADMIN_PASSWORD`; it refuses on a non-`local` `APP_ENV`, a non-loopback
    host, and while `bootstrap/cache/config.php` exists, and it destroys the named
    database with no undo.
+
+**The seeder declares one dashboard setting, insert-only.** The dataset is backdated up to
+75 days while the product's default reporting window is one month
+(`AbstractReporting::getDefaultStartDate()` falls back to `now()->subMonth()`), so a
+freshly seeded instance opened on an empty dashboard. `DemoSeeder::seedDashboardRange()`
+now writes `general.settings.dashboard.date_range = 3_months` to `core_config` inside the
+seeding transaction, and **only when no such row exists** — an operator's saved range
+survives a re-seed, and the product-wide default stays one month for real clients (a
+non-demo instance runs no part of this seeder). Presets still override it in both
+directions; the run reports what it found or did as `Dashboard default range: …`.
 
 **The credentials file is verified before it exists.** `DemoSeeder::run()` reads each hash
 back from `users` and `DemoCredentials::verify()` `Hash::check`s every generated password
