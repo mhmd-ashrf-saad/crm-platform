@@ -6,6 +6,7 @@ Seller speaks Arabic; English gloss follows each talking point. Base URL: `https
 
 - [ ] Instance answers over TLS: `curl -s -o /dev/null -w '%{http_code}\n' https://<demo-host>/admin/login` -> `200`.
 - [ ] `APP_DEBUG=false` in `.env` on the instance.
+- [ ] Currency is Egyptian pounds: `APP_CURRENCY=EGP` in the instance's `.env`, so every amount renders with the Arabic `ج.م.` symbol — kanban cards and column totals, the quotes list, products, the dashboard tiles and the quote PDF. If any of them prints `US$`, stop and fix the instance before the client arrives.
 - [ ] Mail configured and a test message received; do not promise inbound sync (see "If they ask").
 - [ ] Demo dataset seeded: `php artisan db:seed --class='Database\Seeders\Demo\DemoSeeder' --force`.
 - [ ] Counts match `docs/ops/demo-dataset.md`: 3 users, 8 organizations, 19 contacts, 12 products, 27 leads, 10 quotes / 22 lines, 23 activities, 5 mail threads.
@@ -17,7 +18,7 @@ Seller speaks Arabic; English gloss follows each talking point. Base URL: `https
 
 **Beat 1 - Login and dashboard (3 min)**
 Screen: login -> dashboard. URLs: `/admin/login`, `/admin/dashboard`.
-Click: log in as manager; leave default date range; point at the six tiles and the revenue card.
+Click: log in as manager, then **switch the dashboard range to «آخر 3 أشهر» before pointing at anything** — the default 30-day window shows `0.00 ج.م.` won and lost revenue and two «لا توجد بيانات متاحة» panels on this dataset, because the demo data is backdated up to 75 days (open bead `crm-703`); the 3-month range fills every panel. Then point at the six tiles and the revenue card.
 Say (AR): «هذه هي لوحة المعلومات: عدد الفرص وقيمتها، والإيرادات المكتسبة والمفقودة، وأفضل المنتجات والأشخاص — كلها من بياناتك، بالعربية، على خادمك.»
 Gloss (EN): "This is the dashboard: opportunity counts and values, won/lost revenue, top products and people — all from your data, in Arabic, on your server."
 Why: proves Arabic-first, self-hosted, one screen for pipeline health.
@@ -120,9 +121,9 @@ Why: shows capability without promising scheduler reliability.
 - **Scheduler reliability:** Open beads `crm-7y0` and `crm-86i`; do not claim campaigns or reminders fire reliably.
 - **Backups:** Open bead `crm-7rj`; backups are operator-run on an agreed cadence, and rehearsed restore is not yet proven.
 - **Error tracking and health:** A `/up` health route is registered, but it does not cover a dead queue worker, and no error tracker (Sentry/Flare/Bugsnag) is wired — exceptions only reach `storage/logs` on the client's server. Open bead `crm-bfx`.
-- **Tax/e-invoicing:** Not a product; tax value is entered per line in the install's base currency (`APP_CURRENCY`, `USD` on the reference demo), not in EGP.
+- **Tax/e-invoicing:** Not a product; tax value is entered per line in the install's base currency (`APP_CURRENCY`, `EGP` on the reference demo, set at install), so the per-line tax on screen is in Egyptian pounds.
 - **Stock deduction:** Quotes do not deduct or reserve stock.
 - **Quote status:** No status field; acceptance is recorded by moving the lead to **مكتسب**.
 - **Reminders:** No pre-event reminders; only invite.ics on create/edit.
 - **Mobile use:** Not audited for phones; use desktop.
-- **Multi-branch/multi-currency:** Scale supports more users and branches, but one currency and one language per install (`APP_CURRENCY`, set at install — `USD` on the reference demo, so prices on screen are not EGP; the EGP numbers in the offer sheet are commercial, not what the demo prints).
+- **Multi-branch/multi-currency:** Scale supports more users and branches, but one currency and one language per install (`APP_CURRENCY`, set at install — `EGP` on the reference demo). The amounts are stored as bare numbers and re-labelled with the instance's currency, never converted: there is no exchange rate anywhere, so what the screen prints is the figure that was entered, and the same figure is what the offer sheet quotes. Say that plainly if they ask — do not imply a conversion or a live rate.
